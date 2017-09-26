@@ -16,7 +16,9 @@ public class SEGICascadedEditor : Editor
 	SerializedProperty shadowSpaceSize;
 	SerializedProperty temporalBlendWeight;
 	SerializedProperty visualizeVoxels;
-	SerializedProperty updateGI;
+    SerializedProperty visualizeShadowmapCopy;
+    SerializedProperty useUnityShadowMap;
+    SerializedProperty updateGI;
 	SerializedProperty skyColor;
 	SerializedProperty voxelSpaceSize;
 	SerializedProperty useBilateralFiltering;
@@ -67,7 +69,7 @@ public class SEGICascadedEditor : Editor
 
 
 	bool showMainConfig = true;
-	bool showDebugTools = false;
+	bool showDebugTools = true;
 	bool showTracingProperties = true;
 	bool showEnvironmentProperties = true;
 	bool showPresets = true;
@@ -88,8 +90,10 @@ public class SEGICascadedEditor : Editor
 		giCullingMask = serObj.FindProperty("giCullingMask");
 		shadowSpaceSize = serObj.FindProperty("shadowSpaceSize");
 		temporalBlendWeight = serObj.FindProperty("temporalBlendWeight");
-		visualizeVoxels = serObj.FindProperty("visualizeVoxels");
-		updateGI = serObj.FindProperty("updateGI");
+        visualizeVoxels = serObj.FindProperty("visualizeVoxels");
+        visualizeShadowmapCopy = serObj.FindProperty("visualizeShadowmapCopy");
+        useUnityShadowMap = serObj.FindProperty("useUnityShadowMap");
+        updateGI = serObj.FindProperty("updateGI");
 		skyColor = serObj.FindProperty("skyColor");
 		voxelSpaceSize = serObj.FindProperty("voxelSpaceSize");
 		useBilateralFiltering = serObj.FindProperty("useBilateralFiltering");
@@ -217,8 +221,12 @@ public class SEGICascadedEditor : Editor
 			EditorGUILayout.PropertyField(softSunlight, new GUIContent("Soft Sunlight", "The amount of soft diffuse sunlight that will be added to the scene. Use this to simulate the effect of clouds/haze scattering soft sunlight onto the scene."));
 			EditorGUILayout.PropertyField(skyColor, new GUIContent("Sky Color", "The color of the light scattered onto the scene coming from the sky."));
 			EditorGUILayout.PropertyField(skyIntensity, new GUIContent("Sky Intensity", "The brightness of the sky light."));
-			EditorGUILayout.PropertyField(sphericalSkylight, new GUIContent("Spherical Skylight", "If enabled, light from the sky will come from all directions. If disabled, light from the sky will only come from the top hemisphere."));
-			EditorGUI.indentLevel--;
+            EditorGUILayout.PropertyField(sphericalSkylight, new GUIContent("Spherical Skylight", "If enabled, light from the sky will come from all directions. If disabled, light from the sky will only come from the top hemisphere."));
+            EditorGUILayout.PropertyField(useUnityShadowMap, new GUIContent("Use Unity ShadowMap", "If enabled, unity's shadowmap will be used instead of creating new onces."));
+
+            
+
+            EditorGUI.indentLevel--;
 		}
 
 		EditorGUILayout.Space();
@@ -280,8 +288,10 @@ public class SEGICascadedEditor : Editor
 			EditorGUI.indentLevel++;
 			EditorGUILayout.PropertyField(visualizeSunDepthTexture, new GUIContent("Visualize Sun Depth Texture", "Visualize the depth texture used to render proper shadows while injecting sunlight into voxel data."));
 			EditorGUILayout.PropertyField(visualizeGI, new GUIContent("Visualize GI", "Visualize GI result only (no textures)."));
-			EditorGUILayout.PropertyField(visualizeVoxels, new GUIContent("Visualize Voxels", "Directly view the voxels in the scene."));
-			EditorGUI.indentLevel--;
+            EditorGUILayout.PropertyField(visualizeVoxels, new GUIContent("Visualize Voxels", "Directly view the voxels in the scene."));
+            EditorGUILayout.PropertyField(visualizeShadowmapCopy, new GUIContent("Visualize Shadowmap Copy", "Directly view the Shadowmap of the Sun Light."));
+
+            EditorGUI.indentLevel--;
 		}
 
 

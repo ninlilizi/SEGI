@@ -22,7 +22,8 @@
 				#pragma fragment frag
 				#pragma geometry geom
 				#include "UnityCG.cginc"
-				
+				#include "SEGIUnityShadowInput.cginc"
+
 				RWTexture3D<uint> RG0;
 				
 				int LayerToVisualize;
@@ -230,8 +231,8 @@
 					uint originalValue;
 
 					[allow_uav_condition]
-					for (int i = 0; i < 12; i++)
-					//while (true)
+					//for (int i = 0; i < 12; i++) //performance?
+					while (true)
 					{
 						InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
 						if (compareValue == originalValue)
@@ -249,7 +250,8 @@
 					uint originalValue;
 
 					[allow_uav_condition]
-					for (int i = 0; i < 1; i++)
+					[unroll(1)]
+					for (int i = 0; i < 1; i++) //better performance
 					//while (true)
 					{
 						InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
@@ -312,7 +314,27 @@
 						discard;
 					}
 
-
+#if defined(SEGI_UNITY_SHADOWMAP_ON)
+//#if defined(DIRECTIONAL)
+					#if UNITY_VERSION >= 560
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); // required for sampling the correct slice of the shadow map render texture array
+					#endif
+					float4 wpos = float4(minPosVoxel.xyz + fcoord.xyz * minPosVoxel.w, 1);
+					fixed4 cascadeWeights = getCascadeWeights_splitSpheres(wpos);
+					float4 shadowPos = getShadowCoord(wpos, cascadeWeights);
+					//float3 coordCascade0 = getShadowCoord_SingleCascade(wpos);
+					//float biasMultiply = dot(cascadeWeights, unity_ShadowCascadeScales);
+					//float3 receiverPlaneDepthBias = UnityGetReceiverPlaneDepthBias(coordCascade0.xyz, biasMultiply);
+					float sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x; //UNITY_SAMPLE_SHADOW(SEGISunDepth, shadowPos);// UnityCombineShadowcoordComponents(shadowPos.xy, 0, 0.001, receiverPlaneDepthBias));// 
+					sunDepth = saturate((sunDepth - shadowPos.z - 0.005) * 1000);
+					#if defined(UNITY_REVERSED_Z)
+					sunDepth = 1.0 - sunDepth;
+					#endif
+					float sunVisibility = sunDepth;
+//#else
+//					float sunVisibility = 1;
+//#endif
+#else
 					float4 shadowPos = mul(SEGIVoxelProjectionInverse, float4(fcoord * 2.0 - 1.0, 0.0));
 					shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
 					shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
@@ -323,7 +345,7 @@
 					#endif
 
 					float sunVisibility = saturate((sunDepth - shadowPos.z + 0.2525) * 1000.0);
-
+#endif
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
