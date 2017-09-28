@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/gtkjoxj.png">
 </p>
 
-# SEGI
+# CKGI (modified by CK85 aka Nexusmaster)
 A fully-dynamic voxel-based global illumination system for Unity. More details at http://www.sonicether.com/segi/
 
 <p align="center" style="display: inline-block;">
