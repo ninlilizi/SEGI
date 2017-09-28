@@ -1,4 +1,4 @@
-﻿Shader "Hidden/SEGIVoxelizeScene_C" {
+﻿Shader "Hidden/SEGIVoxelizeScene_C2" {
 	Properties
 	{
 		_Color ("Main Color", Color) = (1,1,1,1)
@@ -166,14 +166,6 @@
 					triStream.Append(p[2]);
 				}
 
-
-
-
-				float4x4 SEGIVoxelToGIProjection;
-				float4x4 SEGIVoxelProjectionInverse;
-				sampler2D SEGISunDepth;
-				sampler2D SEGIShadowmapCopy;
-
 				//float4 SEGISunlightVector;
 				//float4 GISunColor;
 				float4 SEGIVoxelSpaceOriginDelta;
@@ -182,6 +174,7 @@
 				int SEGIInnerOcclusionLayers;
 
 				float SEGIShadowBias;
+				//float SEGIShadowScale;
 
 				float4 SEGIClipmapOverlap;
 				
@@ -208,50 +201,18 @@
 					
 					float3 fcoord = (float3)(coord.xyz) / VoxelResolution;
 
-					float3 minCoord = (SEGIClipmapOverlap.xyz * 1.0 + 0.5) - SEGIClipmapOverlap.w * 0.5;
-					minCoord += 16.0 / VoxelResolution;
-					float3 maxCoord = (SEGIClipmapOverlap.xyz * 1.0 + 0.5) + SEGIClipmapOverlap.w * 0.5;
-					maxCoord -= 16.0 / VoxelResolution;
+					//float3 minCoord = (SEGIClipmapOverlap.xyz * 1.0 + 0.5) - SEGIClipmapOverlap.w * 0.5;
+					//minCoord += 16.0 / VoxelResolution;
+					//float3 maxCoord = (SEGIClipmapOverlap.xyz * 1.0 + 0.5) + SEGIClipmapOverlap.w * 0.5;
+					//maxCoord -= 16.0 / VoxelResolution;
 
-
-					if (fcoord.x > minCoord.x && fcoord.x < maxCoord.x &&
-						fcoord.y > minCoord.y && fcoord.y < maxCoord.y &&
-						fcoord.z > minCoord.z && fcoord.z < maxCoord.z)
-					{
-						discard;
-					}
-
-					float sunVisibilityCopy = 1;
-#if defined(SEGI_UNITY_SHADOWMAP_ON)
-//#if defined(DIRECTIONAL)
-					#if UNITY_VERSION >= 560
-					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); // required for sampling the correct slice of the shadow map render texture array
-					#endif
-					float4 wpos = float4(minPosVoxel.xyz + fcoord.xyz * minPosVoxel.w, 1);
-					fixed4 cascadeWeights = getCascadeWeights_splitSpheres(wpos);
-					float4 shadowPosCopy = getShadowCoord(wpos, cascadeWeights);
-					//float3 coordCascade0 = getShadowCoord_SingleCascade(wpos);
-					//float biasMultiply = dot(cascadeWeights, unity_ShadowCascadeScales);
-					//float3 receiverPlaneDepthBias = UnityGetReceiverPlaneDepthBias(coordCascade0.xyz, biasMultiply);
-					float copyDepth = tex2Dlod(SEGIShadowmapCopy, float4(shadowPosCopy.xy, 0, 0)).x; //UNITY_SAMPLE_SHADOW(SEGISunDepth, shadowPos);// UnityCombineShadowcoordComponents(shadowPos.xy, 0, 0.001, receiverPlaneDepthBias));// 
-					copyDepth = saturate((copyDepth - shadowPosCopy.z - 0.005) * 1000);
-					#if defined(UNITY_REVERSED_Z)
-					copyDepth = 1.0 - copyDepth;
-					#endif
-					sunVisibilityCopy = copyDepth;
-//#endif
-#endif
-
-					float4 shadowPos = mul(SEGIVoxelProjectionInverse, float4(fcoord * 2.0 - 1.0, 0.0));
-					shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
-					shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-					float sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
-					#if defined(UNITY_REVERSED_Z)
-					sunDepth = 1.0 - sunDepth;
-					#endif
-					float sunVisibility = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-
-					sunVisibility = sunVisibility * sunVisibilityCopy;
+					//if (
+					//	fcoord.x > minCoord.x && fcoord.x < maxCoord.x &&
+					//	fcoord.y > minCoord.y && fcoord.y < maxCoord.y &&
+					//	fcoord.z > minCoord.z && fcoord.z < maxCoord.z)
+					//{
+					//	discard;
+					//}
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
@@ -268,11 +229,14 @@
 					{
 						color.rgb *= color.a;
 					}
-
-					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
-
+					
 					float4 prevBounce = tex3D(SEGICurrentIrradianceVolume, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
-					col.rgb += prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * tex.rgb * color.rgb;
+					float3 sunShadow = sunNdotL.xxx + prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * tex.rgb * color.rgb;
+					//TODO sunShadow missing skylight?
+
+					//float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
+					float3 col = sunShadow * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
+
 
 					 
 					float4 result = float4(col.rgb, 2.0);

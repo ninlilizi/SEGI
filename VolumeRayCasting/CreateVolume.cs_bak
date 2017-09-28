@@ -1,0 +1,213 @@
+using UnityEngine;
+using System.Collections;
+using System.IO;
+
+public class CreateVolume : MonoBehaviour
+{
+
+    public RenderTexture FrontRT;
+    public RenderTexture BackRT;
+    public Material volumeMat;
+    public Material frontMat;
+    public Material backMat;
+    public int Size3D = 256;
+    private Texture3D tex3D;
+    static Color[] tex3Dcolors;
+    int mWidth, mHeight, mDepth;
+
+
+    /*
+	public int texSize = 256;
+	static Material m_MaterialCam = null;
+	protected Material materialCam {
+		get {
+			if (m_MaterialCam == null) {
+				m_MaterialCam = new Material(Shader.Find("Custom/FrontBackPos"));
+				m_MaterialCam.hideFlags = HideFlags.DontSave;
+			}
+			return m_MaterialCam;
+		} 
+	}	*/
+
+    #region File Loading Helpers
+    private void loadRAWFile(string filename)
+    {
+        FileStream file = new FileStream(filename, FileMode.Open);
+        long length = file.Length;
+
+        if (length > mWidth * mHeight * mDepth)
+        {
+            loadRAWFile16(file);
+        }
+        else
+        {
+            loadRAWFile8(file);
+        }
+
+        file.Close();
+    }
+
+    private void loadRAWFile8(FileStream file)
+    {
+        BinaryReader reader = new BinaryReader(file);
+
+        byte[] buffer = new byte[mWidth * mHeight * mDepth];
+        int size = sizeof(byte);
+
+        reader.Read(buffer, 0, size * buffer.Length);
+
+        reader.Close();
+
+        //scale the scalar values to [0, 1]
+        tex3Dcolors = new Color[buffer.Length];
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            tex3Dcolors[i] = Color.white * ((float)buffer[i] / byte.MaxValue);
+        }
+    }
+
+    private void loadRAWFile16(FileStream file)
+    {
+        BinaryReader reader = new BinaryReader(file);
+
+        ushort[] buffer = new ushort[mWidth * mHeight * mDepth];
+
+        for (int i = 0; i < buffer.Length; i++)
+            buffer[i] = reader.ReadUInt16();
+
+        reader.Close();
+
+        //scale the scalar values to [0, 1]
+        tex3Dcolors = new Color[buffer.Length];
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            tex3Dcolors[i] = Color.white * ((float)buffer[i] / ushort.MaxValue);
+        }
+    }
+    #endregion
+
+    /*
+	public Texture3D tex;
+	public int size = 256;
+
+	void CreateTex3D ()
+	{
+		tex = new Texture3D (size, size, size, TextureFormat.ARGB32, true);
+		var cols = new Color[size*size*size];
+		float mul = 1.0f / (size-1);
+		int idx = 0;
+		Color c = Color.white;
+		for (int z = 0; z < size; ++z)
+		{
+			for (int y = 0; y < size; ++y)
+			{
+				for (int x = 0; x < size; ++x, ++idx)
+				{
+					c.r = ((x&1)!=0) ? x*mul : 1-x*mul;
+					c.g = ((y&1)!=0) ? y*mul : 1-y*mul;
+					c.b = ((z&1)!=0) ? z*mul : 1-z*mul;
+					cols[idx] = c;
+				}
+			}
+		}
+		tex.SetPixels (cols);
+		tex.Apply ();
+		//renderer.material.SetTexture ("_Volume", tex);
+		volumeMat.SetTexture("VolumeS",tex);
+	}	
+	*/
+    // Use this for initialization
+    void Start()
+    {
+
+        Vector3 sizes = new Vector3(Size3D, Size3D, Size3D);
+        mWidth = (int)sizes.x;
+        mHeight = (int)sizes.y;
+        mDepth = (int)sizes.z;
+
+        //loadRAWFile("Assets/Plugins/Features/VolumeRayCasting/teapot.raw");
+        ////loadRAWFile("Assets/Models/aneurism.raw");
+        ////loadRAWFile("Assets/Models/bonsai.raw");
+
+        //tex3D = new Texture3D(mWidth,mHeight,mDepth,TextureFormat.ARGB32,true);
+        //tex3D.wrapMode = TextureWrapMode.Clamp;
+        //tex3D.SetPixels(tex3Dcolors);
+        //tex3D.Apply();
+
+        volumeMat = this.GetComponent<Renderer>().sharedMaterial;
+        //volumeMat.SetTexture("VolumeS",tex3D);
+
+        //compute the step size and number of iterations to use
+        //the step size for each component needs to be a ratio of the largest component
+        float maxSize = (float)Mathf.Max(mWidth, Mathf.Max(mHeight, mDepth));
+        Vector3 stepSize = new Vector3(1.0f / (mWidth * (maxSize / mWidth)),
+                                       1.0f / (mHeight * (maxSize / mHeight)),
+                                       1.0f / (mDepth * (maxSize / mDepth)));
+
+        float mStepScale = 1.0f;
+
+        volumeMat.SetVector("StepSize", stepSize * mStepScale);
+        //volumeMat.SetFloat("Iterations",(float)maxSize * (1.0f / mStepScale) * 2.0f);
+        Debug.Log("StepSizeX " + stepSize.x * mStepScale);
+        Debug.Log("StepSizeY " + stepSize.y * mStepScale);
+        Debug.Log("StepSizeZ " + stepSize.z * mStepScale);
+
+        //Debug.Log("Iterations " + (float)maxSize * (1.0f / mStepScale) * 2.0f);
+        //      //calculate the scale factor
+        //      //volumes are not always perfect cubes. so we need to scale our cube
+        //      //by the sizes of the volume. Also, scalar data is not always sampled
+        //      //at equidistant steps. So we also need to scale the cube model by mRatios.
+        //      //Vector3 sizes = new Vector3(mWidth, mHeight, mDepth);
+        //float mRatios = 1.0f;
+        //      Vector3 scaleFactor = Vector3.one / ((maxSize) / (sizes.x * mRatios));//TODO
+        ////scaleFactor *= 2.0f;
+        //Debug.Log("scaleFactor " + scaleFactor);
+        //      volumeMat.SetVector("ScaleFactor",new Vector4(scaleFactor.x,scaleFactor.y,scaleFactor.z, 1.0f));		
+        //frontMat.SetVector("ScaleFactor",new Vector4(scaleFactor.x,scaleFactor.y,scaleFactor.z, 1.0f));
+        //backMat.SetVector("ScaleFactor",new Vector4(scaleFactor.x,scaleFactor.y,scaleFactor.z, 1.0f));
+
+        FrontRT.format = RenderTextureFormat.ARGBFloat;
+        FrontRT.width = Screen.width;
+        FrontRT.height = Screen.height;
+        BackRT.format = RenderTextureFormat.ARGBFloat;
+        BackRT.width = Screen.width;
+        BackRT.height = Screen.height;
+
+        //Test3D();
+    }
+
+    public SEGICascaded segi;
+    public Vector3 offsetPos;
+    public float offsetScale = 1;
+
+    void FixRes(RenderTexture rt)
+    {
+        if (rt.width != segi.sunShadowResolution || rt.height != segi.sunShadowResolution)
+        {
+            rt.Release();
+            rt.width = rt.height = segi.sunShadowResolution;
+            rt.Create();
+        }
+    }
+
+    public float SEGIShadowBias = 0;
+
+    void Update()
+    {
+
+        FixRes(FrontRT);
+        FixRes(BackRT);
+
+        Shader.SetGlobalTexture("FrontS", FrontRT);
+        Shader.SetGlobalTexture("BackS", BackRT);
+
+        Shader.SetGlobalFloat("SEGIShadowBias", segi.useVolumeRayCast ? -(1-SEGIShadowBias) : SEGIShadowBias);
+
+
+        var activeClipmap = segi.clipmaps[0];
+        float clipmapSize = segi.voxelSpaceSize * activeClipmap.localScale;
+        this.transform.parent.position = activeClipmap.origin + offsetPos;
+        this.transform.parent.localScale = Vector3.one * clipmapSize * offsetScale;
+
+    }
+}

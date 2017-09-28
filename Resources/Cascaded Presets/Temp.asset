@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 195d4ee8e5f057f4590c043b132f9c86, type: 3}
+  m_Name: Temp
+  m_EditorClassIdentifier: 
+  voxelResolution: 128
+  voxelAA: 0
+  innerOcclusionLayers: 1
+  infiniteBounces: 1
+  temporalBlendWeight: 0.1
+  useBilateralFiltering: 0
+  halfResolution: 0
+  stochasticSampling: 1
+  doReflections: 0
+  cones: 4
+  coneTraceSteps: 10
+  coneLength: 1
+  coneWidth: 3.9
+  coneTraceBias: 2.8
+  occlusionStrength: 0.15
+  nearOcclusionStrength: 0.5
+  occlusionPower: 0.65
+  nearLightGain: 0.36
+  giGain: 1
+  secondaryBounceGain: 0.9
+  reflectionSteps: 64
+  reflectionOcclusionPower: 1
+  skyReflectionIntensity: 1
+  gaussianMipFilter: 0
+  farOcclusionStrength: 1
+  farthestOcclusionStrength: 1
+  secondaryCones: 6
+  secondaryOcclusionStrength: 0.27

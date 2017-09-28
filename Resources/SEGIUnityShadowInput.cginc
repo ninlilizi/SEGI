@@ -7,11 +7,11 @@ float4 SEGISunDepth_TexelSize;
 //SamplerComparisonState samplerSEGISunDepth;
 
 //changed in 5.6
-#if UNITY_VERSION >= 560
-UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
-#else
-sampler2D_float _CameraDepthTexture;
-#endif
+//#if UNITY_VERSION >= 560
+//UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
+//#else
+//sampler2D_float _CameraDepthTexture;
+//#endif
 
 // sizes of cascade projections, relative to first one
 float4 unity_ShadowCascadeScales;

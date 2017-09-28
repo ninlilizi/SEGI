@@ -20,23 +20,16 @@
 				#pragma fragment frag
 				#pragma geometry geom
 				#include "UnityCG.cginc"
-				
+				#include "SEGI_C.cginc"
+
 				#define PI 3.14159265
 				
-				RWTexture3D<uint> RG0;
-				
-				sampler3D SEGIVolumeLevel0;
-				sampler3D SEGIVolumeLevel1;
-				sampler3D SEGIVolumeLevel2;
-				sampler3D SEGIVolumeLevel3;
-				sampler3D SEGIVolumeLevel4;
-				sampler3D SEGIVolumeLevel5;
-				
+				RWTexture2D<uint> RG0;
+								
 				float4x4 SEGIVoxelViewFront;
 				float4x4 SEGIVoxelViewLeft;
 				float4x4 SEGIVoxelViewTop;
 				
-				sampler2D _MainTex;
 				float4 _MainTex_ST;
 				half4 _EmissionColor;
 				float _Cutoff;
@@ -158,27 +151,13 @@
 				float4x4 SEGIVoxelToGIProjection;
 				float4x4 SEGIVoxelProjectionInverse;
 				sampler2D SEGIGIDepthNormalsTexture;
-				float4 SEGISunlightVector;
-				float4 GISunColor;
 				int SEGIFrameSwitch;
-				half4 SEGISkyColor;
-				float SEGISoftSunlight;
 				int SEGISecondaryCones;
 				
 				sampler3D SEGIVolumeTexture0;
-				float SEGIVoxelScaleFactor;
 				int SEGIVoxelAA;
-				int SEGISphericalSkylight;
-
 
 				float4 SEGICurrentClipTransform;
-				float4 SEGIClipTransform0;
-				float4 SEGIClipTransform1;
-				float4 SEGIClipTransform2;
-				float4 SEGIClipTransform3;
-				float4 SEGIClipTransform4;
-				float4 SEGIClipTransform5;
-
 				float4 SEGIClipmapOverlap;
 
 
@@ -193,56 +172,6 @@
 
 					return pos;
 				}
-
-				float3 TransformClipSpace(float3 pos, float4 transform)
-				{
-					pos = pos * 2.0 - 1.0;
-					pos *= transform.w;
-					pos = pos * 0.5 + 0.5;
-					pos -= transform.xyz;
-
-					return pos;
-				}
-
-				float3 TransformClipSpace1(float3 pos)
-				{
-					return TransformClipSpace(pos, SEGIClipTransform1);
-				}
-
-				float3 TransformClipSpace2(float3 pos)
-				{
-					return TransformClipSpace(pos, SEGIClipTransform2);
-				}
-
-				float3 TransformClipSpace3(float3 pos)
-				{
-					return TransformClipSpace(pos, SEGIClipTransform3);
-				}
-
-				float3 TransformClipSpace4(float3 pos)
-				{
-					return TransformClipSpace(pos, SEGIClipTransform4);
-				}
-
-				float3 TransformClipSpace5(float3 pos)
-				{
-					return TransformClipSpace(pos, SEGIClipTransform5);
-				}
-
-				float GISampleWeight(float3 pos)
-				{
-					float weight = 1.0;
-
-					if (pos.x < 0.0 || pos.x > 1.0 ||
-						pos.y < 0.0 || pos.y > 1.0 ||
-						pos.z < 0.0 || pos.z > 1.0)
-					{
-						weight = 0.0;
-					}
-
-					return weight;
-				}
-
 					
 				float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 				{
@@ -346,90 +275,6 @@
 
 					return float4(gi.rgb, 0.0f);
 				}
-				
-				float2 rand(float3 coord)
-				{
-					float noiseX = saturate(frac(sin(dot(coord, float3(12.9898, 78.223, 35.3820))) * 43758.5453));
-					float noiseY = saturate(frac(sin(dot(coord, float3(12.9898, 78.223, 35.2879)*2.0)) * 43758.5453));
-					
-					return float2(noiseX, noiseY);
-				}
-
-				float3 rgb2hsv(float3 c)
-				{
-					float4 k = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-					float4 p = lerp(float4(c.bg, k.wz), float4(c.gb, k.xy), step(c.b, c.g));
-					float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
-
-					float d = q.x - min(q.w, q.y);
-					float e = 1.0e-10;
-
-					return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-				}
-
-				float3 hsv2rgb(float3 c)
-				{
-					float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-					float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
-					return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
-				}
-
-				float4 DecodeRGBAuint(uint value)
-				{
-					uint ai = value & 0x0000007F;
-					uint vi = (value / 0x00000080) & 0x000007FF;
-					uint si = (value / 0x00040000) & 0x0000007F;
-					uint hi = value / 0x02000000;
-
-					float h = float(hi) / 127.0;
-					float s = float(si) / 127.0;
-					float v = (float(vi) / 2047.0) * 10.0;
-					float a = ai * 2.0;
-
-					v = pow(v, 3.0);
-
-					float3 color = hsv2rgb(float3(h, s, v));
-
-					return float4(color.rgb, a);
-				}
-
-				uint EncodeRGBAuint(float4 color)
-				{
-					//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
-					float3 hsv = rgb2hsv(color.rgb);
-					hsv.z = pow(hsv.z, 1.0 / 3.0);
-
-					uint result = 0;
-
-					uint a = min(127, uint(color.a / 2.0));
-					uint v = min(2047, uint((hsv.z / 10.0) * 2047));
-					uint s = uint(hsv.y * 127);
-					uint h = uint(hsv.x * 127);
-
-					result += a;
-					result += v * 0x00000080; // << 7
-					result += s * 0x00040000; // << 18
-					result += h * 0x02000000; // << 25
-
-					return result;
-				}
-
-				void interlockedAddFloat4(RWTexture3D<uint> destination, int3 coord, float4 value)
-				{
-					uint writeValue = EncodeRGBAuint(value);
-					uint compareValue = 0;
-					uint originalValue;
-
-					[allow_uav_condition] for (int i = 0; i < 12; i++)
-					{
-						InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
-						if (compareValue == originalValue)
-							break;
-						compareValue = originalValue;
-						float4 originalValueFloats = DecodeRGBAuint(originalValue);
-						writeValue = EncodeRGBAuint(originalValueFloats + value);
-					}
-				}
 
 				float4 frag (g2f input) : SV_TARGET
 				{
@@ -464,8 +309,6 @@
 						discard;
 					}
 
-
-					
 					float3 gi = (0.0).xxx;
 					
 					float3 worldNormal = input.normal;
@@ -515,8 +358,10 @@
 					
 					float4 result = float4(gi.rgb, 2.0);
 
+					const float4 gridSize = SEGI_GRID_SIZE;
+					uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-					interlockedAddFloat4(RG0, coord, result);
+					interlockedAddFloat4(RG0, coord2D, result);
 					
 					return float4(0.0, 0.0, 0.0, 0.0);
 				}
