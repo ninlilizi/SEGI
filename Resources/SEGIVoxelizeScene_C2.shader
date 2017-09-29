@@ -230,12 +230,12 @@
 						color.rgb *= color.a;
 					}
 					
-					float4 prevBounce = tex3D(SEGICurrentIrradianceVolume, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
-					float3 sunShadow = saturate(sunNdotL.xxx + prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * tex.rgb * color.rgb);
+					//float4 prevBounce = tex3D(SEGICurrentIrradianceVolume, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
+					//float3 sunShadow = saturate(sunNdotL.xxx + prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * tex.rgb * color.rgb);
 					//TODO sunShadow missing skylight?
 
 					//float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
-					float3 col = sunShadow * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
+					float3 col = sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
 
 
 					 
