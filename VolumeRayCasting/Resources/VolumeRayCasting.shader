@@ -2,13 +2,13 @@
 
 Shader "Custom/VolumeRayCasting" {
 	Properties {
-		FrontS ("FrontS", 2D) = "white" {}
-		BackS ("BackS", 2D) = "white" {}
+		SEGIFrontS ("SEGIFrontS", 2D) = "white" {}
+		SEGIBackS ("SEGIBackS", 2D) = "white" {}
 		//VolumeS ("VolumeS", 3D) = "white" {}
 	}
 	SubShader {
-    Pass {
-		//Tags { "RenderType"="Transparent" }
+		Tags{ "RenderType" = "RayCastVolume" "ForceNoShadowCasting" = "True" "IgnoreProjector" = "True" }
+		Pass {
 		//LOD 200
 		//Cull Off ZWrite Off Fog { Mode Off }
 		//Lighting Off
@@ -24,8 +24,8 @@ Shader "Custom/VolumeRayCasting" {
 		#include "UnityCG.cginc"
 		#pragma glsl
 		
-		sampler2D FrontS;
-		sampler2D BackS;
+		sampler2D SEGIFrontS;
+		sampler2D SEGIBackS;
 		//sampler3D VolumeS;
 		sampler3D SEGIActiveClipmapVolume;
 		//float4x4 SEGIShadowCamView;
@@ -42,8 +42,8 @@ Shader "Custom/VolumeRayCasting" {
 			    float4 uv : TEXCOORD0;
 			};
 
-        	float4 FrontS_ST;
-        	float4 BackS_ST;	
+        	//float4 SEGIFrontS_ST;
+        	//float4 SEGIBackS_ST;
         	
 			v2f vert (appdata v) {
 
@@ -60,8 +60,8 @@ Shader "Custom/VolumeRayCasting" {
 				texC.x = 0.5f*texC.x + 0.5f; 
 				texC.y = 0.5f*texC.y + 0.5f;			
 				texC.y = 1 - texC.y;
-			    float3 front = tex2D(FrontS, texC).rgb;
-			    float3 back = tex2D(BackS, texC).rgb;		
+			    float3 front = tex2D(SEGIFrontS, texC).rgb;
+			    float3 back = tex2D(SEGIBackS, texC).rgb;
 
 			    float3 dir = normalize(back - front);
 			    float4 pos = float4(front, 0);
@@ -108,30 +108,12 @@ Shader "Custom/VolumeRayCasting" {
 			    //return float4(back - front, .9f);
 			}			
 			
-			float3 hsv2rgb(float3 c)
-			{
-				float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-				float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
-				return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
-			}
 
-			float4 DecodeRGBAuint(uint value)
+			float DecodeAuint(uint value)
 			{
 				uint ai = value & 0x0000007F;
-				uint vi = (value / 0x00000080) & 0x000007FF;
-				uint si = (value / 0x00040000) & 0x0000007F;
-				uint hi = value / 0x02000000;
-
-				float h = float(hi) / 127.0;
-				float s = float(si) / 127.0;
-				float v = (float(vi) / 2047.0) * 10.0;
 				float a = ai * 2.0;
-
-				v = pow(v, 3.0);
-
-				float3 color = hsv2rgb(float3(h, s, v));
-
-				return float4(color.rgb, a);
+				return a;
 			}
 
 			float4 SEGI_GRID_SIZE;
@@ -143,13 +125,13 @@ Shader "Custom/VolumeRayCasting" {
 				texC.x = 0.5f*texC.x + 0.5f; 
 				texC.y = 0.5f*texC.y + 0.5f;			
 				texC.y = 1 - texC.y;
-			    float3 front = tex2D(FrontS, texC).rgb;
-			    float3 back = tex2D(BackS, texC).rgb;		
+			    float3 front = tex2D(SEGIFrontS, texC).rgb;
+			    float3 back = tex2D(SEGIBackS, texC).rgb;		
 			    		
 			    float3 dir = normalize(back - front);
 			    float4 pos = float4(front, 0);
 			    			    
-			    float4 value = float4(0, 0, 0, 0);
+			    float value = 0;
 				
 				float3 Step = dir * 0.0078125f; // == 1.0f/128.0f // TODO LowRes -> 1.0f/64.0f
 
@@ -162,10 +144,10 @@ Shader "Custom/VolumeRayCasting" {
 					uint3 coord = pos.xyz * 128;
 					uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-					value = DecodeRGBAuint(RG0[coord2D]); //tex3Dlod(SEGIActiveClipmapVolume, pos); //tex3Dlod(VolumeS, pos);
+					value = DecodeAuint(RG0[coord2D]); //tex3Dlod(SEGIActiveClipmapVolume, pos); //tex3Dlod(VolumeS, pos);
 
 					//50.0f should really be a settable uniform variable
-					if ((value.a * 255.0f) >= 50.0f)
+					if ((value * 255.0f) >= 50.0f)
 					{
 						//tempPos = float4(UnityObjectToViewPos(pos.xyz - 0.5),1);
 						float4 tempPos = mul(UNITY_MATRIX_V, mul(unity_ObjectToWorld, float4(pos.xyz - 0.5,1)));

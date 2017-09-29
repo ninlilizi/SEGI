@@ -195,7 +195,7 @@ void CSMainColor(uint3 id : SV_DispatchThreadID)
 		if (SEGICurrentClipmapIndex == 2)
 			sunVisibility = (sunVisibility + sunVisibility3 * 40) * 0.024f;
 
-		float3 color = result.rgb;
+		float3 color = result.rgb; // remove sunNdotL and add it later here
 		result.rgb *= sunVisibility;//TODO
 
 		float4 prevBounce = tex3Dlod(SEGICurrentIrradianceVolume, float4(fcoord + SEGIVoxelSpaceOriginDelta.xyz,0));

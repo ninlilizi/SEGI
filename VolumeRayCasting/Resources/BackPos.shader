@@ -5,8 +5,9 @@ Shader "Custom/BackPos" {
 		//_MainTex ("Base (RGB)", 2D) = "white" {}
 	}
 	SubShader {
-	    Pass {
-	        Fog { Mode Off }
+		Tags{ "RenderType" = "RayCastVolume" "ForceNoShadowCasting" = "True" "IgnoreProjector" = "True" }
+		Pass {
+			Fog { Mode Off }
 	        Cull Front
 	        
 			CGPROGRAM

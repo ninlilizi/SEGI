@@ -13,9 +13,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty visualizeGI;
     SerializedProperty sun;
     SerializedProperty giCullingMask;
-    SerializedProperty volumeCullingMask;
-    SerializedProperty frontVolumeMask;
-    SerializedProperty backVolumeMask;
+    SerializedProperty shadowVolumeMask;
     SerializedProperty showVolumeObjects;
     SerializedProperty shadowSpaceSize;
     SerializedProperty temporalBlendWeight;
@@ -96,9 +94,7 @@ public class SEGICascadedEditor : Editor
         visualizeGI = serObj.FindProperty("visualizeGI");
         sun = serObj.FindProperty("sun");
         giCullingMask = serObj.FindProperty("giCullingMask");
-        volumeCullingMask = serObj.FindProperty("volumeCullingMask");
-        frontVolumeMask = serObj.FindProperty("frontVolumeMask");
-        backVolumeMask = serObj.FindProperty("backVolumeMask");
+        shadowVolumeMask = serObj.FindProperty("shadowVolumeMask");
         showVolumeObjects = serObj.FindProperty("showVolumeObjects");
         shadowSpaceSize = serObj.FindProperty("shadowSpaceSize");
         temporalBlendWeight = serObj.FindProperty("temporalBlendWeight");
@@ -219,9 +215,7 @@ public class SEGICascadedEditor : Editor
             if (showVolumeConfig)
             {
                 EditorGUILayout.PropertyField(showVolumeObjects, new GUIContent("Show Volume Objects", "Show Cubes that get used for VolumeRayCasting in Hierarchy (Runtime)."));
-                EditorGUILayout.PropertyField(volumeCullingMask, new GUIContent("Volume Culling Mask", "Which layer has the Volume Object in it."));
-                EditorGUILayout.PropertyField(frontVolumeMask, new GUIContent("Volume Front Mask", "Which layer has the Front Volume Object in it."));
-                EditorGUILayout.PropertyField(backVolumeMask, new GUIContent("Volume Back Mask", "Which layer has the Back Volume Object in it."));
+                EditorGUILayout.PropertyField(shadowVolumeMask, new GUIContent("Volume Culling Mask", "Which layer has the Volume Object in it."));
             }
             GUI.enabled = true;
             EditorGUILayout.PropertyField(useUnityShadowMap, new GUIContent("Use Unity ShadowMap", "If enabled, unity's shadowmap will be used instead of creating new onces."));

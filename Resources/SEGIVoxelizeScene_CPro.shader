@@ -1,4 +1,4 @@
-﻿Shader "Hidden/SEGIVoxelizeScene_C" {
+﻿Shader "Hidden/SEGIVoxelizeScene_CPro" {
 	Properties
 	{
 		_Color ("Main Color", Color) = (1,1,1,1)
@@ -42,6 +42,17 @@
 				float SEGISecondaryBounceGain;
 				
 				float _BlockerValue;
+#define _SDF 1
+
+#if _SDF
+#if defined(SHADER_API_D3D11) || defined(SHADER_API_XBOXONE) || defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_PSSL)
+#include "../../GPUVoxelSystem/Resources/sdfFunctions.cginc"
+				uint lastCount;
+				float4 vertexOffsetScale;
+				StructuredBuffer<voxelStruct> voxelData;
+				StructuredBuffer<uint> indicesBuffer;
+#endif		 
+#endif
 				
 				struct v2g
 				{
@@ -65,7 +76,14 @@
 				{
 					v2g o;
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
-
+					
+#if _SDF
+#if defined(SHADER_API_D3D11) || defined(SHADER_API_XBOXONE) || defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_PSSL)
+						uint index = lastCount + indicesBuffer[lastCount * 3 * 6 + id];
+						v.vertex = float4((voxelData[index].vertex.xyz - vertexOffsetScale.xyz) * vertexOffsetScale.w, 1);//v.vertex;//float4(verts[index],1);//
+						v.normal = voxelData[index].normal.xyz;//v.normal;//normals[index];
+#endif
+#endif
 					float4 vertex = v.vertex;
 					
 					o.normal = UnityObjectToWorldNormal(v.normal);

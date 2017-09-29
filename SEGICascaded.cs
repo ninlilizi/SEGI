@@ -32,9 +32,7 @@ public class SEGICascaded : MonoBehaviour
 
     public Light sun;
     public LayerMask giCullingMask = 2147483647;
-    public LayerMask volumeCullingMask = 0;
-    public LayerMask frontVolumeMask = 0;
-    public LayerMask backVolumeMask = 0;
+    public LayerMask shadowVolumeMask = 0;
     public float shadowSpaceSize = 50.0f;
 
     [Range(0.01f, 1.0f)]
@@ -132,13 +130,11 @@ public class SEGICascaded : MonoBehaviour
     Material material;
     Camera attachedCamera;
     Transform shadowCamTransform;
-    Camera shadowCam;
+    public Camera shadowCam;
     GameObject shadowCamGameObject;
     //public GameObject volumeGroup;
     public bool showVolumeObjects = false;
-    public GameObject volumeFront;
-    public GameObject volumeBack;
-    public GameObject volumeBox;
+    public GameObject volumeCube;
     public Camera volumeFrontCam;
     public Camera volumeBackCam;
     public float SEGIShadowBias = 0.2525f;
@@ -153,7 +149,8 @@ public class SEGICascaded : MonoBehaviour
 
     Shader sunDepthShader;
     Shader sunVolumeRayCastShader;
-
+    Shader frontRayCastShader;
+    Shader backRayCastShader;
     float shadowSpaceDepthRatio = 10.0f;
 
     int frameCounter = 0;
@@ -197,7 +194,7 @@ public class SEGICascaded : MonoBehaviour
     int clipmapCounter = 0;
     int currentClipmapIndex = 0;
 
-    Camera voxelCamera;
+    public Camera voxelCamera;
     GameObject voxelCameraGO;
     GameObject leftViewPoint;
     GameObject topViewPoint;
@@ -643,6 +640,8 @@ public class SEGICascaded : MonoBehaviour
         //Setup shaders and materials
         sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
         sunVolumeRayCastShader = Shader.Find("Custom/VolumeRayCasting");//TODO
+        frontRayCastShader = Shader.Find("Custom/FrontPos");
+        backRayCastShader = Shader.Find("Custom/BackPos");
         //clearCompute = Resources.Load("SEGIClear_C") as ComputeShader;
         transferIntsCompute = Resources.Load("SEGITransferInts_C") as ComputeShader;
         mipFilterCompute = Resources.Load("SEGIMipFilter_C") as ComputeShader;
@@ -698,42 +697,19 @@ public class SEGICascaded : MonoBehaviour
 
         if (useVolumeRayCast)
         {
-            volumeFront = GameObject.Find("SEGICubeFront");
-            if (!volumeFront)
+            volumeCube = GameObject.Find("SEGICubeVolume");
+            if (!volumeCube)
             {
-                volumeFront = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                volumeFront.name = "SEGICubeFront";
-                DestroyImmediate(volumeFront.GetComponent<Collider>());
+                volumeCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                volumeCube.name = "SEGICubeVolume";
+                DestroyImmediate(volumeCube.GetComponent<Collider>());
             }
-            volumeFront.layer = 19;//TODO use front layer
-            volumeFront.GetComponent<Renderer>().sharedMaterial = (Material)Resources.Load("SEGIFrontRC", typeof(Material));
-            volumeFront.hideFlags = showVolumeObjects ? HideFlags.None : HideFlags.HideAndDontSave;
+            volumeCube.layer = 19;//TODO use front layer
+            volumeCube.GetComponent<Renderer>().sharedMaterial = (Material)Resources.Load("SEGIFrontRC", typeof(Material));
+            volumeCube.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            volumeCube.hideFlags = showVolumeObjects ? HideFlags.None : HideFlags.HideAndDontSave;
 
-            volumeBack = GameObject.Find("SEGICubeBack");
-            if (!volumeBack)
-            {
-                volumeBack = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                volumeBack.name = "SEGICubeBack";
-                DestroyImmediate(volumeBack.GetComponent<Collider>());
-            }
-            volumeBack.layer = 21;//TODO use back layer
-            volumeBack.GetComponent<Renderer>().sharedMaterial = (Material)Resources.Load("SEGIBackRC", typeof(Material));
-            volumeBack.hideFlags = showVolumeObjects ? HideFlags.None : HideFlags.HideAndDontSave;
-
-            volumeBox = GameObject.Find("SEGICubeVolume");
-            if (!volumeBox)
-            {
-                volumeBox = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                volumeBox.name = "SEGICubeVolume";
-                DestroyImmediate(volumeBox.GetComponent<Collider>());
-            }
-            volumeBox.layer = 1;//TODO use volume layer
-            volumeBox.GetComponent<Renderer>().sharedMaterial = (Material)Resources.Load("SEGIVolumeRC", typeof(Material));
-            volumeBox.hideFlags = showVolumeObjects ? HideFlags.None : HideFlags.HideAndDontSave;
-
-            frontVolumeMask = 1 << volumeFront.layer;
-            backVolumeMask = 1 << volumeBack.layer;
-            volumeCullingMask = 1 << volumeBox.layer;
+            shadowVolumeMask = 1 << volumeCube.layer;
 
             if (!FrontRT)
             {
@@ -755,8 +731,8 @@ public class SEGICascaded : MonoBehaviour
             FixRes(FrontRT);
             FixRes(BackRT);
 
-            volumeBox.GetComponent<Renderer>().sharedMaterial.SetTexture("FrontS", FrontRT);
-            volumeBox.GetComponent<Renderer>().sharedMaterial.SetTexture("BackS", BackRT);
+            Shader.SetGlobalTexture("SEGIFrontS", FrontRT);
+            Shader.SetGlobalTexture("SEGIBackS", BackRT);
 
             GameObject frontCam = GameObject.Find("VolumeFrontCam");
             if (frontCam != null) volumeFrontCam = frontCam.GetComponent<Camera>();
@@ -767,7 +743,7 @@ public class SEGICascaded : MonoBehaviour
                 volumeFrontCam = goFrontCam.AddComponent<Camera>();
             }
             volumeFrontCam.CopyFrom(shadowCam);
-            volumeFrontCam.cullingMask = frontVolumeMask;
+            volumeFrontCam.cullingMask = shadowVolumeMask;
             volumeFrontCam.depth = -99;
             volumeFrontCam.targetTexture = FrontRT;
             volumeFrontCam.enabled = false;
@@ -781,7 +757,7 @@ public class SEGICascaded : MonoBehaviour
                 volumeBackCam = goBackCam.AddComponent<Camera>();
             }
             volumeBackCam.CopyFrom(shadowCam);
-            volumeBackCam.cullingMask = backVolumeMask;
+            volumeBackCam.cullingMask = shadowVolumeMask;
             volumeBackCam.depth = -99;
             volumeBackCam.targetTexture = BackRT;
             volumeBackCam.enabled = false;
@@ -948,9 +924,7 @@ public class SEGICascaded : MonoBehaviour
         DestroyImmediate(leftViewPoint);
         DestroyImmediate(topViewPoint);
         DestroyImmediate(shadowCamGameObject);
-        DestroyImmediate(volumeFront);
-        DestroyImmediate(volumeBack);
-        DestroyImmediate(volumeBox);
+        DestroyImmediate(volumeCube);
         initChecker = null;
         CleanupTextures();
     }
@@ -1343,7 +1317,7 @@ public class SEGICascaded : MonoBehaviour
             if (sun != null)
             {
                 //if (currentClipmapIndex <= 2)
-                shadowCam.cullingMask = useVolumeRayCast ? volumeCullingMask : giCullingMask;
+                shadowCam.cullingMask = useVolumeRayCast ? shadowVolumeMask : giCullingMask;
 
                 Vector3 shadowCamPosition = activeClipmap.origin + Vector3.Normalize(-sun.transform.forward) * clipmapShadowSize * 0.5f * shadowSpaceDepthRatio;
 
@@ -1355,27 +1329,27 @@ public class SEGICascaded : MonoBehaviour
                 shadowCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
 
 
-                if (useVolumeRayCast && voxelToGIProjection!= null && voxelToGIProjection.Length > 0)//TODO use only one volumeBox and RenderWithShader
+                if (useVolumeRayCast && voxelToGIProjection!= null && voxelToGIProjection.Length > 0)
                 {
                     voxelToGIProjection[currentClipmapIndex] = shadowCam.projectionMatrix * shadowCam.worldToCameraMatrix * voxelCamera.cameraToWorldMatrix;
 
-                    volumeFront.transform.position = volumeBack.transform.position = volumeBox.transform.position = activeClipmap.origin;
-                    volumeFront.transform.localScale = volumeBack.transform.localScale = volumeBox.transform.localScale = Vector3.one * clipmapSize;
+                    volumeCube.transform.position = activeClipmap.origin;
+                    volumeCube.transform.localScale = Vector3.one * clipmapSize;
 
                     volumeFrontCam.transform.position = shadowCamPosition;
                     volumeFrontCam.transform.LookAt(activeClipmap.origin, Vector3.up);
                     volumeFrontCam.orthographicSize = clipmapShadowSize;
                     volumeFrontCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
-                    volumeFrontCam.Render();
+                    volumeFrontCam.RenderWithShader(frontRayCastShader, "");
 
                     volumeBackCam.transform.position = shadowCamPosition;
                     volumeBackCam.transform.LookAt(activeClipmap.origin, Vector3.up);
                     volumeBackCam.orthographicSize = clipmapShadowSize;
                     volumeBackCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
-                    volumeBackCam.Render();
+                    volumeBackCam.RenderWithShader(backRayCastShader, "RenderType");
 
-                    Shader.SetGlobalTexture("FrontS", FrontRT);
-                    Shader.SetGlobalTexture("BackS", BackRT);
+                    //Shader.SetGlobalTexture("SEGIFrontS", FrontRT);
+                    //Shader.SetGlobalTexture("SEGIBackS", BackRT);
                     Shader.SetGlobalTexture("RG0", integerVolume);
                     //Shader.SetGlobalTexture("SEGIActiveClipmapVolume", activeClipmap.volumeTexture0);
                 }else
@@ -1389,7 +1363,7 @@ public class SEGICascaded : MonoBehaviour
                 {
                     shadowCam.targetTexture = sunDepthTexture[currentIndex];
                     shadowCam.SetTargetBuffers(sunDepthTexture[currentIndex].colorBuffer, sunDepthTexture[currentIndex].depthBuffer);
-                    shadowCam.RenderWithShader(useVolumeRayCast ? sunVolumeRayCastShader : sunDepthShader, "");
+                    shadowCam.RenderWithShader(useVolumeRayCast ? sunVolumeRayCastShader : sunDepthShader, useVolumeRayCast ? "RenderType" : "");
                     Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture[currentIndex]);
                 }
                 if (useUnityShadowMap == false)

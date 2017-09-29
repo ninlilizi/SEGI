@@ -5,7 +5,8 @@ Shader "Custom/FrontPos" {
 		//_MainTex ("Base (RGB)", 2D) = "white" {}
 	}
 	SubShader {
-	    Pass {
+		Tags{ "RenderType" = "RayCastVolume" "ForceNoShadowCasting" = "True" "IgnoreProjector" = "True" }
+		Pass {
 	        Fog { Mode Off }
 	        
 			CGPROGRAM
