@@ -498,7 +498,7 @@ public class SEGICascaded : MonoBehaviour
             //    Debug.Log("SEGI using external m_ShadowmapCopy");
             //    m_ShadowmapCopy = ngss.m_ShadowmapCopy;
             //}
-
+            //Debug.Log("m_ShadowmapCopy " + m_ShadowmapCopy);
             if(m_ShadowmapCopy == null)
             {
                 RenderTargetIdentifier shadowmap = BuiltinRenderTextureType.CurrentActive;
@@ -1085,6 +1085,7 @@ public class SEGICascaded : MonoBehaviour
     bool useUnityShadowMapPrev = false;
     void CheckShadowKeyword(string strKeyword, string strState)
     {
+        useUnityShadowMapPrev = useUnityShadowMap;
         int line_to_edit = 1; // Warning: 1-based indexing!
 
         string path = "Assets/Plugins/Features/SEGI";
@@ -1402,7 +1403,7 @@ public class SEGICascaded : MonoBehaviour
 
                     Vector4 minPosVoxel = activeClipmap.origin - Vector3.one * clipmapSize * 0.5f;
                     minPosVoxel.w = clipmapSize;
-                    Shader.SetGlobalVector("minPosVoxel", minPosVoxel);
+                    Shader.SetGlobalVector("SEGIMinPosVoxel", minPosVoxel);
                     Shader.SetGlobalTexture("SEGIShadowmapCopy", m_ShadowmapCopy);
                 }
 

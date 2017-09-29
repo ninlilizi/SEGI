@@ -227,7 +227,7 @@
 					#if UNITY_VERSION >= 560
 					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); // required for sampling the correct slice of the shadow map render texture array
 					#endif
-					float4 wpos = float4(minPosVoxel.xyz + fcoord.xyz * minPosVoxel.w, 1);
+					float4 wpos = float4(SEGIMinPosVoxel.xyz + fcoord.xyz * SEGIMinPosVoxel.w, 1);
 					fixed4 cascadeWeights = getCascadeWeights_splitSpheres(wpos);
 					float4 shadowPosCopy = getShadowCoord(wpos, cascadeWeights);
 					//float3 coordCascade0 = getShadowCoord_SingleCascade(wpos);

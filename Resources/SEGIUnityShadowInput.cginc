@@ -121,4 +121,4 @@ inline float4 getShadowCoord_SingleCascade(float4 wpos)
 //}
 
 
-float4 minPosVoxel;
+float4 SEGIMinPosVoxel;
