@@ -111,13 +111,18 @@ Shader "Custom/VolumeRayCasting" {
 
 			float DecodeAuint(uint value)
 			{
+				//const float div = 1.0f / 255.0f;
+				//float alpha = (value >> 24) * div;
+				//alpha *= 2.0;
+				//return alpha;
+
 				uint ai = value & 0x0000007F;
 				float a = ai * 2.0;
 				return a;
 			}
 
 			float4 SEGI_GRID_SIZE;
-			Texture2D<uint> RG0;
+			Texture2DArray<uint> SEGIRG0;
 
 			float4 fragDepth( v2f i ) : COLOR {
 				
@@ -144,7 +149,7 @@ Shader "Custom/VolumeRayCasting" {
 					uint3 coord = pos.xyz * 128;
 					uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-					value = DecodeAuint(RG0[coord2D]); //tex3Dlod(SEGIActiveClipmapVolume, pos); //tex3Dlod(VolumeS, pos);
+					value = DecodeAuint(SEGIRG0[uint3(coord2D, 0)]); //tex3Dlod(SEGIActiveClipmapVolume, pos); //tex3Dlod(VolumeS, pos);
 
 					//50.0f should really be a settable uniform variable
 					if ((value * 255.0f) >= 50.0f)

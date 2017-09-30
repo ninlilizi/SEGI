@@ -1,4 +1,4 @@
-﻿Shader "Hidden/SEGIVoxelizeScene_C2" {
+﻿Shader "Hidden/SEGIVoxelizeSceneNoShadows_C" {
 	Properties
 	{
 		_Color ("Main Color", Color) = (1,1,1,1)
@@ -25,8 +25,9 @@
 				#include "SEGIUnityShadowInput.cginc"
 				#include "SEGI_C.cginc"
 
-				RWTexture2D<uint> RG0;
-				
+				RWTexture2DArray<uint> RG0;
+				//RWStructuredBuffer<colorStruct> RG0Buffer;
+
 				int LayerToVisualize;
 				
 				float4x4 SEGIVoxelViewFront;
@@ -235,8 +236,12 @@
 					//TODO sunShadow missing skylight?
 
 					//float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
-					float3 col = sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
+					
+					float3 col = color.rgb * tex.rgb;
+					float3 colShaded = sunNdotL * GISunColor.rgb * GISunColor.a;
+					float3 colEmission = _EmissionColor.rgb * 0.9 * emissionTex.rgb;
 
+					//col *= colShaded;
 
 					 
 					float4 result = float4(col.rgb, 2.0);
@@ -264,16 +269,16 @@
 					coordOcclusion = coord - int3(input.normal.xyz * sqrt2 * 2.0);
 					uint2 coord2DOcclusion2 = uint2(coordOcclusion.x + gridSize.x*(coordOcclusion.z%gridSize.w), coordOcclusion.y + gridSize.y*(coordOcclusion.z / gridSize.w));
 
-					interlockedAddFloat4(RG0, coord2D, result);
+					interlockedAddFloat4(RG0, coord2D, result, colShaded, colEmission);
 
 					if (SEGIInnerOcclusionLayers > 0)
 					{
-						interlockedAddFloat4b(RG0, coord2DOcclusion1, float4(0.0, 0.0, 0.0, 14.0));
+						interlockedAddFloat4c(RG0, coord2DOcclusion1, float4(0.0, 0.0, 0.0, 14.0));
 					}
 
 					if (SEGIInnerOcclusionLayers > 1)
 					{
-						interlockedAddFloat4b(RG0, coord2DOcclusion2, float4(0.0, 0.0, 0.0, 22.0));
+						interlockedAddFloat4c(RG0, coord2DOcclusion2, float4(0.0, 0.0, 0.0, 22.0));
 					}
 					
 					return float4(0.0, 0.0, 0.0, 0.0);

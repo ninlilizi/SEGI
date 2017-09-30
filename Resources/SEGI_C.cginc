@@ -412,6 +412,11 @@ float3 hsv2rgb(float3 c)
 
 float4 DecodeRGBAuint(uint value)
 {
+	//const float div = 1.0f / 255.0f;
+	//float4 colorOut = float4((value & 0xFF) * div, ((value & 0xFFFF) >> 8) * div, ((value & 0xFFFFFF) >> 16) * div, (value >> 24) * div);
+	//colorOut.a *= 2.0;
+	//return colorOut;
+
 	uint ai = value & 0x0000007F;
 	uint vi = (value / 0x00000080) & 0x000007FF;
 	uint si = (value / 0x00040000) & 0x0000007F;
@@ -431,6 +436,8 @@ float4 DecodeRGBAuint(uint value)
 
 uint EncodeRGBAuint(float4 color)
 {
+	//return uint(color.r * 255) + (uint(color.g * 255) << 8) + (uint(color.b * 255) << 16) + (uint(color.a * 255) << 24);
+
 	//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
 	float3 hsv = rgb2hsv(color.rgb);
 	hsv.z = pow(hsv.z, 1.0 / 3.0);
@@ -455,38 +462,63 @@ float4 SEGI_GRID_SIZE;
 void interlockedAddFloat4(RWTexture2D<uint> destination, uint2 coord, float4 value)
 {
 	uint writeValue = EncodeRGBAuint(value);
-	uint compareValue = 0;
-	uint originalValue;
+	InterlockedMax(destination[coord], writeValue);
+	//uint compareValue = 0;
+	//uint originalValue;
 
-	[allow_uav_condition]
+	//[allow_uav_condition]
 	//for (int i = 0; i < 12; i++) //performance?
-	while (true)
-	{
-		InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
-		if (compareValue == originalValue)
-			break;
-		compareValue = originalValue;
-		float4 originalValueFloats = DecodeRGBAuint(originalValue);
-		writeValue = EncodeRGBAuint(originalValueFloats + value);
-	}
+	////while (true)
+	//{
+	//	InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
+	//	if (compareValue == originalValue)
+	//		break;
+	//	compareValue = originalValue;
+	//	float4 originalValueFloats = DecodeRGBAuint(originalValue);
+	//	writeValue = EncodeRGBAuint(originalValueFloats + value);
+	//}
+}
+
+//void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint3 coord, float4 value)
+//{
+//	uint writeValue = EncodeRGBAuint(value);
+//	InterlockedMax(destination[coord], writeValue);
+//}
+
+void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint2 coord, float4 value, float3 shaded, float3 emission)
+{
+	uint writeValue = EncodeRGBAuint(value);
+	uint writeValue1 = EncodeRGBAuint(float4(shaded, value.a));
+	uint writeValue2 = EncodeRGBAuint(float4(emission, value.a));
+
+	InterlockedMax(destination[uint3(coord, 0)], writeValue);
+	InterlockedMax(destination[uint3(coord, 1)], writeValue1);
+	InterlockedMax(destination[uint3(coord, 2)], writeValue2);
 }
 
 void interlockedAddFloat4b(RWTexture2D<uint> destination, uint2 coord, float4 value)
 {
 	uint writeValue = EncodeRGBAuint(value);
-	uint compareValue = 0;
-	uint originalValue;
+	InterlockedAdd(destination[coord], writeValue);
+	//uint compareValue = 0;
+	//uint originalValue;
 
-	[allow_uav_condition]
-	[unroll(1)]
-	for (int i = 0; i < 1; i++) //better performance
-								//while (true)
-	{
-		InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
-		if (compareValue == originalValue)
-			break;
-		compareValue = originalValue;
-		float4 originalValueFloats = DecodeRGBAuint(originalValue);
-		writeValue = EncodeRGBAuint(originalValueFloats + value);
-	}
+	//[allow_uav_condition]
+	//[unroll(1)]
+	//for (int i = 0; i < 1; i++) //better performance
+	////while (true)
+	//{
+	//	InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
+	//	if (compareValue == originalValue)
+	//		break;
+	//	compareValue = originalValue;
+	//	float4 originalValueFloats = DecodeRGBAuint(originalValue);
+	//	writeValue = EncodeRGBAuint(originalValueFloats + value);
+	//}
+}
+
+void interlockedAddFloat4c(RWTexture2DArray<uint> destination, uint2 coord, float4 value)
+{
+	uint writeValue = EncodeRGBAuint(value);
+	InterlockedAdd(destination[uint3(coord, 0)], writeValue);
 }

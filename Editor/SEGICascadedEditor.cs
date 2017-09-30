@@ -214,7 +214,7 @@ public class SEGICascadedEditor : Editor
             showVolumeConfig = EditorGUILayout.Foldout(showVolumeConfig, new GUIContent("VolumeRayCasting Configuration"));
             if (showVolumeConfig)
             {
-                EditorGUILayout.PropertyField(showVolumeObjects, new GUIContent("Show Volume Objects", "Show Cubes that get used for VolumeRayCasting in Hierarchy (Runtime)."));
+                EditorGUILayout.PropertyField(showVolumeObjects, new GUIContent("Show Volume Cube", "Show Cube that gets used for VolumeRayCasting in Hierarchy (Runtime)."));
                 EditorGUILayout.PropertyField(shadowVolumeMask, new GUIContent("Volume Culling Mask", "Which layer has the Volume Object in it."));
             }
             GUI.enabled = true;

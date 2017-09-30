@@ -5,7 +5,7 @@
 RWTexture3D<float4> Result;
 Texture3D<float4> PrevResult;
 
-Texture2D<uint> RG0;
+Texture2DArray<uint> RG0;
 
 SamplerState _PointClamp;
 
@@ -17,12 +17,12 @@ float4 VoxelOriginDelta;
 float4 ClipmapOverlap;
 float4 SEGI_GRID_SIZE;
 
-float2 IntToFloats(uint intval)
-{
-	float value1 = f16tof32(intval);
-	float value2 = f16tof32(intval / 0x0000FFFF);
-	return float2(value1, value2);
-}
+//float2 IntToFloats(uint intval)
+//{
+//	float value1 = f16tof32(intval);
+//	float value2 = f16tof32(intval / 0x0000FFFF);
+//	return float2(value1, value2);
+//}
 
 float3 hsv2rgb(float3 c)
 {
@@ -33,6 +33,11 @@ float3 hsv2rgb(float3 c)
 
 float4 DecodeRGBAuint(uint value)
 {
+	//const float div = 1.0f / 255.0f;
+	//float4 colorOut = float4((value & 0xFF) * div, ((value & 0xFFFF) >> 8) * div, ((value & 0xFFFFFF) >> 16) * div, (value >> 24) * div);
+	//colorOut.a *= 2.0;
+	//return colorOut;
+
 	uint ai = value & 0x0000007F;
 	uint vi = (value / 0x00000080) & 0x000007FF;
 	uint si = (value / 0x00040000) & 0x0000007F;
@@ -61,7 +66,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 		uint3 coord = uint3(id.x, id.y, i);
 		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-		result.rgba = DecodeRGBAuint(RG0[coord2D]);
+		result.rgba = DecodeRGBAuint(RG0[uint3(coord2D,0)]);
 
 		result /= 1 + VoxelAA * 3;
 
@@ -93,7 +98,7 @@ void CSMain2 (uint3 id : SV_DispatchThreadID)
 		uint3 coord = uint3(id.x, id.y, i);
 		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-		result.rgba = DecodeRGBAuint(RG0[coord2D]);
+		result.rgba = DecodeRGBAuint(RG0[uint3(coord2D,0)]);
 
 		result.rgb /= max(2.0, result.a);
 
@@ -112,26 +117,36 @@ float3 TransformClipSpace(float3 pos, float4 transform)
 }
 
 uint SEGICurrentClipmapIndex;
+float SEGIShadowBias;
+float SEGISecondaryBounceGain;
+float4 SEGIVoxelSpaceOriginDelta;
+
 float4 SEGIShadowClipTransform1;
 float4 SEGIShadowClipTransform2;
 float4 SEGIShadowClipTransform3;
+float4 SEGIShadowClipTransform4;
+float4 SEGIShadowClipTransform5;
+float4x4 SEGIVoxelProjectionInverse;
 float4x4 SEGIVoxelProjectionInverse1;
 float4x4 SEGIVoxelProjectionInverse2;
 float4x4 SEGIVoxelProjectionInverse3;
+float4x4 SEGIVoxelProjectionInverse4;
+float4x4 SEGIVoxelProjectionInverse5;
+float4x4 SEGIVoxelToGIProjection;
 float4x4 SEGIVoxelToGIProjection1;
 float4x4 SEGIVoxelToGIProjection2;
 float4x4 SEGIVoxelToGIProjection3;
+float4x4 SEGIVoxelToGIProjection4;
+float4x4 SEGIVoxelToGIProjection5;
+
+sampler2D SEGISunDepth;
 sampler2D SEGISunDepth1;
 sampler2D SEGISunDepth2;
 sampler2D SEGISunDepth3;
-
-float SEGIShadowBias;
-float4x4 SEGIVoxelProjectionInverse;
-float4x4 SEGIVoxelToGIProjection;
-sampler2D SEGISunDepth;
+sampler2D SEGISunDepth4;
+sampler2D SEGISunDepth5;
 sampler3D SEGICurrentIrradianceVolume;
-float4 SEGIVoxelSpaceOriginDelta;
-float SEGISecondaryBounceGain;
+
 
 [numthreads(16, 16, 1)]
 void CSMainColor(uint3 id : SV_DispatchThreadID)
@@ -139,21 +154,43 @@ void CSMainColor(uint3 id : SV_DispatchThreadID)
 	for (int i = 0; i < Resolution; i++)
 	{
 		float4 result = float4(0, 0, 0, 0);
+		float4 colShaded = float4(0, 0, 0, 0);
+		float4 colEmission = float4(0, 0, 0, 0);
 
 		const float4 gridSize = SEGI_GRID_SIZE;
 		uint3 coord = uint3(id.x, id.y, i);
 		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-		result.rgba = DecodeRGBAuint(RG0[coord2D]);
+		result = DecodeRGBAuint(RG0[uint3(coord2D, 0)]);
+		colShaded = DecodeRGBAuint(RG0[uint3(coord2D, 1)]);
+		colEmission = DecodeRGBAuint(RG0[uint3(coord2D, 2)]);
 
 		float3 fcoord = uint3(id.x, id.y, i) / float(Resolution);
 
 		//TODO add more
+		float4 shadowPos = mul(SEGIVoxelProjectionInverse5, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform5) * 2.0 - 1.0, 0.0));
+		shadowPos = mul(SEGIVoxelToGIProjection5, shadowPos);
+		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
+		float sunDepth = tex2Dlod(SEGISunDepth5, float4(shadowPos.xy, 0, 0)).x;
+		//#if defined(UNITY_REVERSED_Z)
+		sunDepth = 1.0 - sunDepth;
+		//#endif
+		float sunVisibility5 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
-		float4 shadowPos = mul(SEGIVoxelProjectionInverse3, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform3) * 2.0 - 1.0, 0.0));
+
+		shadowPos = mul(SEGIVoxelProjectionInverse4, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform4) * 2.0 - 1.0, 0.0));
+		shadowPos = mul(SEGIVoxelToGIProjection4, shadowPos);
+		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
+		sunDepth = tex2Dlod(SEGISunDepth4, float4(shadowPos.xy, 0, 0)).x;
+		//#if defined(UNITY_REVERSED_Z)
+		sunDepth = 1.0 - sunDepth;
+		//#endif
+		float sunVisibility4 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
+
+		shadowPos = mul(SEGIVoxelProjectionInverse3, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform3) * 2.0 - 1.0, 0.0));
 		shadowPos = mul(SEGIVoxelToGIProjection3, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		float sunDepth = tex2Dlod(SEGISunDepth3, float4(shadowPos.xy, 0, 0)).x;
+		sunDepth = tex2Dlod(SEGISunDepth3, float4(shadowPos.xy, 0, 0)).x;
 		//#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
 		//#endif
@@ -185,18 +222,28 @@ void CSMainColor(uint3 id : SV_DispatchThreadID)
 		sunDepth = 1.0 - sunDepth;
 		//#endif
 		float sunVisibility = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
+		float tempSadow = sunVisibility;
 
 		if (SEGICurrentClipmapIndex == 0)
-			sunVisibility = (sunVisibility + sunVisibility1 * 40 + sunVisibility2 * 20 + sunVisibility3 * 10) * 0.014f;
+			sunVisibility = (sunVisibility + sunVisibility1 * 6 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 15.0f;
 
 		if (SEGICurrentClipmapIndex == 1)
-			sunVisibility = (sunVisibility + sunVisibility2 * 40 + sunVisibility3 * 4) * 0.02f;
+			sunVisibility = (sunVisibility * 2 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 10.0f;
 
 		if (SEGICurrentClipmapIndex == 2)
-			sunVisibility = (sunVisibility + sunVisibility3 * 40) * 0.024f;
+			sunVisibility = (sunVisibility * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 8.0f;
 
-		float3 color = result.rgb; // remove sunNdotL and add it later here
-		result.rgb *= sunVisibility;//TODO
+		if (SEGICurrentClipmapIndex == 3)
+			sunVisibility = (sunVisibility * 6 + sunVisibility4 + sunVisibility5) / 8.0f;
+
+		if (SEGICurrentClipmapIndex == 4)
+			sunVisibility = (sunVisibility * 8 + sunVisibility5) / 9.0f;
+
+
+		sunVisibility = saturate(((sunVisibility - 0.5f) * max(3, 0)) + 0.5f);
+
+		float3 color = result.rgb;
+		result.rgb = color * colShaded.rgb * sunVisibility + colEmission.rgb;
 
 		float4 prevBounce = tex3Dlod(SEGICurrentIrradianceVolume, float4(fcoord + SEGIVoxelSpaceOriginDelta.xyz,0));
 		result.rgb += prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * color.rgb;// tex.rgb * color.rgb;
