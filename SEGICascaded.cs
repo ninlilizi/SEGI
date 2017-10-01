@@ -121,7 +121,7 @@ public class SEGICascaded : MonoBehaviour
     public bool sphericalSkylight = false;
 
     public bool useUnityShadowMap = false;
-    #endregion
+    #endregion // Parameters
 
 
 
@@ -129,6 +129,7 @@ public class SEGICascaded : MonoBehaviour
     #region InternalVariables
     object initChecker;
     Material material;
+    Material m_CopyShadowParamsMaterial;
     Camera attachedCamera;
     Transform shadowCamTransform;
     public Camera shadowCam;
@@ -156,7 +157,6 @@ public class SEGICascaded : MonoBehaviour
 
     int frameCounter = 0;
 
-
     public RenderTexture m_ShadowmapCopy;
 
     public RenderTexture[] sunDepthTexture;
@@ -180,13 +180,12 @@ public class SEGICascaded : MonoBehaviour
     ///<summary>The secondary clipmaps that hold irradiance data for infinite bounces</summary>
     Clipmap[] irradianceClipmaps;
 
-
-
     bool notReadyToRender = false;
 
     Shader voxelizationShader;
     Shader voxelizationShaderNoShadows;
     Shader voxelTracingShader;
+    Shader m_CopyShadowParamsShader;
 
     //ComputeShader clearCompute;
     ComputeShader transferIntsCompute;
@@ -228,7 +227,10 @@ public class SEGICascaded : MonoBehaviour
     }
 
     RenderState renderState = RenderState.Voxelize;
-    #endregion
+
+    ComputeBuffer m_ShadowParamsCB;
+    Vector4 minPosVoxel;
+    #endregion // InternalVariables
 
 
 
@@ -384,7 +386,7 @@ public class SEGICascaded : MonoBehaviour
             {
                 //volumeTexture0.DiscardContents();
                 volumeTexture0.Release();
-                //DestroyImmediate(volumeTexture0);
+                DestroyImmediate(volumeTexture0);//TODO needed? unity should handle this
             }
         }
     }
@@ -419,7 +421,7 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
-    #endregion
+    #endregion // SupportingObjectsAndProperties
 
 
 
@@ -733,11 +735,17 @@ public class SEGICascaded : MonoBehaviour
         voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
         voxelizationShaderNoShadows = Shader.Find("Hidden/SEGIVoxelizeSceneNoShadows_C");
         voxelTracingShader = Shader.Find("Hidden/SEGITraceScene_C");
+        m_CopyShadowParamsShader = Shader.Find("Hidden/SEGICopyShadowParams");
 
         if (!material)
         {
             material = new Material(Shader.Find("Hidden/SEGI_C"));
             material.hideFlags = HideFlags.HideAndDontSave;
+        }
+        if (!m_CopyShadowParamsMaterial)
+        {
+            m_CopyShadowParamsMaterial = new Material(m_CopyShadowParamsShader);
+            m_CopyShadowParamsMaterial.hideFlags = HideFlags.HideAndDontSave;
         }
 
         //Get the camera attached to this game object
@@ -883,7 +891,7 @@ public class SEGICascaded : MonoBehaviour
         {
             //texture.DiscardContents();
             texture.Release();
-            //DestroyImmediate(texture);
+            DestroyImmediate(texture);//TODO needed?
         }
     }
 
@@ -923,7 +931,12 @@ public class SEGICascaded : MonoBehaviour
 
     void Cleanup()
     {
+        if (m_ShadowParamsCB != null)
+            m_ShadowParamsCB.Release();
+        m_ShadowParamsCB = null;
+
         DestroyImmediate(material);
+        DestroyImmediate(m_CopyShadowParamsMaterial);
         DestroyImmediate(voxelCameraGO);
         DestroyImmediate(leftViewPoint);
         DestroyImmediate(topViewPoint);
@@ -1376,7 +1389,7 @@ public class SEGICascaded : MonoBehaviour
                     if (m_ShadowmapCopy == null) InitShadowmapCopy();//TODO use NGSS shadowCopy
                     SetShadowKeyword("SEGI_UNITY_SHADOWMAP_", "ON");
 
-                    Vector4 minPosVoxel = activeClipmap.origin - Vector3.one * clipmapSize * 0.5f;
+                    minPosVoxel = activeClipmap.origin - Vector3.one * clipmapSize * 0.5f;
                     minPosVoxel.w = clipmapSize;
                     Shader.SetGlobalVector("SEGIMinPosVoxel", minPosVoxel);
                     Shader.SetGlobalTexture("SEGIShadowmapCopy", m_ShadowmapCopy);
@@ -1407,8 +1420,26 @@ public class SEGICascaded : MonoBehaviour
             }
             else // if (voxelProjectionInverse != null && voxelProjectionInverse.Length > 0)//useVolumeRayCast //TODO add unity shadowmap and emission texture
             {
-                //Transfer the data from the volume integer texture to the main volume texture used for GI tracing and apply shadows here
                 kernel = 2;
+
+                if (useUnityShadowMap)
+                {
+                    // Copy directional shadowmap params - they're only set for regular shaders, but we need them in compute
+                    if (m_ShadowParamsCB == null)
+                        m_ShadowParamsCB = new ComputeBuffer(1, 336);//sizeof(float) * 16 * 4 + sizeof(float) * 4 * 4 + sizeof(float) * 4
+                    Graphics.SetRandomWriteTarget(2, m_ShadowParamsCB);
+                    m_CopyShadowParamsMaterial.SetPass(0);
+                    Graphics.DrawProcedural(MeshTopology.Points, 1);
+                    Graphics.ClearRandomWriteTargets();
+
+                    minPosVoxel = activeClipmap.origin - Vector3.one * clipmapSize * 0.5f;
+                    minPosVoxel.w = clipmapSize;
+
+                    transferIntsCompute.SetVector("SEGIMinPosVoxel", minPosVoxel);
+                    transferIntsCompute.SetBuffer(kernel, "_ShadowParams", m_ShadowParamsCB);
+                    transferIntsCompute.SetTexture(kernel, "SEGIShadowmapCopy", m_ShadowmapCopy);
+                }
+                //Transfer the data from the volume integer texture to the main volume texture used for GI tracing and apply shadows here
                 transferIntsCompute.SetInt("SEGICurrentClipmapIndex", currentClipmapIndex);
                 for (int i = 1; i < numClipmaps; i++)
                 {
@@ -1418,14 +1449,14 @@ public class SEGICascaded : MonoBehaviour
                     clipScaleFromMaster = clipmaps[currentClipmapIndex].localScale / clipmaps[i].localScale;
 
                     transferIntsCompute.SetVector("SEGIShadowClipTransform" + i, new Vector4(clipPosFromMaster.x, clipPosFromMaster.y, clipPosFromMaster.z, clipScaleFromMaster));
-                    transferIntsCompute.SetFloats("SEGIVoxelProjectionInverse" + i, MatrixToFloat(voxelProjectionInverse[i]));
-                    transferIntsCompute.SetFloats("SEGIVoxelToGIProjection" + i, MatrixToFloat(voxelToGIProjection[i]));
+                    transferIntsCompute.SetFloats("SEGIVoxelProjectionInverse" + i, MatrixToFloats(voxelProjectionInverse[i]));
+                    transferIntsCompute.SetFloats("SEGIVoxelToGIProjection" + i, MatrixToFloats(voxelToGIProjection[i]));
                     transferIntsCompute.SetTexture(kernel, "SEGISunDepth" + i, sunDepthTexture[i]);
                 }
 
                 transferIntsCompute.SetFloat("SEGIShadowBias", -(1 - SEGIShadowBias));
-                transferIntsCompute.SetFloats("SEGIVoxelProjectionInverse", MatrixToFloat(voxelCamera.projectionMatrix.inverse));
-                transferIntsCompute.SetFloats("SEGIVoxelToGIProjection", MatrixToFloat(voxelToGIProjection[currentClipmapIndex]));
+                transferIntsCompute.SetFloats("SEGIVoxelProjectionInverse", MatrixToFloats(voxelCamera.projectionMatrix.inverse));
+                transferIntsCompute.SetFloats("SEGIVoxelToGIProjection", MatrixToFloats(voxelToGIProjection[currentClipmapIndex]));
                 transferIntsCompute.SetTexture(kernel, "SEGISunDepth", sunDepthTexture[currentClipmapIndex]);
 
                 transferIntsCompute.SetFloat("SEGISecondaryBounceGain", infiniteBounces ? secondaryBounceGain : 0.0f);
@@ -1818,7 +1849,33 @@ public class SEGICascaded : MonoBehaviour
         frameCounter = (frameCounter + 1) % (64);
     }
 
-    float[] MatrixToFloat(Matrix4x4 mat)
+    float[] Vector4ArrayToFloats(Vector4[] vecArray)
+    {
+        float[] temp = new float[vecArray.Length * 4];
+        for (int i = 0; i < vecArray.Length; i++)
+        {
+            temp[i * 4 + 0] = vecArray[i].x;
+            temp[i * 4 + 1] = vecArray[i].y;
+            temp[i * 4 + 2] = vecArray[i].z;
+            temp[i * 4 + 3] = vecArray[i].w;
+        }
+        return temp;
+    }
+
+    float[] MatrixArrayToFloats(Matrix4x4[] mats)
+    {
+        float[] temp = new float[mats.Length * 16];
+        for (int i = 0; i < mats.Length; i++)
+        {
+            for (int n = 0; n < 16; n++)
+            {
+                temp[i * 16 + n] = mats[i][n];
+            }
+        }
+        return temp;
+    }
+
+    float[] MatrixToFloats(Matrix4x4 mat)
     {
         float[] temp = new float[16];
         for (int i = 0; i < 16; i++)
@@ -1827,7 +1884,7 @@ public class SEGICascaded : MonoBehaviour
         }
         return temp;
     }
-    float[] MatrixToFloat(Matrix4x4 mat, bool transpose)
+    float[] MatrixToFloats(Matrix4x4 mat, bool transpose)
     {
         Matrix4x4 matTranspose = mat;
         if (transpose)

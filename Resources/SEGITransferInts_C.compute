@@ -2,6 +2,8 @@
 #pragma kernel CSMain2
 #pragma kernel CSMainColor
 
+#include "SEGIUnityShadowInput.cginc"
+
 RWTexture3D<float4> Result;
 Texture3D<float4> PrevResult;
 
@@ -172,9 +174,9 @@ void CSMainColor(uint3 id : SV_DispatchThreadID)
 		shadowPos = mul(SEGIVoxelToGIProjection5, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 		float sunDepth = tex2Dlod(SEGISunDepth5, float4(shadowPos.xy, 0, 0)).x;
-		//#if defined(UNITY_REVERSED_Z)
+		#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
-		//#endif
+		#endif
 		float sunVisibility5 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
 
@@ -182,53 +184,53 @@ void CSMainColor(uint3 id : SV_DispatchThreadID)
 		shadowPos = mul(SEGIVoxelToGIProjection4, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 		sunDepth = tex2Dlod(SEGISunDepth4, float4(shadowPos.xy, 0, 0)).x;
-		//#if defined(UNITY_REVERSED_Z)
+		#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
-		//#endif
+		#endif
 		float sunVisibility4 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
 		shadowPos = mul(SEGIVoxelProjectionInverse3, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform3) * 2.0 - 1.0, 0.0));
 		shadowPos = mul(SEGIVoxelToGIProjection3, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 		sunDepth = tex2Dlod(SEGISunDepth3, float4(shadowPos.xy, 0, 0)).x;
-		//#if defined(UNITY_REVERSED_Z)
+		#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
-		//#endif
+		#endif
 		float sunVisibility3 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
 		shadowPos = mul(SEGIVoxelProjectionInverse2, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform2) * 2.0 - 1.0, 0.0));
 		shadowPos = mul(SEGIVoxelToGIProjection2, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 		sunDepth = tex2Dlod(SEGISunDepth2, float4(shadowPos.xy, 0, 0)).x;
-		//#if defined(UNITY_REVERSED_Z)
+		#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
-		//#endif
+		#endif
 		float sunVisibility2 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
 		shadowPos = mul(SEGIVoxelProjectionInverse1, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform1) * 2.0 - 1.0, 0.0));
 		shadowPos = mul(SEGIVoxelToGIProjection1, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 		sunDepth = tex2Dlod(SEGISunDepth1, float4(shadowPos.xy, 0, 0)).x;
-		//#if defined(UNITY_REVERSED_Z)
+		#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
-		//#endif
+		#endif
 		float sunVisibility1 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
 		shadowPos = mul(SEGIVoxelProjectionInverse, float4(fcoord * 2.0 - 1.0, 0.0));
 		shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
 		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 		sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
-		//#if defined(UNITY_REVERSED_Z)
+		#if defined(UNITY_REVERSED_Z)
 		sunDepth = 1.0 - sunDepth;
-		//#endif
+		#endif
 		float sunVisibility = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 		float tempSadow = sunVisibility;
 
 		if (SEGICurrentClipmapIndex == 0)
-			sunVisibility = (sunVisibility + sunVisibility1 * 6 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 15.0f;
+			sunVisibility = (sunVisibility * 4 + sunVisibility1 * 6 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 19.0f;
 
 		if (SEGICurrentClipmapIndex == 1)
-			sunVisibility = (sunVisibility * 2 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 10.0f;
+			sunVisibility = (sunVisibility * 6 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 14.0f;
 
 		if (SEGICurrentClipmapIndex == 2)
 			sunVisibility = (sunVisibility * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 8.0f;
@@ -239,8 +241,23 @@ void CSMainColor(uint3 id : SV_DispatchThreadID)
 		if (SEGICurrentClipmapIndex == 4)
 			sunVisibility = (sunVisibility * 8 + sunVisibility5) / 9.0f;
 
+		const float contrast = 3;
+		sunVisibility = saturate(((sunVisibility - 0.5f) * contrast) + 0.5f);
 
-		sunVisibility = saturate(((sunVisibility - 0.5f) * max(3, 0)) + 0.5f);
+		float sunVisibilityCopy = 1;
+
+#if defined(SEGI_UNITY_SHADOWMAP_ON)
+		float4 wpos = float4(SEGIMinPosVoxel.xyz + fcoord.xyz * SEGIMinPosVoxel.w, 1);
+		float4 cascadeWeights = getCascadeWeights_splitSpheres(wpos.xyz);
+		float4 shadowPosCopy = getShadowCoord(wpos, cascadeWeights);
+		float copyDepth = tex2Dlod(SEGIShadowmapCopy, float4(shadowPosCopy.xy, 0, 0)).x; 
+		copyDepth = saturate((copyDepth - shadowPosCopy.z - 0.005) * 1000);
+#if defined(UNITY_REVERSED_Z)
+		copyDepth = 1.0 - copyDepth;
+#endif
+		sunVisibilityCopy = copyDepth;
+#endif
+		sunVisibility *= sunVisibilityCopy;
 
 		float3 color = result.rgb;
 		result.rgb = color * colShaded.rgb * sunVisibility + colEmission.rgb;

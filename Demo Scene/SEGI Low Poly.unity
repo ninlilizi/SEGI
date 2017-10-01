@@ -4246,33 +4246,6 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 647203243}
   m_Mesh: {fileID: 4300000, guid: 40c618b3f8760f74db4a2cefe3dff7b3, type: 3}
---- !u!84 &649988701
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_Width: 2048
-  m_Height: 2048
-  m_AntiAliasing: 1
-  m_DepthFormat: 0
-  m_ColorFormat: 14
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
 --- !u!1001 &657374849
 Prefab:
   m_ObjectHideFlags: 0
@@ -8245,7 +8218,7 @@ MonoBehaviour:
   PCSS_FILTER_DIR_MAX: 0.25
   BANDING_NOISE_AMOUNT: 1
   SAMPLERS_COUNT: 3
-  m_ShadowmapCopy: {fileID: 649988701}
+  m_ShadowmapCopy: {fileID: 1775509438}
 --- !u!1 &1301257111
 GameObject:
   m_ObjectHideFlags: 0
@@ -10710,7 +10683,7 @@ MonoBehaviour:
   secondaryCones: 6
   secondaryOcclusionStrength: 0.27
   sphericalSkylight: 0
-  useUnityShadowMap: 0
+  useUnityShadowMap: 1
   shadowCam: {fileID: 0}
   showVolumeObjects: 0
   volumeCube: {fileID: 0}
@@ -10721,7 +10694,7 @@ MonoBehaviour:
   FrontRT: {fileID: 0}
   BackRT: {fileID: 0}
   sunShadowResolution: 128
-  m_ShadowmapCopy: {fileID: 1754567938}
+  m_ShadowmapCopy: {fileID: 1914291535}
   sunDepthTexture:
   - {fileID: 0}
   - {fileID: 0}
@@ -11658,7 +11631,7 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1750593958}
   m_Mesh: {fileID: 4300008, guid: 40c618b3f8760f74db4a2cefe3dff7b3, type: 3}
---- !u!84 &1754567938
+--- !u!84 &1775509438
 RenderTexture:
   m_ObjectHideFlags: 0
   m_PrefabParentObject: {fileID: 0}
@@ -12685,6 +12658,33 @@ Prefab:
 Transform:
   m_PrefabParentObject: {fileID: 469422, guid: a886d93727cd9e248bbc2c4f63cac301, type: 2}
   m_PrefabInternal: {fileID: 1909850843}
+--- !u!84 &1914291535
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_Width: 2048
+  m_Height: 2048
+  m_AntiAliasing: 1
+  m_DepthFormat: 0
+  m_ColorFormat: 14
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
 --- !u!1 &1927565343
 GameObject:
   m_ObjectHideFlags: 0

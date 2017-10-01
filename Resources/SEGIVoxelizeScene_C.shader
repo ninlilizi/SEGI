@@ -171,7 +171,6 @@
 				float4x4 SEGIVoxelToGIProjection;
 				float4x4 SEGIVoxelProjectionInverse;
 				sampler2D SEGISunDepth;
-				sampler2D SEGIShadowmapCopy;
 
 				//float4 SEGISunlightVector;
 				//float4 GISunColor;
@@ -227,7 +226,7 @@
 					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); // required for sampling the correct slice of the shadow map render texture array
 					#endif
 					float4 wpos = float4(SEGIMinPosVoxel.xyz + fcoord.xyz * SEGIMinPosVoxel.w, 1);
-					fixed4 cascadeWeights = getCascadeWeights_splitSpheres(wpos);
+					fixed4 cascadeWeights = getCascadeWeights_splitSpheres(wpos.xyz);
 					float4 shadowPosCopy = getShadowCoord(wpos, cascadeWeights);
 					//float3 coordCascade0 = getShadowCoord_SingleCascade(wpos);
 					//float biasMultiply = dot(cascadeWeights, unity_ShadowCascadeScales);
@@ -250,7 +249,7 @@
 					#endif
 					float sunVisibility = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
 
-					sunVisibility = sunVisibility * sunVisibilityCopy;
+					sunVisibility *= sunVisibilityCopy;
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
