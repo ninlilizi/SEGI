@@ -140,7 +140,13 @@ float2 rand(float2 coord)
 {
 	float noiseX = saturate(frac(sin(dot(coord, float2(12.9898, 78.223))) * 43758.5453));
 	float noiseY = saturate(frac(sin(dot(coord, float2(12.9898, 78.223)*2.0)) * 43758.5453));
+	return float2(noiseX, noiseY);
+}
 
+float2 rand(float3 coord)
+{
+	float noiseX = saturate(frac(sin(dot(coord, float3(12.9898, 78.223, 35.3820))) * 43758.5453));
+	float noiseY = saturate(frac(sin(dot(coord, float3(12.9898, 78.223, 35.2879)*2.0)) * 43758.5453));
 	return float2(noiseX, noiseY);
 }
 
