@@ -29,6 +29,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty halfResolution;
     SerializedProperty stochasticSampling;
     SerializedProperty infiniteBounces;
+    SerializedProperty infiniteBouncesRerenderObjects;
     SerializedProperty followTransform;
     SerializedProperty cones;
     SerializedProperty coneTraceSteps;
@@ -110,6 +111,7 @@ public class SEGICascadedEditor : Editor
         halfResolution = serObj.FindProperty("halfResolution");
         stochasticSampling = serObj.FindProperty("stochasticSampling");
         infiniteBounces = serObj.FindProperty("infiniteBounces");
+        infiniteBouncesRerenderObjects = serObj.FindProperty("infiniteBouncesRerenderObjects");
         followTransform = serObj.FindProperty("followTransform");
         cones = serObj.FindProperty("cones");
         coneTraceSteps = serObj.FindProperty("coneTraceSteps");
@@ -228,6 +230,7 @@ public class SEGICascadedEditor : Editor
             GUI.enabled = true;
             EditorGUILayout.PropertyField(updateGI, new GUIContent("Update GI", "Whether voxelization and multi-bounce rendering should update every frame. When disabled, GI tracing will use cached data from the last time this was enabled."));
             EditorGUILayout.PropertyField(infiniteBounces, new GUIContent("Infinite Bounces", "Enables infinite bounces. This is expensive for complex scenes and is still experimental."));
+            EditorGUILayout.PropertyField(infiniteBouncesRerenderObjects, new GUIContent("Infinite Bounces Rerender Objects", "This re-renders the scene via the voxel camera. If disabled data will be reused to calc bounces."));
             EditorGUILayout.PropertyField(followTransform, new GUIContent("Follow Transform", "If provided, the voxel volume will follow and be centered on this object instead of the camera. Useful for top-down scenes."));
             EditorGUILayout.PropertyField(sunDepthTextureDepth, new GUIContent("SunTexture Depth Bits", "Set the depth of the shadow texture(s)."));        
             EditorGUILayout.EndVertical();

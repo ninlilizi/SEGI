@@ -35,9 +35,6 @@ CGINCLUDE
 		return o; 
 	}
 
-	#define PI 3.147159265
-
-
 ENDCG
 
 
@@ -59,9 +56,28 @@ SubShader
 			sampler2D _CameraGBufferTexture2;
 			
 			
-			sampler2D NoiseTexture;
-			
-			
+			//sampler2D NoiseTexture;
+
+			float hash(uint2 x)
+			{
+				uint2 q = 1103515245U * ((x >> 1U) ^ (x.yx));
+				uint  n = 1103515245U * ((q.x) ^ (q.y >> 3U));
+				return float(n) * (1.0 / float(0xffffffffU));
+			}
+			//float whangHashNoise(uint u, uint v, uint s)
+			//{
+			//	uint seed = (u * 1664525u + v) + s;
+
+			//	seed = (seed ^ 61u) ^ (seed >> 16u);
+			//	seed *= 9u;
+			//	seed = seed ^ (seed >> 4u);
+			//	seed *= uint(0x27d4eb2d);
+			//	seed = seed ^ (seed >> 15u);
+
+			//	float value = float(seed) / (4294967296.0);
+			//	return value;
+			//}
+
 			float4 frag(v2f input) : SV_Target
 			{
 				#if UNITY_UV_STARTS_AT_TOP
@@ -72,10 +88,13 @@ SubShader
 				
 				//Get view space position and view vector
 				float4 viewSpacePosition = GetViewSpacePosition(coord);
-				float3 viewVector = normalize(viewSpacePosition.xyz);
+				//float3 viewVector = normalize(viewSpacePosition.xyz);
 
 				//Get voxel space position
 				float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
+
+				//float3 viewDir = WorldSpaceViewDir(voxelSpacePosition);
+
 				voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
 				voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
 				voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
@@ -90,12 +109,15 @@ SubShader
 				float4 traceResult = float4(0,0,0,0);
 
 				const float phi = 1.618033988;
-				const float gAngle = phi * PI * 1.0;
+				const float gAngle = phi * PI;
 
 
-				//Get blue noise
-				float2 noiseCoord = (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-				float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
+				//Get noise
+				float2 noiseCoord = input.uv.xy * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
+				//noiseCoord = (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
+				float2 blueNoise = hash(noiseCoord * 64);
+				blueNoise.y = hash(noiseCoord.yx * 128);
+				//blueNoise.xy = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).rg;
 
 				//Trace GI cones
 				int numSamples = TraceDirections;
@@ -113,10 +135,10 @@ SubShader
 					kernel.z = cos(latitude) * sin(longitude);
 					kernel.y = sin(latitude);
 					
-					kernel = normalize(kernel + worldNormal.xyz * 1.0);
+					kernel = normalize(kernel + worldNormal.xyz);
 
 
-					traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, blueNoise.z, TraceSteps, ConeSize, 1.0, 1.0);
+					traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, blueNoise.x, TraceSteps, ConeSize, 1.0, 1.0);
 				}
 				
 				traceResult /= numSamples;
@@ -153,7 +175,7 @@ SubShader
 				
 				for (int i = -4; i <= 4; i++)
 				{
-					float2 offs = Kernel.xy * (i) * _MainTex_TexelSize.xy * 1.0;
+					float2 offs = Kernel.xy * (i) * _MainTex_TexelSize.xy;
 					float sampleDepth = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + offs.xy * 1, 0, 0)).x);
 					half3 sampleNormal = DecodeViewNormalStereo(tex2Dlod(_CameraDepthNormalsTexture, float4(input.uv.xy  + offs.xy * 1, 0, 0)));
 					
@@ -203,7 +225,6 @@ SubShader
 				float3 albedo = albedoTex.rgb;
 				float3 gi = tex2D(GITexture, input.uv.xy).rgb;
 				float3 scene = tex2D(_MainTex, input.uv.xy).rgb;
-				float3 reflections = tex2D(Reflections, input.uv.xy).rgb;
 				
 				gi *= 0.75 + (float)HalfResolution * 0.25;
 				
@@ -211,6 +232,8 @@ SubShader
 
 				if (DoReflections > 0)
 				{
+					float3 reflections = tex2D(Reflections, input.uv.xy).rgb;
+
 					float4 viewSpacePosition = GetViewSpacePosition(coord);
 					float3 viewVector = normalize(viewSpacePosition.xyz);
 					float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
@@ -244,7 +267,6 @@ SubShader
 			
 			sampler2D GITexture;
 			sampler2D PreviousDepth;
-			sampler2D CurrentDepth;
 			sampler2D PreviousLocalWorldPos;
 			
 			
@@ -422,7 +444,7 @@ SubShader
 				//reflection = tex3D(SEGIVolumeLevel0, voxelOrigin.xyz) * 10.0;
 				//reflection = float4(1.0, 1.0, 1.0, 1.0);
 
-				float3 skyReflection = (reflection.a * 1.0 * SEGISkyColor);
+				float3 skyReflection = (reflection.a * SEGISkyColor);
 				
 				reflection.rgb = reflection.rgb * 0.7 + skyReflection.rgb * 2.4015 * SkyReflectionIntensity;
 				
@@ -598,15 +620,15 @@ ZTest Always
 			#pragma vertex vert
 			#pragma fragment frag
 			
-			float2 Kernel;
+			//float2 Kernel;
+			//
+			//float DepthTolerance;
 			
-			float DepthTolerance;
-			
-			sampler2D DepthNormalsLow;
-			sampler2D DepthLow;
-			int SourceScale;
-			sampler2D CurrentDepth;
-			sampler2D CurrentNormal;
+			//sampler2D DepthNormalsLow;
+			//sampler2D DepthLow;
+			//int SourceScale;
+			//sampler2D CurrentDepth;
+			//sampler2D CurrentNormal;
 			
 					
 			float4 frag(v2f input) : COLOR0
@@ -625,21 +647,21 @@ ZTest Always
 				float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
 				thresh *= 1.0 + NdotV * 2.0;
 				
-				float4 sample00 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0) * 1.0, 0.0, 0.0));
-				float4 sample10 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0) * 1.0, 0.0, 0.0));
-				float4 sample11 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0) * 1.0, 0.0, 0.0));
-				float4 sample01 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0) * 1.0, 0.0, 0.0));
+				float4 sample00 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0.0, 0.0));
+				float4 sample10 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0.0, 0.0));
+				float4 sample11 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0.0, 0.0));
+				float4 sample01 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0.0, 0.0));
 				
 				float4 depthSamples = float4(0,0,0,0);
-				depthSamples.x = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0, 0)).x);
-				depthSamples.y = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0, 0)).x);
-				depthSamples.z = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0, 0)).x);
-				depthSamples.w = LinearEyeDepth(tex2Dlod(CurrentDepth, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0, 0)).x);
+				depthSamples.x = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0, 0)).x);//TODO? use CurrentDepth ....
+				depthSamples.y = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0, 0)).x);
+				depthSamples.z = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0, 0)).x);
+				depthSamples.w = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0, 0)).x);
 				
-				half3 normal00 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));
-				half3 normal10 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
-				half3 normal11 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
-				half3 normal01 = DecodeViewNormalStereo(tex2D(CurrentNormal, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
+				half3 normal00 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));//TODO? use CurrentNormal ....
+				half3 normal10 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
+				half3 normal11 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
+				half3 normal01 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
 				
 				float4 depthWeights = saturate(1.0 - abs(depthSamples - depth.xxxx) / thresh);
 				
@@ -661,7 +683,7 @@ ZTest Always
 				
 				weights /= weightSum;
 				
-				float2 fractCoord = frac(input.uv.xy * _MainTex_TexelSize.zw * 1.0);
+				float2 fractCoord = frac(input.uv.xy * _MainTex_TexelSize.zw);
 				
 				float4 filteredX0 = lerp(sample00 * weights.x, sample10 * weights.y, fractCoord.x);
 				float4 filteredX1 = lerp(sample01 * weights.w, sample11 * weights.z, fractCoord.x);

@@ -8218,7 +8218,7 @@ MonoBehaviour:
   PCSS_FILTER_DIR_MAX: 0.25
   BANDING_NOISE_AMOUNT: 1
   SAMPLERS_COUNT: 3
-  m_ShadowmapCopy: {fileID: 1775509438}
+  m_ShadowmapCopy: {fileID: 1964615599}
 --- !u!1 &1301257111
 GameObject:
   m_ObjectHideFlags: 0
@@ -10632,7 +10632,7 @@ MonoBehaviour:
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1689627605}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 28a7d14251905ef4aa5cc89268c6ff6e, type: 3}
   m_Name: 
@@ -10661,6 +10661,7 @@ MonoBehaviour:
   halfResolution: 0
   stochasticSampling: 1
   infiniteBounces: 1
+  infiniteBouncesRerenderObjects: 0
   followTransform: {fileID: 0}
   cones: 4
   coneTraceSteps: 10
@@ -10694,7 +10695,7 @@ MonoBehaviour:
   FrontRT: {fileID: 0}
   BackRT: {fileID: 0}
   sunShadowResolution: 128
-  m_ShadowmapCopy: {fileID: 1914291535}
+  m_ShadowmapCopy: {fileID: 1847000047}
   sunDepthTexture:
   - {fileID: 0}
   - {fileID: 0}
@@ -10703,7 +10704,11 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   sunDepthTextureDepth: 32
+  integerVolumeArray: {fileID: 0}
+  transferIntsCompute: {fileID: 0}
   voxelCamera: {fileID: 0}
+  minPosVoxel: {x: 0, y: 0, z: 0, w: 0}
+  vecGridSize: {x: 0, y: 0, z: 0, w: 0}
   voxelAA: 0
 --- !u!81 &1689627608
 AudioListener:
@@ -10738,7 +10743,7 @@ Camera:
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 4294441983
+    m_Bits: 4294443007
   m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -10785,6 +10790,7 @@ MonoBehaviour:
   halfResolution: 0
   stochasticSampling: 1
   infiniteBounces: 1
+  infiniteBouncesRerenderObjects: 0
   followTransform: {fileID: 1689627606}
   cones: 4
   coneTraceSteps: 10
@@ -10821,7 +10827,11 @@ MonoBehaviour:
   m_ShadowmapCopy: {fileID: 0}
   sunDepthTexture: []
   sunDepthTextureDepth: 32
+  integerVolumeArray: {fileID: 0}
+  transferIntsCompute: {fileID: 0}
   voxelCamera: {fileID: 0}
+  minPosVoxel: {x: 0, y: 0, z: 0, w: 0}
+  vecGridSize: {x: 0, y: 0, z: 0, w: 0}
   voxelAA: 0
 --- !u!114 &1689627613
 MonoBehaviour:
@@ -11631,33 +11641,6 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1750593958}
   m_Mesh: {fileID: 4300008, guid: 40c618b3f8760f74db4a2cefe3dff7b3, type: 3}
---- !u!84 &1775509438
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_Width: 2048
-  m_Height: 2048
-  m_AntiAliasing: 1
-  m_DepthFormat: 0
-  m_ColorFormat: 14
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
 --- !u!1001 &1782763343
 Prefab:
   m_ObjectHideFlags: 0
@@ -12124,6 +12107,33 @@ MeshFilter:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1845159462}
   m_Mesh: {fileID: 4300010, guid: 40c618b3f8760f74db4a2cefe3dff7b3, type: 3}
+--- !u!84 &1847000047
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_Width: 2048
+  m_Height: 2048
+  m_AntiAliasing: 1
+  m_DepthFormat: 0
+  m_ColorFormat: 14
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
 --- !u!1 &1847463902
 GameObject:
   m_ObjectHideFlags: 0
@@ -12658,33 +12668,6 @@ Prefab:
 Transform:
   m_PrefabParentObject: {fileID: 469422, guid: a886d93727cd9e248bbc2c4f63cac301, type: 2}
   m_PrefabInternal: {fileID: 1909850843}
---- !u!84 &1914291535
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_Width: 2048
-  m_Height: 2048
-  m_AntiAliasing: 1
-  m_DepthFormat: 0
-  m_ColorFormat: 14
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
 --- !u!1 &1927565343
 GameObject:
   m_ObjectHideFlags: 0
@@ -12979,6 +12962,33 @@ Prefab:
 Transform:
   m_PrefabParentObject: {fileID: 418394, guid: 034b1c2c5bc333e4b8f33c538d1eb219, type: 2}
   m_PrefabInternal: {fileID: 1155132416}
+--- !u!84 &1964615599
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_Width: 2048
+  m_Height: 2048
+  m_AntiAliasing: 1
+  m_DepthFormat: 0
+  m_ColorFormat: 14
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 2
+  m_VolumeDepth: 1
 --- !u!1001 &1969448265
 Prefab:
   m_ObjectHideFlags: 0

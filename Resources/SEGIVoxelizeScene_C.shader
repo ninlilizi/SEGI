@@ -180,14 +180,12 @@
 				int SEGIInnerOcclusionLayers;
 
 				float SEGIShadowBias;
-
-				float4 SEGIClipmapOverlap;
-				
+			
 				float4 frag (g2f input) : SV_TARGET
 				{
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					
-					float3 absNormal = abs(input.normal);
+					//float3 absNormal = abs(input.normal);
 					
 					int angle = 0;
 					

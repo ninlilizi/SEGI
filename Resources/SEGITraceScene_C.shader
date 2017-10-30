@@ -1,10 +1,10 @@
 ﻿Shader "Hidden/SEGITraceScene_C" {
 	Properties
 	{
-		_Color ("Main Color", Color) = (1,1,1,1)
+		//_Color ("Main Color", Color) = (1,1,1,1)
 		_MainTex ("Base (RGB)", 2D) = "white" {}
-		_EmissionColor("Color", Color) = (0,0,0)
-		_Cutoff ("Alpha Cutoff", Range(0,1)) = 0.333
+		//_EmissionColor("Color", Color) = (0,0,0)
+		//_Cutoff ("Alpha Cutoff", Range(0,1)) = 0.333
 	}
 	SubShader 
 	{
@@ -21,8 +21,6 @@
 				#pragma geometry geom
 				#include "UnityCG.cginc"
 				#include "SEGI_C.cginc"
-
-				#define PI 3.14159265
 				
 				RWTexture2D<uint> RG0;
 								
@@ -31,8 +29,8 @@
 				float4x4 SEGIVoxelViewTop;
 				
 				float4 _MainTex_ST;
-				half4 _EmissionColor;
-				float _Cutoff;
+				//half4 _EmissionColor;
+				//float _Cutoff;
 				
 				struct v2g
 				{
@@ -50,8 +48,7 @@
 					float angle : TEXCOORD2;
 				};
 				
-				half4 _Color;
-				float SEGISecondaryOcclusionStrength;
+				//half4 _Color;
 				
 				v2g vert(appdata_full v)
 				{
@@ -61,7 +58,7 @@
 					float4 vertex = v.vertex;
 					
 					o.normal = UnityObjectToWorldNormal(v.normal);
-					float3 absNormal = abs(o.normal);
+					//float3 absNormal = abs(o.normal);
 					
 					o.pos = vertex;
 					
@@ -147,134 +144,7 @@
 					triStream.Append(p[2]);
 				}
 				
-
-				float4x4 SEGIVoxelToGIProjection;
-				float4x4 SEGIVoxelProjectionInverse;
-				sampler2D SEGIGIDepthNormalsTexture;
-				int SEGIFrameSwitch;
-				int SEGISecondaryCones;
-				
-				sampler3D SEGIVolumeTexture0;
-				int SEGIVoxelAA;
-
-				float4 SEGICurrentClipTransform;
-				float4 SEGIClipmapOverlap;
-
-
 				#define VoxelResolution (SEGIVoxelResolution)
-
-				float3 TransformClipSpaceInverse(float3 pos, float4 transform)
-				{
-					pos += transform.xyz;
-					pos = pos * 2.0 - 1.0;
-					pos /= transform.w;
-					pos = pos * 0.5 + 0.5;
-
-					return pos;
-				}
-					
-				float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
-				{
-
-
-					float skyVisibility = 1.0;		
-					
-					float3 gi = float3(0,0,0);	
-					
-					const int numSteps = 7;	
-					
-					float3 adjustedKernel = normalize(kernel + worldNormal * 0.2);	
-					
-
-
-					float dist = length(voxelOrigin * 2.0 - 1.0);
-					
-					int startMipLevel = 0;
-
-					voxelOrigin = TransformClipSpaceInverse(voxelOrigin, SEGICurrentClipTransform);
-					voxelOrigin.xyz += worldNormal.xyz * 0.016;
-
-
-					const float width = 3.38;
-					const float farOcclusionStrength = 4.0;
-					const float occlusionPower = 1.05;
-
-				
-					for (int i = 0; i < numSteps; i++)
-					{
-						float fi = ((float)i) / numSteps;		
-						fi = lerp(fi, 1.0, 0.001);
-						
-						float coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0; 
-										
-						float coneSize = coneDistance * width * 10.3;
-
-						float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * 1.0);
-
-						float4 sample = float4(0.0, 0.0, 0.0, 0.0);
-						int mipLevel = floor(coneSize);
-
-						mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
-
-						
-
-						if (mipLevel == 0 || mipLevel == 1)
-						{
-							voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
-							sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-						}
-						else if (mipLevel == 2)
-						{
-							voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
-							sample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-						}
-						else if (mipLevel == 3)
-						{
-							voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
-							sample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-						}
-						else if (mipLevel == 4)
-						{
-							voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
-							sample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-						}
-						else
-						{
-							voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
-							sample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-						}
-						
-						float occlusion = skyVisibility;
-						
-						float falloffFix = pow(fi, 2.0) * 4.0 + 0.0;
-
-						gi.rgb += sample.rgb * (coneSize * 1.0 + 1.0) * occlusion * falloffFix;
-
-						skyVisibility *= pow(saturate(1.0 - sample.a * SEGISecondaryOcclusionStrength * (1.0 + coneDistance * farOcclusionStrength)), 1.0 * occlusionPower);
-
-						
-					}
-
-
-					float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 1.0);
-
-					gi *= NdotL;
-					skyVisibility *= NdotL;
-
-					skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
-
-					float3 skyColor = float3(0.0, 0.0, 0.0);
-
-					float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
-					float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
-					skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
-					skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
-
-
-					gi += skyColor * skyVisibility * 10.0;
-
-					return float4(gi.rgb, 0.0f);
-				}
 
 				float4 frag (g2f input) : SV_TARGET
 				{

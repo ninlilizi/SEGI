@@ -71,7 +71,7 @@
 					float4 vertex = v.vertex;
 					
 					o.normal = UnityObjectToWorldNormal(v.normal);
-					float3 absNormal = abs(o.normal);
+					//float3 absNormal = abs(o.normal);
 					
 					o.pos = vertex;
 					
@@ -175,15 +175,13 @@
 				int SEGIInnerOcclusionLayers;
 
 				float SEGIShadowBias;
-				//float SEGIShadowScale;
+				uint SEGICurrentClipmapIndex;
 
-				float4 SEGIClipmapOverlap;
-				
 				float4 frag (g2f input) : SV_TARGET
 				{
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					
-					float3 absNormal = abs(input.normal);
+					//float3 absNormal = abs(input.normal);
 					
 					int angle = 0;
 					
@@ -245,7 +243,6 @@
 
 					 
 					float4 result = float4(col.rgb, 2.0);
-
 					
 					const float sqrt2 = sqrt(2.0) * 1.2;
 
@@ -263,22 +260,22 @@
 
 					uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
 
-					uint3 coordOcclusion = coord - int3(input.normal.xyz * sqrt2);
+					uint3 coordOcclusion = coord - int3(input.normal * sqrt2);
 					uint2 coord2DOcclusion1 = uint2(coordOcclusion.x + gridSize.x*(coordOcclusion.z%gridSize.w), coordOcclusion.y + gridSize.y*(coordOcclusion.z / gridSize.w));
 
-					coordOcclusion = coord - int3(input.normal.xyz * sqrt2 * 2.0);
+					coordOcclusion = coord - int3(input.normal * sqrt2 * 2.0);
 					uint2 coord2DOcclusion2 = uint2(coordOcclusion.x + gridSize.x*(coordOcclusion.z%gridSize.w), coordOcclusion.y + gridSize.y*(coordOcclusion.z / gridSize.w));
 
-					interlockedAddFloat4(RG0, coord2D, result, colShaded, colEmission);
+					interlockedAddFloat4(RG0, coord2D, result, colShaded, colEmission, input.normal, SEGICurrentClipmapIndex);
 
 					if (SEGIInnerOcclusionLayers > 0)
 					{
-						interlockedAddFloat4c(RG0, coord2DOcclusion1, float4(0.0, 0.0, 0.0, 14.0));
+						interlockedAddFloat4c(RG0, coord2DOcclusion1, float4(0.0, 0.0, 0.0, 14.0 * tex.a));
 					}
 
 					if (SEGIInnerOcclusionLayers > 1)
 					{
-						interlockedAddFloat4c(RG0, coord2DOcclusion2, float4(0.0, 0.0, 0.0, 22.0));
+						interlockedAddFloat4c(RG0, coord2DOcclusion2, float4(0.0, 0.0, 0.0, 22.0 * tex.a));
 					}
 					
 					return float4(0.0, 0.0, 0.0, 0.0);

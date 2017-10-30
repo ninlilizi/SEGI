@@ -1,4 +1,6 @@
-﻿float SEGIVoxelScaleFactor;
+﻿#define PI 3.14159265
+
+float SEGIVoxelScaleFactor;
 
 int StochasticSampling;
 int TraceDirections;
@@ -14,7 +16,6 @@ float NearOcclusionStrength;
 float SEGISoftSunlight;
 float FarOcclusionStrength;
 float FarthestOcclusionStrength;
-
 
 half4 GISunColor;
 
@@ -48,7 +49,6 @@ float4x4 GIProjectionInverse;
 float4x4 GIToWorld;
 
 float4x4 GIToVoxelProjection;
-
 
 half4 SEGISkyColor;
 
@@ -140,7 +140,13 @@ float2 rand(float2 coord)
 {
 	float noiseX = saturate(frac(sin(dot(coord, float2(12.9898, 78.223))) * 43758.5453));
 	float noiseY = saturate(frac(sin(dot(coord, float2(12.9898, 78.223)*2.0)) * 43758.5453));
+	return float2(noiseX, noiseY);
+}
 
+float2 rand(float3 coord)
+{
+	float noiseX = saturate(frac(sin(dot(coord, float3(12.9898, 78.223, 35.3820))) * 43758.5453));
+	float noiseY = saturate(frac(sin(dot(coord, float3(12.9898, 78.223, 35.2879)*2.0)) * 43758.5453));
 	return float2(noiseX, noiseY);
 }
 
@@ -248,6 +254,11 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
 	float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
+
+	//float3 reflectedDir = reflect(viewDir, worldNormal);
+	//float3 probe = unity_SpecCube0.Sample(samplerunity_SpecCube0, reflectedDir).rgb;// UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal);
+	//probe = DecodeHDR(probe, unity_SpecCube0_HDR);
+
 	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
@@ -410,6 +421,33 @@ float3 hsv2rgb(float3 c)
 	return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
 }
 
+//Split normal up in 10 - 12 - 10 bits
+//1010000111 111101000011 1010100110
+
+float3 DecodeVectorUint(uint value)
+{
+	const uint maskX = ((1 << 10) - 1);
+	uint tempX = (value & maskX);
+
+	const uint maskY = ((1 << 12) - 1) << 10;
+	uint tempY = (value & maskY) >> 10;
+
+	const uint maskZ = ((1 << 10) - 1) << 22;
+	uint tempZ = ((value & maskZ) >> 22) & ((1 << 10) - 1);
+
+	const float div = 1.0f / 1023.0f;
+
+	float3 normal = float3(tempX * div, tempY / 4095.0f, tempZ * div);
+	normal = normal * 2.0f - 1.0f;
+	return normal;
+}
+
+uint EncodeVectorUint(float3 normal)
+{
+	normal = (normal + 1.0f) * 0.5f;
+	return (uint)(normal.x * 1023) + ((uint)(normal.y * 4095) << 10) + ((uint)(normal.z * 1023) << 22);
+}
+
 float4 DecodeRGBAuint(uint value)
 {
 	//const float div = 1.0f / 255.0f;
@@ -440,7 +478,7 @@ uint EncodeRGBAuint(float4 color)
 
 	//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
 	float3 hsv = rgb2hsv(color.rgb);
-	hsv.z = pow(hsv.z, 1.0 / 3.0);
+	hsv.z = pow(abs(hsv.z), 1.0 / 3.0);
 
 	uint result = 0;
 
@@ -479,13 +517,13 @@ void interlockedAddFloat4(RWTexture2D<uint> destination, uint2 coord, float4 val
 	//}
 }
 
-//void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint3 coord, float4 value)
-//{
-//	uint writeValue = EncodeRGBAuint(value);
-//	InterlockedMax(destination[coord], writeValue);
-//}
+void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint3 coord, float4 value)
+{
+	uint writeValue = EncodeRGBAuint(value);
+	InterlockedMax(destination[coord], writeValue);
+}
 
-void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint2 coord, float4 value, float3 shaded, float3 emission)
+void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint2 coord, float4 value, float3 shaded, float3 emission, float3 normal, uint normalIndex)
 {
 	uint writeValue = EncodeRGBAuint(value);
 	uint writeValue1 = EncodeRGBAuint(float4(shaded, value.a));
@@ -494,6 +532,11 @@ void interlockedAddFloat4(RWTexture2DArray<uint> destination, uint2 coord, float
 	InterlockedMax(destination[uint3(coord, 0)], writeValue);
 	InterlockedMax(destination[uint3(coord, 1)], writeValue1);
 	InterlockedMax(destination[uint3(coord, 2)], writeValue2);
+
+	if (normalIndex < 3) {
+		uint writeValue3 = EncodeVectorUint(normal);
+		InterlockedMax(destination[uint3(coord, 3 + normalIndex)], writeValue3);
+	}
 }
 
 void interlockedAddFloat4b(RWTexture2D<uint> destination, uint2 coord, float4 value)
@@ -521,4 +564,134 @@ void interlockedAddFloat4c(RWTexture2DArray<uint> destination, uint2 coord, floa
 {
 	uint writeValue = EncodeRGBAuint(value);
 	InterlockedAdd(destination[uint3(coord, 0)], writeValue);
+}
+
+//float4x4 SEGIVoxelToGIProjection;
+//float4x4 SEGIVoxelProjectionInverse;
+//sampler2D SEGIGIDepthNormalsTexture;
+//int SEGIFrameSwitch;
+int SEGISecondaryCones;
+float SEGISecondaryOcclusionStrength;
+
+//sampler3D SEGIVolumeTexture0;
+//int SEGIVoxelAA;
+
+float4 SEGICurrentClipTransform;
+float4 SEGIClipmapOverlap;
+
+float3 TransformClipSpaceInverse(float3 pos, float4 transform)
+{
+	pos += transform.xyz;
+	pos = pos * 2.0 - 1.0;
+	pos /= transform.w;
+	pos = pos * 0.5 + 0.5;
+
+	return pos;
+}
+
+float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
+{
+
+
+	float skyVisibility = 1.0;
+
+	float3 gi = float3(0, 0, 0);
+
+	const int numSteps = 7;
+
+	float3 adjustedKernel = normalize(kernel + worldNormal * 0.2);
+
+
+
+	float dist = length(voxelOrigin * 2.0 - 1.0);
+
+	int startMipLevel = 0;
+
+	voxelOrigin = TransformClipSpaceInverse(voxelOrigin, SEGICurrentClipTransform);
+	voxelOrigin.xyz += worldNormal.xyz * 0.016;
+
+
+	const float width = 3.38;
+	const float farOcclusionStrength = 4.0;
+	const float occlusionPower = 1.05;
+
+
+	for (int i = 0; i < numSteps; i++)
+	{
+		float fi = ((float)i) / numSteps;
+		fi = abs(lerp(fi, 1.0, 0.001));//TODO abs() needed for pow -> replace pow?
+
+		float coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
+
+		float coneSize = coneDistance * width * 10.3;
+
+		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * 1.0);
+
+		float4 sample = float4(0.0, 0.0, 0.0, 0.0);
+		int mipLevel = floor(coneSize);
+
+		mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
+
+
+
+		if (mipLevel == 0 || mipLevel == 1)
+		{
+			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
+			sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+		}
+		else if (mipLevel == 2)
+		{
+			voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
+			sample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+		}
+		else if (mipLevel == 3)
+		{
+			voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
+			sample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+		}
+		else if (mipLevel == 4)
+		{
+			voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
+			sample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+		}
+		else
+		{
+			voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
+			sample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+		}
+
+		float occlusion = skyVisibility;
+
+		float falloffFix = pow(fi, 2.0) * 4.0 + 0.0;
+
+		gi.rgb += sample.rgb * (coneSize * 1.0 + 1.0) * occlusion * falloffFix;
+
+		skyVisibility *= pow(saturate(1.0 - sample.a * SEGISecondaryOcclusionStrength * (1.0 + coneDistance * farOcclusionStrength)), 1.0 * occlusionPower);
+
+
+	}
+
+
+	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 1.0);
+
+	gi *= NdotL;
+	skyVisibility *= NdotL;
+
+	skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
+
+	float3 skyColor = float3(0.0, 0.0, 0.0);
+
+	float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
+	float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
+
+	//float3 probe = unity_SpecCube0.Sample(samplerunity_SpecCube0, worldNormal).rgb;//UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal);
+	//probe = DecodeHDR(probe, unity_SpecCube0_HDR);
+
+	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
+	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+
+
+	gi += skyColor * skyVisibility * 10.0;
+
+	return float4(gi.rgb, 0.0f);
 }
