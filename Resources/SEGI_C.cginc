@@ -117,9 +117,9 @@ float4 GetViewSpacePosition(float2 coord)
 {
 	float depth = tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
 
-	#if defined(UNITY_REVERSED_Z)
+#if defined(UNITY_REVERSED_Z)
 	depth = 1.0 - depth;
-	#endif
+#endif
 
 	float4 viewPosition = mul(ProjectionMatrixInverse, float4(coord.x * 2.0 - 1.0, coord.y * 2.0 - 1.0, 2.0 * depth - 1.0, 1.0));
 	viewPosition /= viewPosition.w;
@@ -191,7 +191,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 
 		float coneSize = coneDistance * width * 10.3;
-																			
+
 		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.000);
 
 
@@ -384,7 +384,7 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel, float skyVisibility, i
 
 
 		if (voxelCheckCoord.x < 0.0 || voxelCheckCoord.x > 1.0 ||
-			voxelCheckCoord.y < 0.0 || voxelCheckCoord.y > 1.0 || 
+			voxelCheckCoord.y < 0.0 || voxelCheckCoord.y > 1.0 ||
 			voxelCheckCoord.z < 0.0 || voxelCheckCoord.z > 1.0)
 		{
 			giSample = float4(0, 0, 0, 0);
@@ -565,7 +565,6 @@ void interlockedAddFloat4c(RWTexture2DArray<uint> destination, uint2 coord, floa
 	uint writeValue = EncodeRGBAuint(value);
 	InterlockedAdd(destination[uint3(coord, 0)], writeValue);
 }
-<<<<<<< HEAD
 
 //float4x4 SEGIVoxelToGIProjection;
 //float4x4 SEGIVoxelProjectionInverse;
@@ -696,5 +695,3 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 
 	return float4(gi.rgb, 0.0f);
 }
-=======
->>>>>>> 5a27489137ff5e4fdf518b42ec7d3862436811d3
