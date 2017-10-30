@@ -565,6 +565,7 @@ void interlockedAddFloat4c(RWTexture2DArray<uint> destination, uint2 coord, floa
 	uint writeValue = EncodeRGBAuint(value);
 	InterlockedAdd(destination[uint3(coord, 0)], writeValue);
 }
+<<<<<<< HEAD
 
 //float4x4 SEGIVoxelToGIProjection;
 //float4x4 SEGIVoxelProjectionInverse;
@@ -695,3 +696,5 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 
 	return float4(gi.rgb, 0.0f);
 }
+=======
+>>>>>>> 5a27489137ff5e4fdf518b42ec7d3862436811d3
