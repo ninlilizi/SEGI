@@ -42,8 +42,8 @@ Shader "Custom/VolumeRayCasting" {
 			    float4 uv : TEXCOORD0;
 			};
 
-        	//float4 SEGIFrontS_ST;
-        	//float4 SEGIBackS_ST;
+        	float4 SEGIFrontS_ST;
+        	float4 SEGIBackS_ST;
         	
 			v2f vert (appdata v) {
 
@@ -60,8 +60,8 @@ Shader "Custom/VolumeRayCasting" {
 				texC.x = 0.5f*texC.x + 0.5f; 
 				texC.y = 0.5f*texC.y + 0.5f;			
 				texC.y = 1 - texC.y;
-			    float3 front = tex2D(SEGIFrontS, texC).rgb;
-			    float3 back = tex2D(SEGIBackS, texC).rgb;
+			    float3 front = tex2D(SEGIFrontS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
+			    float3 back = tex2D(SEGIBackS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
 
 			    float3 dir = normalize(back - front);
 			    float4 pos = float4(front, 0);
@@ -130,8 +130,8 @@ Shader "Custom/VolumeRayCasting" {
 				texC.x = 0.5f*texC.x + 0.5f; 
 				texC.y = 0.5f*texC.y + 0.5f;			
 				texC.y = 1 - texC.y;
-			    float3 front = tex2D(SEGIFrontS, texC).rgb;
-			    float3 back = tex2D(SEGIBackS, texC).rgb;		
+				float3 front = tex2D(SEGIFrontS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
+				float3 back = tex2D(SEGIBackS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
 			    		
 			    float3 dir = normalize(back - front);
 			    float4 pos = float4(front, 0);

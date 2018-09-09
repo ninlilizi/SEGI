@@ -54,7 +54,7 @@ public class SEGICascaded : MonoBehaviour
     [Range(0, 2)]
     public int innerOcclusionLayers = 1;
 
-    public bool halfResolution = false;
+    private bool halfResolution = false;
     public bool stochasticSampling = true;
     public bool infiniteBounces = false;
     public bool infiniteBouncesRerenderObjects = false;
@@ -231,6 +231,12 @@ public class SEGICascaded : MonoBehaviour
     Matrix4x4[] voxelProjectionInverse;
     public Vector4 vecGridSize;
 
+    /// <summary>
+    /// Did we already calculate and only need to display the results?
+    /// </summary>
+    internal static bool alreadyUpdatedThisFrame = false;
+    internal static SEGICascaded calculationSEGIObject = null;
+
     #endregion // InternalVariables
 
 
@@ -362,6 +368,7 @@ public class SEGICascaded : MonoBehaviour
                 //DestroyImmediate(volumeTexture0);
             }
             volumeTexture0 = new RenderTexture(resolution, resolution, 0, renderTextureFormat, RenderTextureReadWrite.Linear);
+            volumeTexture0.vrUsage = VRTextureUsage.TwoEyes;
             volumeTexture0.wrapMode = TextureWrapMode.Clamp;
 #if UNITY_5_4_OR_NEWER
             volumeTexture0.dimension = TextureDimension.Tex3D;
@@ -435,7 +442,7 @@ public class SEGICascaded : MonoBehaviour
 
         temporalBlendWeight = preset.temporalBlendWeight;
         useBilateralFiltering = preset.useBilateralFiltering;
-        halfResolution = preset.halfResolution;
+        halfResolution = false;
         stochasticSampling = preset.stochasticSampling;
         doReflections = preset.doReflections;
 
@@ -491,6 +498,7 @@ public class SEGICascaded : MonoBehaviour
             {
                 RenderTargetIdentifier shadowmap = BuiltinRenderTextureType.CurrentActive;
                 m_ShadowmapCopy = new RenderTexture(shadowmapCopySize, shadowmapCopySize, 0);//TODO
+                m_ShadowmapCopy.vrUsage = VRTextureUsage.TwoEyes;
                 CommandBuffer cb = new CommandBuffer();
 
                 // Change shadow sampling mode for sun's shadowmap.
@@ -521,6 +529,7 @@ public class SEGICascaded : MonoBehaviour
         }
 
         integerVolumeArray = new RenderTexture((int)size2D[0], (int)size2D[1], 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        integerVolumeArray.vrUsage = VRTextureUsage.TwoEyes;
         integerVolumeArray.dimension = TextureDimension.Tex2DArray;
         integerVolumeArray.volumeDepth = useVolumeRayCast ? 6 : 1;
         //integerVolumeArray.useMipMap = true;
@@ -591,6 +600,7 @@ public class SEGICascaded : MonoBehaviour
             //DestroyImmediate(dummyVoxelTextureAAScaled);
         }
         dummyVoxelTextureAAScaled = new RenderTexture(dummyVoxelResolution, dummyVoxelResolution, 0, RenderTextureFormat.R8);
+        dummyVoxelTextureAAScaled.vrUsage = VRTextureUsage.TwoEyes;
         dummyVoxelTextureAAScaled.Create();
         dummyVoxelTextureAAScaled.hideFlags = HideFlags.HideAndDontSave;
 
@@ -601,6 +611,7 @@ public class SEGICascaded : MonoBehaviour
             //DestroyImmediate(dummyVoxelTextureFixed);
         }
         dummyVoxelTextureFixed = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.R8);
+        dummyVoxelTextureFixed.vrUsage = VRTextureUsage.TwoEyes;
         dummyVoxelTextureFixed.Create();
         dummyVoxelTextureFixed.hideFlags = HideFlags.HideAndDontSave;
     }
@@ -670,6 +681,7 @@ public class SEGICascaded : MonoBehaviour
             if (!FrontRT)
             {
                 FrontRT = new RenderTexture(sunShadowResolution, sunShadowResolution, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+                FrontRT.vrUsage = VRTextureUsage.TwoEyes;
                 FrontRT.autoGenerateMips = false;
                 FrontRT.wrapMode = TextureWrapMode.Clamp;
                 FrontRT.filterMode = FilterMode.Point;
@@ -678,6 +690,7 @@ public class SEGICascaded : MonoBehaviour
             if (!BackRT)
             {
                 BackRT = new RenderTexture(sunShadowResolution, sunShadowResolution, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+                BackRT.vrUsage = VRTextureUsage.TwoEyes;
                 BackRT.autoGenerateMips = false;
                 BackRT.wrapMode = TextureWrapMode.Clamp;
                 BackRT.filterMode = FilterMode.Point;
@@ -971,6 +984,7 @@ public class SEGICascaded : MonoBehaviour
         int height = attachedCamera.pixelHeight == 0 ? 2 : attachedCamera.pixelHeight;
 
         previousGIResult = new RenderTexture(width, height, 0, RenderTextureFormat.ARGBHalf);
+        previousGIResult.vrUsage = VRTextureUsage.TwoEyes;
         previousGIResult.wrapMode = TextureWrapMode.Clamp;
         previousGIResult.filterMode = FilterMode.Bilinear;
         previousGIResult.Create();
@@ -983,6 +997,7 @@ public class SEGICascaded : MonoBehaviour
             //DestroyImmediate(previousDepth);
         }
         previousDepth = new RenderTexture(width, height, 0, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
+        previousDepth.vrUsage = VRTextureUsage.TwoEyes;
         previousDepth.wrapMode = TextureWrapMode.Clamp;
         previousDepth.filterMode = FilterMode.Bilinear;
         previousDepth.Create();
@@ -1002,6 +1017,7 @@ public class SEGICascaded : MonoBehaviour
                 //DestroyImmediate(sunDepthTexture[i]);
             }
             sunDepthTexture[i] = new RenderTexture(sunShadowResolution, sunShadowResolution, sunDepthTextureDepth, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
+            sunDepthTexture[i].vrUsage = VRTextureUsage.TwoEyes;
             sunDepthTexture[i].wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture[i].filterMode = FilterMode.Point;
             sunDepthTexture[i].Create();
@@ -1011,6 +1027,8 @@ public class SEGICascaded : MonoBehaviour
 
     void Update()
     {
+        alreadyUpdatedThisFrame = false;
+        calculationSEGIObject = null;
         if (notReadyToRender)
             return;
 
@@ -1175,10 +1193,22 @@ public class SEGICascaded : MonoBehaviour
 
         if (useVolumeRayCast != useVolumeRayCastPrev) SetupVolumeRayCasting();
 
+        if (alreadyUpdatedThisFrame)
+        {
+            return;
+        }
+        // only use main camera for voxel simulations
+        if (attachedCamera != Camera.main)
+        {
+            return;
+        }
+
+        alreadyUpdatedThisFrame = true;
+        //calculationSEGIObject = this;
+        //Debug.Log(Camera.current.name + "," + Camera.current.stereoActiveEye + ", " + calculationSEGIObject.name + ", " + Time.frameCount + ", " + Time.renderedFrameCount);
         //Cache the previous active render texture to avoid issues with other Unity rendering going on
         RenderTexture previousActive = RenderTexture.active;
-
-        Shader.SetGlobalInt("SEGIVoxelAA", voxelAA ? 3 : 0);
+        Shader.SetGlobalInt("SEGIVoxelAA", voxelAA ? 1 : 0);
 
         CustomSunSetup();
 
@@ -1664,14 +1694,14 @@ public class SEGICascaded : MonoBehaviour
         }
 
         //Setup temporary textures
-        RenderTexture gi1 = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf);
-        RenderTexture gi2 = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf);
+        RenderTexture gi1 = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+        RenderTexture gi2 = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
         RenderTexture reflections = null;
 
         //If reflections are enabled, create a temporary render buffer to hold them
         if (doReflections)
         {
-            reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
+            reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
         }
 
         ////Get the camera depth and normals
@@ -1724,8 +1754,8 @@ public class SEGICascaded : MonoBehaviour
             RenderTexture.ReleaseTemporary(gi1);
 
             //Setup temporary textures
-            RenderTexture gi3 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
-            RenderTexture gi4 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
+            RenderTexture gi3 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+            RenderTexture gi4 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
 
             //Prepare the half-resolution diffuse GI result to be bilaterally upsampled
             gi2.filterMode = FilterMode.Point;
@@ -1742,8 +1772,8 @@ public class SEGICascaded : MonoBehaviour
             material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
 
             //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
-            RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
-            RenderTexture blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
+            RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+            RenderTexture blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
             material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
             Graphics.Blit(gi3, blur1, material, Pass.BilateralBlur);
 
@@ -1801,8 +1831,8 @@ public class SEGICascaded : MonoBehaviour
             if (temporalBlendWeight < 1.0f)
             {
                 //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
-                RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
-                RenderTexture blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf);
+                RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+                RenderTexture blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
                 material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
                 Graphics.Blit(gi2, blur1, material, Pass.BilateralBlur);
 

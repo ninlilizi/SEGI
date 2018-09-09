@@ -26,7 +26,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty skyColor;
     SerializedProperty voxelSpaceSize;
     SerializedProperty useBilateralFiltering;
-    SerializedProperty halfResolution;
+    //SerializedProperty halfResolution;
     SerializedProperty stochasticSampling;
     SerializedProperty infiniteBounces;
     SerializedProperty infiniteBouncesRerenderObjects;
@@ -108,7 +108,7 @@ public class SEGICascadedEditor : Editor
         skyColor = serObj.FindProperty("skyColor");
         voxelSpaceSize = serObj.FindProperty("voxelSpaceSize");
         useBilateralFiltering = serObj.FindProperty("useBilateralFiltering");
-        halfResolution = serObj.FindProperty("halfResolution");
+        //halfResolution = serObj.FindProperty("halfResolution");
         stochasticSampling = serObj.FindProperty("stochasticSampling");
         infiniteBounces = serObj.FindProperty("infiniteBounces");
         infiniteBouncesRerenderObjects = serObj.FindProperty("infiniteBouncesRerenderObjects");
@@ -273,7 +273,7 @@ public class SEGICascadedEditor : Editor
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(temporalBlendWeight, new GUIContent("Temporal Blend Weight", "The lower the value, the more previous frames will be blended with the current frame. Lower values result in smoother GI that updates less quickly."));
             EditorGUILayout.PropertyField(useBilateralFiltering, new GUIContent("Bilateral Filtering", "Enables filtering of the GI result to reduce noise."));
-            EditorGUILayout.PropertyField(halfResolution, new GUIContent("Half Resolution", "If enabled, GI tracing will be done at half screen resolution. Improves speed of GI tracing."));
+            //EditorGUILayout.PropertyField(halfResolution, new GUIContent("Half Resolution", "If enabled, GI tracing will be done at half screen resolution. Improves speed of GI tracing."));
             EditorGUILayout.PropertyField(stochasticSampling, new GUIContent("Stochastic Sampling", "If enabled, uses random jitter to reduce banding and discontinuities during GI tracing."));
 
             EditorGUILayout.PropertyField(cones, new GUIContent("Cones", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
@@ -349,7 +349,7 @@ public class SEGICascadedEditor : Editor
 
         preset.temporalBlendWeight = instance.temporalBlendWeight;
         preset.useBilateralFiltering = instance.useBilateralFiltering;
-        preset.halfResolution = instance.halfResolution;
+        //preset.halfResolution = instance.halfResolution;
         preset.stochasticSampling = instance.stochasticSampling;
         //preset.doReflections = instance.doReflections;
         preset.doReflections = false;

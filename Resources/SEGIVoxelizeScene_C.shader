@@ -229,7 +229,7 @@
 					//float3 coordCascade0 = getShadowCoord_SingleCascade(wpos);
 					//float biasMultiply = dot(cascadeWeights, unity_ShadowCascadeScales);
 					//float3 receiverPlaneDepthBias = UnityGetReceiverPlaneDepthBias(coordCascade0.xyz, biasMultiply);
-					float copyDepth = tex2Dlod(SEGIShadowmapCopy, float4(shadowPosCopy.xy, 0, 0)).x; //UNITY_SAMPLE_SHADOW(SEGISunDepth, shadowPos);// UnityCombineShadowcoordComponents(shadowPos.xy, 0, 0.001, receiverPlaneDepthBias));// 
+					float copyDepth = tex2Dlod(SEGIShadowmapCopy, float4(UnityStereoTransformScreenSpaceTex(shadowPosCopy).xy, 0, 0)).x; //UNITY_SAMPLE_SHADOW(SEGISunDepth, shadowPos);// UnityCombineShadowcoordComponents(shadowPos.xy, 0, 0.001, receiverPlaneDepthBias));// 
 					copyDepth = saturate((copyDepth - shadowPosCopy.z - 0.005) * 1000);
 					#if defined(UNITY_REVERSED_Z)
 					copyDepth = 1.0 - copyDepth;
@@ -241,7 +241,7 @@
 					float4 shadowPos = mul(SEGIVoxelProjectionInverse, float4(fcoord * 2.0 - 1.0, 0.0));
 					shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
 					shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-					float sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
+					float sunDepth = tex2Dlod(SEGISunDepth, float4(UnityStereoTransformScreenSpaceTex(shadowPos).xy, 0, 0)).x;
 					#if defined(UNITY_REVERSED_Z)
 					sunDepth = 1.0 - sunDepth;
 					#endif
@@ -251,8 +251,8 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = tex2D(_MainTex, input.uv.xy);
-					float4 emissionTex = tex2D(_EmissionMap, input.uv.xy);
+					float4 tex = tex2D(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+					float4 emissionTex = tex2D(_EmissionMap, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 					
 					float4 color = _Color;
 

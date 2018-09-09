@@ -81,9 +81,9 @@ SubShader
 			float4 frag(v2f input) : SV_Target
 			{
 				#if UNITY_UV_STARTS_AT_TOP
-					float2 coord = input.uv2.xy;
+					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 				#else
-					float2 coord = input.uv.xy;
+					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 				#endif
 				
 				//Get view space position and view vector
@@ -113,7 +113,7 @@ SubShader
 
 
 				//Get noise
-				float2 noiseCoord = input.uv.xy * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
+				float2 noiseCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 				//noiseCoord = (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 				float2 blueNoise = hash(noiseCoord * 64);
 				blueNoise.y = hash(noiseCoord.yx * 128);
@@ -158,16 +158,16 @@ SubShader
 			#pragma fragment frag
 			
 			float2 Kernel;
-					
+				
 			float4 frag(v2f input) : COLOR0
 			{
 				float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 				float validWeights = 0.0;
-				float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, input.uv.xy).x);
-				half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy));
+				float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
+				half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
 				float thresh = 0.26;
 				
-				float3 viewPosition = GetViewSpacePosition(input.uv.xy).xyz;
+				float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy).xyz;
 				float3 viewVector = normalize(viewPosition);
 				
 				float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
@@ -176,13 +176,13 @@ SubShader
 				for (int i = -4; i <= 4; i++)
 				{
 					float2 offs = Kernel.xy * (i) * _MainTex_TexelSize.xy;
-					float sampleDepth = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + offs.xy * 1, 0, 0)).x);
-					half3 sampleNormal = DecodeViewNormalStereo(tex2Dlod(_CameraDepthNormalsTexture, float4(input.uv.xy  + offs.xy * 1, 0, 0)));
+					float sampleDepth = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).x);
+					half3 sampleNormal = DecodeViewNormalStereo(tex2Dlod(_CameraDepthNormalsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy  + offs.xy * 1, 0, 0)));
 					
 					float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
 					weight *= pow(saturate(dot(sampleNormal, normal)), 14.0);
 					
-					float4 blurSample = tex2Dlod(_MainTex, float4(input.uv.xy + offs.xy, 0, 0)).rgba;
+					float4 blurSample = tex2Dlod(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0)).rgba;
 					blurred += blurSample * weight;
 					validWeights += weight;
 				}
@@ -212,27 +212,33 @@ SubShader
 			int DoReflections;
 
 			int HalfResolution;
+
+			half4 _MainTex_ST;
+			half4 GITexture_ST;
+			half4 _CameraGBufferTexture0_ST;
+			half4 _CameraGBufferTexture1_ST;
+			half4 Reflections_ST;
 					
 			float4 frag(v2f input) : COLOR0
 			{
 #if UNITY_UV_STARTS_AT_TOP
-				float2 coord = input.uv2.xy;
+				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 #else
-				float2 coord = input.uv.xy;
+				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 #endif
 
-				float4 albedoTex = tex2D(_CameraGBufferTexture0, input.uv.xy);
-				float3 albedo = albedoTex.rgb;
-				float3 gi = tex2D(GITexture, input.uv.xy).rgb;
-				float3 scene = tex2D(_MainTex, input.uv.xy).rgb;
+				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+				float3 albedo = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);//albedoTex.rgb;
+				float3 gi = tex2D(GITexture, UnityStereoScreenSpaceUVAdjust(input.uv, GITexture_ST).xy).rgb;
+				float3 scene = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy).rgb;
 				
-				gi *= 0.75 + (float)HalfResolution * 0.25;
+				gi *= 0.75 + 1 * 0.25;
 				
 				float3 result = scene + gi * albedoTex.a * albedoTex.rgb;
 
 				if (DoReflections > 0)
 				{
-					float3 reflections = tex2D(Reflections, input.uv.xy).rgb;
+					float3 reflections = tex2D(Reflections, UnityStereoScreenSpaceUVAdjust(input.uv, Reflections_ST).xy).rgb;
 
 					float4 viewSpacePosition = GetViewSpacePosition(coord);
 					float3 viewVector = normalize(viewSpacePosition.xyz);
@@ -281,25 +287,32 @@ SubShader
 			float BlendWeight;
 
 			sampler2D BlurredGI;
+
+			half4 _MainTex_ST;
+			half4 PreviousDepth_ST;
+			half4 PreviousGITexture_ST;
+			half4 BlurredGI_ST;
+
+			half4 _CameraMotionVectorsTexture_ST;
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				float3 gi = tex2D(_MainTex, input.uv.xy).rgb;
+				float3 gi = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy).rgb;
 
 				//Calculate moments and width of color deviation of neighbors for color clamping
 				float3 m1, m2 = (0.0).xxx;
 				{
 					float width = 0.7;
-					float3 samp = tex2D(_MainTex, input.uv.xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					float3 samp = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 = samp;
 					m2 = samp * samp;
-					samp = tex2D(_MainTex, input.uv.xy + float2(width, -width) * _MainTex_TexelSize.xy).rgb;
+					samp = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
-					samp = tex2D(_MainTex, input.uv.xy + float2(-width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
-					samp = tex2D(_MainTex, input.uv.xy + float2(-width, -width) * _MainTex_TexelSize.xy).rgb;
+					samp = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
 				}
@@ -314,13 +327,13 @@ SubShader
 
 				
 				//Calculate world space position for current frame
-				float depth = tex2Dlod(_CameraDepthTexture, float4(input.uv.xy, 0.0, 0.0)).x;
+				float depth = tex2Dlod(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).x;
 
 				#if defined(UNITY_REVERSED_Z)
 				depth = 1.0 - depth;
 				#endif
 				
-				float4 currentPos = float4(input.uv.x * 2.0 - 1.0, input.uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+				float4 currentPos = float4(UnityStereoTransformScreenSpaceTex(input.uv).x * 2.0 - 1.0, UnityStereoTransformScreenSpaceTex(input.uv).y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
 				
 				float4 fragpos = mul(ProjectionMatrixInverse, currentPos);
 				float4 thisViewPos = fragpos;
@@ -330,12 +343,12 @@ SubShader
 
 
 				//Get motion vectors and calculate reprojection coord
-				float2 motionVectors = tex2Dlod(_CameraMotionVectorsTexture, float4(input.uv.xy, 0.0, 0.0)).xy;
-				float2 reprojCoord = input.uv.xy - motionVectors.xy;
+				float2 motionVectors = tex2Dlod(_CameraMotionVectorsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).xy;
+				float2 reprojCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy - motionVectors.xy;
 
 				
 				//Calculate world space position for the previous frame reprojected to the current frame
-				float prevDepth = (tex2Dlod(PreviousDepth, float4(reprojCoord + _MainTex_TexelSize.xy * 0.0, 0.0, 0.0)).x);
+				float prevDepth = (tex2Dlod(PreviousDepth, UnityStereoScreenSpaceUVAdjust(float4(reprojCoord + _MainTex_TexelSize.xy * 0.0, 0.0, 0.0), PreviousDepth_ST)).x);
 
 				#if defined(UNITY_REVERSED_Z)
 				prevDepth = 1.0 - prevDepth;
@@ -349,7 +362,7 @@ SubShader
 				//Apply blending
 				float blendWeight = BlendWeight;
 
-				float3 blurredGI = tex2D(BlurredGI, input.uv.xy).rgb;
+				float3 blurredGI = tex2D(BlurredGI, UnityStereoScreenSpaceUVAdjust(input.uv, BlurredGI_ST).xy).rgb;
 
 				if (reprojCoord.x > 1.0 || reprojCoord.x < 0.0 || reprojCoord.y > 1.0 || reprojCoord.y < 0.0)
 				{
@@ -362,7 +375,7 @@ SubShader
 				gi = lerp(blurredGI, gi, posSimilarity);
 				
 
-				float3 prevGI = tex2D(PreviousGITexture, reprojCoord).rgb;
+				float3 prevGI = tex2D(PreviousGITexture, UnityStereoScreenSpaceUVAdjust(reprojCoord, PreviousGITexture_ST)).rgb;
 				prevGI = clamp(prevGI, minc, maxc);
 				gi = lerp(prevGI, gi, float3(blendWeight, blendWeight, blendWeight));
 				
@@ -396,9 +409,9 @@ SubShader
 			float4 frag(v2f input) : SV_Target
 			{
 				#if UNITY_UV_STARTS_AT_TOP
-					float2 coord = input.uv2.xy;
+					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 				#else
-					float2 coord = input.uv.xy;
+					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 				#endif
 				
 				float4 spec = tex2D(_CameraGBufferTexture1, coord);
@@ -462,7 +475,7 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				float2 coord = input.uv.xy;
+				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 				float4 tex = tex2D(_CameraDepthTexture, coord);				
 				return tex;
 			}	
@@ -479,7 +492,7 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				float2 coord = input.uv.xy;
+				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 				float4 tex = tex2D(_CameraDepthNormalsTexture, coord);				
 				return tex;
 			}	
@@ -498,9 +511,9 @@ SubShader
 					
 			float4 frag(v2f input) : COLOR0
 			{
-				float4 albedoTex = tex2D(_CameraGBufferTexture0, input.uv.xy);
+				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 				float3 albedo = albedoTex.rgb;
-				float3 gi = tex2D(GITexture, input.uv.xy).rgb;
+				float3 gi = tex2D(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
 				return float4(gi, 1.0);
 			}		
 		
@@ -536,7 +549,7 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				return float4(tex3D(SEGIVolumeTexture1, float3(input.uv.xy, LayerToVisualize)).rgb, 1.0);
+				return float4(tex3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
 			}
 			
 		ENDCG
@@ -636,32 +649,32 @@ ZTest Always
 				float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 				float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
 				float validWeights = 0.0;
-				float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, input.uv.xy).x);
+				float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
 
-				half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy));
+				half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
 				float thresh = 0.26;
 				
-				float3 viewPosition = GetViewSpacePosition(input.uv.xy).xyz;
+				float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy).xyz;
 				float3 viewVector = normalize(viewPosition);
 				
 				float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
 				thresh *= 1.0 + NdotV * 2.0;
 				
-				float4 sample00 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0.0, 0.0));
-				float4 sample10 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0.0, 0.0));
-				float4 sample11 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0.0, 0.0));
-				float4 sample01 = tex2Dlod(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0.0, 0.0));
+				float4 sample00 = tex2Dlod(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0.0, 0.0));
+				float4 sample10 = tex2Dlod(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0.0, 0.0));
+				float4 sample11 = tex2Dlod(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0.0, 0.0));
+				float4 sample01 = tex2Dlod(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0.0, 0.0));
 				
 				float4 depthSamples = float4(0,0,0,0);
-				depthSamples.x = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0, 0)).x);//TODO? use CurrentDepth ....
-				depthSamples.y = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0, 0)).x);
-				depthSamples.z = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0, 0)).x);
-				depthSamples.w = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0, 0)).x);
+				depthSamples.x = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0, 0)).x);//TODO? use CurrentDepth ....
+				depthSamples.y = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0, 0)).x);
+				depthSamples.z = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0, 0)).x);
+				depthSamples.w = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0, 0)).x);
 				
-				half3 normal00 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));//TODO? use CurrentNormal ....
-				half3 normal10 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
-				half3 normal11 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
-				half3 normal01 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, input.uv.xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
+				half3 normal00 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));//TODO? use CurrentNormal ....
+				half3 normal10 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
+				half3 normal11 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
+				half3 normal01 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
 				
 				float4 depthWeights = saturate(1.0 - abs(depthSamples - depth.xxxx) / thresh);
 				
@@ -683,7 +696,7 @@ ZTest Always
 				
 				weights /= weightSum;
 				
-				float2 fractCoord = frac(input.uv.xy * _MainTex_TexelSize.zw);
+				float2 fractCoord = frac(UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw);
 				
 				float4 filteredX0 = lerp(sample00 * weights.x, sample10 * weights.y, fractCoord.x);
 				float4 filteredX1 = lerp(sample01 * weights.w, sample11 * weights.z, fractCoord.x);

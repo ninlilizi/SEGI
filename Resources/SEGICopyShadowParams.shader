@@ -25,10 +25,10 @@
 			{
 				for (int i = 0; i < 4; i++)
 				{
-					_ShadowParams[0].worldToShadow[i] = unity_WorldToShadow[i];
-					_ShadowParams[0].shadowSplitSpheres[i] = unity_ShadowSplitSpheres[i];
+					UnityStereoTransformScreenSpaceTex(_ShadowParams[0]).worldToShadow[i] = unity_WorldToShadow[i];
+					UnityStereoTransformScreenSpaceTex(_ShadowParams[0]).shadowSplitSpheres[i] = unity_ShadowSplitSpheres[i];
 				}
-				_ShadowParams[0].shadowSplitSqRadii = unity_ShadowSplitSqRadii;
+			UnityStereoTransformScreenSpaceTex(_ShadowParams[0]).shadowSplitSqRadii = unity_ShadowSplitSqRadii;
 
 				return float4(0, 0, 0, 1);
 			}

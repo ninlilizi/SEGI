@@ -12,7 +12,7 @@ public class SEGICascadedPreset : ScriptableObject
 	[Range(0.01f, 1.0f)]
 	public float temporalBlendWeight = 0.15f;
 	public bool useBilateralFiltering = true;
-	public bool halfResolution = true;
+	private bool halfResolution = false;
 	public bool stochasticSampling = true;
 	public bool doReflections = true;
 

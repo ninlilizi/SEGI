@@ -215,8 +215,8 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = tex2D(_MainTex, input.uv.xy);
-					float4 emissionTex = tex2D(_EmissionMap, input.uv.xy);
+					float4 tex = tex2D(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+					float4 emissionTex = tex2D(_EmissionMap, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 					
 					float4 color = _Color;
 

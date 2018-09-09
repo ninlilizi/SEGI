@@ -26,8 +26,8 @@ SubShader
 			struct v2f
 			{
 				float4 pos : SV_POSITION;
-				//float4 uv : TEXCOORD0;
-				//float3 normal : TEXCOORD1;
+				float4 uv : TEXCOORD0;
+				float3 normal : TEXCOORD1;
 				//half4 color : COLOR;
 			};
 			
@@ -43,8 +43,8 @@ SubShader
 				//o.pos.xy = (o.pos.xy);
 				//
 				//
-				//o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
-				//o.normal = UnityObjectToWorldNormal(v.normal);
+				o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
+				o.normal = UnityObjectToWorldNormal(v.normal);
 				//
 				//o.color = v.color;
 				//
