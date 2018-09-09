@@ -32,6 +32,9 @@ Shader "Custom/VolumeRayCasting" {
 		//float4 SEGIShadowVector;
 		
 		// vertex input: position, UV
+
+		half4 SEGIActiveClipmapVolume_ST;
+
 		struct appdata {
 		    float4 vertex : POSITION;
 		    float4 texcoord : TEXCOORD0;
@@ -41,15 +44,12 @@ Shader "Custom/VolumeRayCasting" {
 			    float4 pos : SV_POSITION;
 			    float4 uv : TEXCOORD0;
 			};
-
-        	float4 SEGIFrontS_ST;
-        	float4 SEGIBackS_ST;
-        	
+       	
 			v2f vert (appdata v) {
 
 			    v2f o;
 			    o.pos = UnityObjectToClipPos(v.vertex);
-			    o.uv = UnityObjectToClipPos(v.vertex);
+				o.uv = float4(TRANSFORM_TEX(v.vertex, SEGIActiveClipmapVolume), 1.0, 1.0);
 			    return o;
 			    
 			}
@@ -60,8 +60,8 @@ Shader "Custom/VolumeRayCasting" {
 				texC.x = 0.5f*texC.x + 0.5f; 
 				texC.y = 0.5f*texC.y + 0.5f;			
 				texC.y = 1 - texC.y;
-			    float3 front = tex2D(SEGIFrontS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
-			    float3 back = tex2D(SEGIBackS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
+			    float3 front = tex2D(SEGIFrontS, texC).rgb;
+			    float3 back = tex2D(SEGIBackS, texC).rgb;
 
 			    float3 dir = normalize(back - front);
 			    float4 pos = float4(front, 0);
@@ -130,8 +130,8 @@ Shader "Custom/VolumeRayCasting" {
 				texC.x = 0.5f*texC.x + 0.5f; 
 				texC.y = 0.5f*texC.y + 0.5f;			
 				texC.y = 1 - texC.y;
-				float3 front = tex2D(SEGIFrontS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
-				float3 back = tex2D(SEGIBackS, UnityStereoScreenSpaceUVAdjust(texC, SEGIBackS_ST)).rgb;
+				float3 front = tex2D(SEGIFrontS, texC).rgb;
+				float3 back = tex2D(SEGIBackS, texC).rgb;
 			    		
 			    float3 dir = normalize(back - front);
 			    float4 pos = float4(front, 0);

@@ -21,7 +21,9 @@ public class SEGICascaded : MonoBehaviour
     [Serializable]
     public enum VoxelResolution
     {
-        low = 64,
+        potato = 16,
+        low = 32,
+        medium = 64,
         high = 128
     }
 
