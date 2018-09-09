@@ -2,7 +2,7 @@
   <img src="https://i.imgur.com/gtkjoxj.png">
 </p>
 
-# CKGI (SEGI modified by CK85 aka Nexusmaster)
+# CKGI-VR (SEGI modified by CK85 aka Nexusmaster, then Single Pass Stereo support added by Ninlilizi)
 A fully-dynamic voxel-based global illumination system for Unity. More details at http://www.sonicether.com/segi/
 
 <p align="center" style="display: inline-block;">
