@@ -49,6 +49,8 @@
 					half4 uv : TEXCOORD0;
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
+
+					UNITY_VERTEX_OUTPUT_STEREO //Insert
 				};
 				
 				struct g2f
@@ -57,6 +59,8 @@
 					half4 uv : TEXCOORD0;
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
+
+					UNITY_VERTEX_OUTPUT_STEREO //Insert
 				};
 				
 				half4 _Color;
@@ -183,6 +187,10 @@
 			
 				float4 frag (g2f input) : SV_TARGET
 				{
+					#if UNITY_VERSION >= 560
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); // required for sampling the correct slice of the shadow map render texture array
+					#endif
+
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					
 					//float3 absNormal = abs(input.normal);

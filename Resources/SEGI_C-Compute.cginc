@@ -69,11 +69,9 @@ float4x4 ProjectionMatrixInverse;
 
 sampler2D _CameraDepthNormalsTexture;
 sampler2D _CameraDepthTexture;
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
-//sampler2D _MainTex;
+sampler2D _MainTex;
 sampler2D PreviousGITexture;
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
-//sampler2D _CameraGBufferTexture0;
+sampler2D _CameraGBufferTexture0;
 sampler2D _CameraMotionVectorsTexture;
 float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;

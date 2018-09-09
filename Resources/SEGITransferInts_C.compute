@@ -8,7 +8,9 @@
 //SamplerState samplerunity_SpecCube0;
 
 #include "SEGIUnityShadowInput.cginc"
-#include "SEGI_C.cginc"
+#include "SEGI_C-Compute.cginc"
+
+
 
 RWTexture3D<float4> Result;
 //Texture3D<float4> PrevResult;

@@ -17,11 +17,17 @@ CGINCLUDE
 		#if UNITY_UV_STARTS_AT_TOP
 		half4 uv2 : TEXCOORD1;
 		#endif
+
+		UNITY_VERTEX_OUTPUT_STEREO //Insert
 	};
 	
 	v2f vert(appdata_img v)
 	{
 		v2f o;
+
+		UNITY_SETUP_INSTANCE_ID(v); //Insert
+		UNITY_INITIALIZE_OUTPUT(v2f, o); //Insert
+		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
 		
 		o.pos = UnityObjectToClipPos (v.vertex);
 		o.uv = float4(v.texcoord.xy, 1, 1);		
@@ -53,8 +59,9 @@ SubShader
 			
 			float4x4 CameraToWorld;
 			
-			sampler2D _CameraGBufferTexture2;
+			//sampler2D _CameraGBufferTexture2;
 			
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
 			
 			//sampler2D NoiseTexture;
 
@@ -80,6 +87,9 @@ SubShader
 
 			float4 frag(v2f input) : SV_Target
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); //Insert
+				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, input.uv); //Insert
+
 				#if UNITY_UV_STARTS_AT_TOP
 					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 				#else
@@ -105,7 +115,7 @@ SubShader
 				
 				float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;	//Apply bias of cone trace origin towards the surface normal to avoid self-occlusion artifacts
 				
-				float3 gi = float3(0.0, 0.0, 0.0);
+				//float3 gi = float3(0.0, 0.0, 0.0);
 				float4 traceResult = float4(0,0,0,0);
 
 				const float phi = 1.618033988;
@@ -201,36 +211,30 @@ SubShader
 			#pragma vertex vert
 			#pragma fragment frag
 			
-			sampler2D _CameraGBufferTexture2;
-			sampler2D _CameraGBufferTexture1;
-			sampler2D GITexture;
-			sampler2D Reflections;
-			
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
 			
 			float4x4 CameraToWorld;
 			
 			int DoReflections;
 
 			int HalfResolution;
-
-			half4 _MainTex_ST;
-			half4 GITexture_ST;
-			half4 _CameraGBufferTexture0_ST;
-			half4 _CameraGBufferTexture1_ST;
-			half4 Reflections_ST;
-					
+				
 			float4 frag(v2f input) : COLOR0
 			{
-#if UNITY_UV_STARTS_AT_TOP
-				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
-#else
-				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
-#endif
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
-				float3 albedo = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);//albedoTex.rgb;
-				float3 gi = tex2D(GITexture, UnityStereoScreenSpaceUVAdjust(input.uv, GITexture_ST).xy).rgb;
-				float3 scene = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy).rgb;
+#if UNITY_UV_STARTS_AT_TOP
+				float2 coord = input.uv2.xy;
+#else
+				float2 coord = input.uv.xy;
+#endif
+				float4 albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, input.uv);
+				float3 albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, input.uv);
+				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, input.uv);
+				float3 scene = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
 				
 				gi *= 0.75 + 1 * 0.25;
 				
@@ -238,17 +242,17 @@ SubShader
 
 				if (DoReflections > 0)
 				{
-					float3 reflections = tex2D(Reflections, UnityStereoScreenSpaceUVAdjust(input.uv, Reflections_ST).xy).rgb;
+					float3 reflections = UNITY_SAMPLE_SCREENSPACE_TEXTURE(Reflections, input.uv); //Insert
 
 					float4 viewSpacePosition = GetViewSpacePosition(coord);
 					float3 viewVector = normalize(viewSpacePosition.xyz);
 					float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-					float4 spec = tex2D(_CameraGBufferTexture1, coord);
+					float4 spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, coord); //Insert
 					float smoothness = spec.a;
 					float3 specularColor = spec.rgb;
 
-					float3 worldNormal = normalize(tex2D(_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
+					float3 worldNormal = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0; //Insert
 					float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
 
 					float3 fresnel = pow(saturate(dot(worldViewVector.xyz, reflectionKernel.xyz)) * (smoothness * 0.5 + 0.5), 5.0);
@@ -297,7 +301,9 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				float3 gi = tex2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy).rgb;
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv).rgb;
 
 				//Calculate moments and width of color deviation of neighbors for color clamping
 				float3 m1, m2 = (0.0).xxx;
@@ -396,12 +402,8 @@ SubShader
 			
 			float4x4 CameraToWorld;
 			
-			
 			sampler2D _CameraGBufferTexture1;
 			sampler2D _CameraGBufferTexture2;
-			
-			
-			
 			
 			int FrameSwitch;
 
@@ -475,8 +477,10 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
-				float4 tex = tex2D(_CameraDepthTexture, coord);				
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
+
+				float2 coord = input.uv.xy;
+				float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, input.uv);
 				return tex;
 			}	
 		
@@ -492,29 +496,36 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
-				float4 tex = tex2D(_CameraDepthNormalsTexture, coord);				
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
+
+				float2 coord = input.uv.xy;
+				float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, input.uv);
 				return tex;
-			}	
-		
+			}
+
 		ENDCG
-	}	
-	
-	
-	Pass //7 Visualize GI
-	{
-		CGPROGRAM
-			#pragma vertex vert
-			#pragma fragment frag
-			
-			sampler2D GITexture;
+			}
+
+
+				Pass //7 Visualize GI
+			{
+				CGPROGRAM
+					#pragma vertex vert
+					#pragma fragment frag
+
+					//UNITY_DECLARE_TEX2D(GITexture);
+					sampler2D GITexture;
 					
 			float4 frag(v2f input) : COLOR0
 			{
-				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+				float4 albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, input.uv); //Insert
+				//float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 				float3 albedo = albedoTex.rgb;
+				//float3 gi = UNITY_SAMPLE_TEX2D(GITexture, input.uv).rgb; //Insert
 				float3 gi = tex2D(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
-				return float4(gi, 1.0);
+				return (gi, 1.0);
 			}		
 		
 		ENDCG
@@ -530,6 +541,7 @@ SubShader
 			
 			float4 frag(v2f input) : COLOR0
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				return float4(0.0, 0.0, 0.0, 1.0);
 			}
 			
@@ -572,6 +584,7 @@ ZTest Always
 			
 			float4 frag(v2f input) : SV_Target
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
 				#if UNITY_UV_STARTS_AT_TOP
 					float2 coord = input.uv2.xy;
 				#else
@@ -646,12 +659,14 @@ ZTest Always
 					
 			float4 frag(v2f input) : COLOR0
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 				float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 				float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
 				float validWeights = 0.0;
-				float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
+				float depth = LinearEyeDepth(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, input.uv).x);
 
-				half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
+				half3 normal = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, input.uv));
 				float thresh = 0.26;
 				
 				float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy).xyz;
