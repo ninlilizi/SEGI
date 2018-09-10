@@ -81,7 +81,8 @@
 					
 					o.pos = vertex;
 					
-					o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
+					o.uv = float4(v.texcoord.xy, 1.0, 1.0);
+					//o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
 					
 					
 					return o;
@@ -221,7 +222,7 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
+					float4 tex = UNITY_SAMPLE_TEX2D(_MainTex, input.uv);
 					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_EmissionMap, input.uv);
 					
 					float4 color = _Color;

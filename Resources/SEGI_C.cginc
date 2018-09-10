@@ -68,11 +68,10 @@ uniform half4 _MainTex_TexelSize;
 float4x4 ProjectionMatrixInverse;
 
 sampler2D _CameraDepthNormalsTexture;
-sampler2D _CameraDepthTexture;
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
-//sampler2D _MainTex;
+UNITY_DECLARE_TEX2D(_CameraDepthTexture);
+UNITY_DECLARE_TEX2D(_MainTex);
 sampler2D PreviousGITexture;
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
+UNITY_DECLARE_TEX2D(_CameraGBufferTexture0);
 //sampler2D _CameraGBufferTexture0;
 sampler2D _CameraMotionVectorsTexture;
 float4x4 WorldToCamera;
@@ -117,7 +116,7 @@ float3 TransformClipSpace5(float3 pos)
 
 float4 GetViewSpacePosition(float2 coord)
 {
-	float depth = tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	float depth = UNITY_SAMPLE_TEX2DARRAY_LOD(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0), 0).x;
 
 #if defined(UNITY_REVERSED_Z)
 	depth = 1.0 - depth;
