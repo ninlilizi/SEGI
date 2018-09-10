@@ -87,7 +87,7 @@ SubShader
 
 			float4 frag(v2f input) : SV_Target
 			{
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); //Insert
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, input.uv); //Insert
 
 				#if UNITY_UV_STARTS_AT_TOP

@@ -33,10 +33,9 @@
 				float4x4 SEGIVoxelViewLeft;
 				float4x4 SEGIVoxelViewTop;
 				
-				//sampler2D _MainTex;
+				float4 _MainTex_ST;
 				sampler2D _EmissionMap;
 				float _Cutoff;
-				float4 _MainTex_ST;
 				half4 _EmissionColor;
 
 				float SEGISecondaryBounceGain;
@@ -50,7 +49,7 @@
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
 
-					UNITY_VERTEX_OUTPUT_STEREO //Insert
+					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				struct g2f
@@ -60,7 +59,7 @@
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
 
-					UNITY_VERTEX_OUTPUT_STEREO //Insert
+					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				half4 _Color;
@@ -68,7 +67,10 @@
 				v2g vert(appdata_full v, uint id : SV_VertexID)
 				{
 					v2g o;
+
+					UNITY_SETUP_INSTANCE_ID(g);
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
+					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 					float4 vertex = v.vertex;
 					
@@ -259,8 +261,8 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = tex2D(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy);
-					float4 emissionTex = tex2D(_EmissionMap, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
+					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_EmissionMap, input.uv);
 					
 					float4 color = _Color;
 
