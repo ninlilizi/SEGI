@@ -1,4 +1,4 @@
-#define SEGI_UNITY_SHADOWMAP_OFF
+#define SEGI_UNITY_SHADOWMAP_ON
 
 //float4 SEGISunDepth_TexelSize;
 float4 SEGIMinPosVoxel;
