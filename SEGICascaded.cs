@@ -38,7 +38,7 @@ public class SEGICascaded : MonoBehaviour
     public float shadowSpaceSize = 50.0f;
 
     [Range(0.01f, 1.0f)]
-    public float temporalBlendWeight = 0.1f;
+    //public float temporalBlendWeight = 0.1f;
 
     public bool visualizeVoxels = false;
     public bool visualizeShadowmapCopy = false;
@@ -251,7 +251,7 @@ public class SEGICascaded : MonoBehaviour
         public static int DiffuseTrace = 0;
         public static int BilateralBlur = 1;
         public static int BlendWithScene = 2;
-        public static int TemporalBlend = 3;
+        //public static int TemporalBlend = 3;
         public static int SpecularTrace = 4;
         public static int GetCameraDepthTexture = 5;
         public static int GetWorldNormals = 6;
@@ -446,7 +446,7 @@ public class SEGICascaded : MonoBehaviour
         innerOcclusionLayers = preset.innerOcclusionLayers;
         infiniteBounces = preset.infiniteBounces;
 
-        temporalBlendWeight = preset.temporalBlendWeight;
+        //temporalBlendWeight = preset.temporalBlendWeight;
         useBilateralFiltering = preset.useBilateralFiltering;
         halfResolution = false;
         stochasticSampling = preset.stochasticSampling;
@@ -1684,7 +1684,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetFloat("FarOcclusionStrength", farOcclusionStrength);
         material.SetFloat("FarthestOcclusionStrength", farthestOcclusionStrength);
         material.SetTexture("NoiseTexture", blueNoise[frameCounter]);
-        material.SetFloat("BlendWeight", temporalBlendWeight);
+        //material.SetFloat("BlendWeight", temporalBlendWeight);
 
         if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
         {
@@ -1745,9 +1745,9 @@ public class SEGICascaded : MonoBehaviour
             material.SetTexture("Reflections", reflections);
         }
 
-        /*
+        
         //Perform bilateral filtering
-        if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
+        if (useBilateralFiltering)// && temporalBlendWeight >= 0.99999f)
         {
             material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
             Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
@@ -1761,7 +1761,7 @@ public class SEGICascaded : MonoBehaviour
             material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
             Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
         }
-        */
+
         //If Half Resolution tracing is enabled
         if (giRenderRes == 2)
         {
@@ -1775,8 +1775,8 @@ public class SEGICascaded : MonoBehaviour
             gi2.filterMode = FilterMode.Point;
             Graphics.Blit(gi2, gi4);
 
-            Graphics.ExecuteCommandBuffer(_cb);
-            _cb.Clear();
+            //Graphics.ExecuteCommandBuffer(_cb);
+            //_cb.Clear();
 
             RenderTexture.ReleaseTemporary(gi2);
 
@@ -1845,8 +1845,8 @@ public class SEGICascaded : MonoBehaviour
         }
         else    //If Half Resolution tracing is disabled
         {
-            /*
-            if (temporalBlendWeight < 1.0f)
+            
+            /*if (temporalBlendWeight < 1.0f)
             {
                 //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
                 RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
@@ -1867,10 +1867,10 @@ public class SEGICascaded : MonoBehaviour
 
 
 
-                
+
                 //Perform temporal reprojection and blending
-                Graphics.Blit(gi2, gi1, material, Pass.TemporalBlend);
-                Graphics.Blit(gi1, previousGIResult);
+                //Graphics.Blit(gi2, gi1, material, Pass.TemporalBlend);
+                //Graphics.Blit(gi1, previousGIResult);
                 Graphics.Blit(source, previousDepth, material, Pass.GetCameraDepthTexture);
 
 
@@ -1890,15 +1890,14 @@ public class SEGICascaded : MonoBehaviour
                     material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
                     Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
                 }
-                
 
 
                 RenderTexture.ReleaseTemporary(blur0);
                 RenderTexture.ReleaseTemporary(blur1);
-            }
-            */
+            }*/
+            
             //Actually apply the GI to the scene using gbuffer data
-            material.SetTexture("GITexture", temporalBlendWeight < 1.0f ? gi1 : gi2);
+            material.SetTexture("GITexture", gi2);
             Graphics.Blit(source, destination, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
 
             //Release temporary textures
