@@ -194,7 +194,7 @@ SubShader
 					float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
 					weight *= pow(saturate(dot(sampleNormal, normal)), 14.0);
 					
-					float4 blurSample = UNITY_SAMPLE_TEX2DARRAY_LOD(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0), 0).rgba;
+					float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0)).rgba;
 					blurred += blurSample * weight;
 					validWeights += weight;
 				}
@@ -237,7 +237,7 @@ SubShader
 				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv));
-				float3 scene = UNITY_SAMPLE_TEX2D(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
+				float3 scene = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
 				
 				gi *= 0.75 + 1 * 0.25;
 				
@@ -306,22 +306,22 @@ SubShader
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-				float3 gi = UNITY_SAMPLE_TEX2D(_MainTex, input.uv).rgb;
+				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv).rgb;
 
 				//Calculate moments and width of color deviation of neighbors for color clamping
 				float3 m1, m2 = (0.0).xxx;
 				{
 					float width = 0.7;
-					float3 samp = UNITY_SAMPLE_TEX2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					float3 samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 = samp;
 					m2 = samp * samp;
-					samp = UNITY_SAMPLE_TEX2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
-					samp = UNITY_SAMPLE_TEX2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
-					samp = UNITY_SAMPLE_TEX2D(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
 				}
@@ -681,10 +681,10 @@ ZTest Always
 				float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
 				thresh *= 1.0 + NdotV * 2.0;
 				
-				float4 sample00 = UNITY_SAMPLE_TEX2DARRAY_LOD(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0.0, 0.0), 0);
-				float4 sample10 = UNITY_SAMPLE_TEX2DARRAY_LOD(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0.0, 0.0), 0);
-				float4 sample11 = UNITY_SAMPLE_TEX2DARRAY_LOD(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0.0, 0.0), 0);
-				float4 sample01 = UNITY_SAMPLE_TEX2DARRAY_LOD(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0.0, 0.0), 0);
+				float4 sample00 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0), 0.0, 0.0));
+				float4 sample10 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0), 0.0, 0.0));
+				float4 sample11 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0), 0.0, 0.0));
+				float4 sample01 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0), 0.0, 0.0));
 				
 				float4 depthSamples = float4(0,0,0,0);
 				depthSamples.x = LinearEyeDepth(UNITY_SAMPLE_TEX2DARRAY_LOD(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0).x, 0));

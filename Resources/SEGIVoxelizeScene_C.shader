@@ -81,7 +81,7 @@
 					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
 					//UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-					UNITY_TRANSFER_INSTANCE_ID(v, o)
+					//UNITY_TRANSFER_INSTANCE_ID(v, o)
 
 					float4 vertex = v.vertex;
 					
@@ -274,7 +274,7 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = UNITY_SAMPLE_TEX2D(_MainTex, input.uv);
+					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
 					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(UNITY_ACCESS_INSTANCED_PROP(Props, _EmissionMap), input.uv);
 					
 					float4 color = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
