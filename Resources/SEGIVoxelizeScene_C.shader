@@ -21,9 +21,19 @@
 				#pragma vertex vert
 				#pragma fragment frag
 				#pragma geometry geom
+				#pragma multi_compile_instancing
 				#include "UnityCG.cginc"
 				#include "SEGIUnityShadowInput.cginc"
 				#include "SEGI_C.cginc"
+
+				UNITY_INSTANCING_BUFFER_START(Props)
+				UNITY_DEFINE_INSTANCED_PROP(half4, _Color)
+				UNITY_DEFINE_INSTANCED_PROP(half4, _EmissionColor)
+				UNITY_DEFINE_INSTANCED_PROP(float, _Cutoff)
+				UNITY_DEFINE_INSTANCED_PROP(float, _BlockerValue)
+				UNITY_DEFINE_INSTANCED_PROP(sampler2D, _EmissionMap)
+				UNITY_INSTANCING_BUFFER_END(Props)
+
 
 				RWTexture2D<uint> RG0;
 				
@@ -34,13 +44,13 @@
 				float4x4 SEGIVoxelViewTop;
 				
 				float4 _MainTex_ST;
-				sampler2D _EmissionMap;
-				float _Cutoff;
-				half4 _EmissionColor;
+				//sampler2D _EmissionMap;
+				//float _Cutoff;
+				//half4 _EmissionColor;
 
 				float SEGISecondaryBounceGain;
 				
-				float _BlockerValue;
+				//float _BlockerValue;
 				
 				struct v2g
 				{
@@ -49,7 +59,7 @@
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
 
-					UNITY_VERTEX_OUTPUT_STEREO
+					//UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				struct g2f
@@ -59,18 +69,19 @@
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
 
-					UNITY_VERTEX_OUTPUT_STEREO
+					//UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
-				half4 _Color;
+				//half4 _Color;
 				
 				v2g vert(appdata_full v, uint id : SV_VertexID)
 				{
 					v2g o;
 
-					UNITY_SETUP_INSTANCE_ID(g);
+					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
-					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+					//UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+					UNITY_TRANSFER_INSTANCE_ID(v, o)
 
 					float4 vertex = v.vertex;
 					
@@ -96,6 +107,8 @@
 				[maxvertexcount(3)]
 				void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 				{
+					UNITY_SETUP_INSTANCE_ID(input);
+
 					v2g p[3];
 					int i = 0;
 					for (i = 0; i < 3; i++)
@@ -262,11 +275,11 @@
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
 					float4 tex = UNITY_SAMPLE_TEX2D(_MainTex, input.uv);
-					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_EmissionMap, input.uv);
+					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(UNITY_ACCESS_INSTANCED_PROP(Props, _EmissionMap), input.uv);
 					
-					float4 color = _Color;
+					float4 color = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
 
-					if (length(_Color.rgb) < 0.0001)
+					if (length(UNITY_ACCESS_INSTANCED_PROP(Props, _Color).rgb) < 0.0001)
 					{
 						color.rgb = float3(1, 1, 1);
 					}
@@ -275,7 +288,7 @@
 						color.rgb *= color.a;
 					}
 
-					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
+					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + UNITY_ACCESS_INSTANCED_PROP(Props, _EmissionColor).rgb * 0.9 * emissionTex.rgb;
 
 					float4 prevBounce = tex3D(SEGICurrentIrradianceVolume, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
 					col.rgb += prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * tex.rgb * color.rgb;
@@ -289,10 +302,10 @@
 					coord /= (uint)SEGIVoxelAA + 1u;
 
 
-					if (_BlockerValue > 0.01)
+					if (UNITY_ACCESS_INSTANCED_PROP(Props, _BlockerValue) > 0.01)
 					{
 						result.a += 20.0;
-						result.a += _BlockerValue;
+						result.a += UNITY_ACCESS_INSTANCED_PROP(Props, _BlockerValue);
 						result.rgb = float3(0.0, 0.0, 0.0);
 					}
 

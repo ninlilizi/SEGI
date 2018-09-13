@@ -19,6 +19,7 @@
 				#pragma vertex vert
 				#pragma fragment frag
 				#pragma geometry geom
+				#pragma multi_compile_instancing
 				#include "UnityCG.cginc"
 				#include "SEGI_C.cginc"
 				
@@ -39,7 +40,7 @@
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
 
-					UNITY_VERTEX_OUTPUT_STEREO //Insert
+					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				struct g2f
@@ -49,7 +50,7 @@
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
 
-					UNITY_VERTEX_OUTPUT_STEREO //Insert
+					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				//half4 _Color;
@@ -58,11 +59,11 @@
 				{
 					v2g o;
 
-					UNITY_SETUP_INSTANCE_ID(v); //Insert
-					UNITY_INITIALIZE_OUTPUT(v2g, o); //Insert
-					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
+					UNITY_SETUP_INSTANCE_ID(v);
+					UNITY_INITIALIZE_OUTPUT(v2g, o);
+					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+					UNITY_TRANSFER_INSTANCE_ID(v, o);
 
-					//UNITY_INITIALIZE_OUTPUT(v2g, o);
 					
 					float4 vertex = v.vertex;
 					
@@ -157,7 +158,8 @@
 
 				float4 frag (g2f input) : SV_TARGET
 				{
-					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+					UNITY_SETUP_INSTANCE_ID(input);
 
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					

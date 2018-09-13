@@ -56,6 +56,7 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			float4x4 CameraToWorld;
 			
@@ -166,6 +167,7 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			float2 Kernel;
 				
@@ -210,6 +212,7 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
@@ -231,7 +234,7 @@ SubShader
 #else
 				float2 coord = input.uv.xy;
 #endif
-				float4 albedoTex = UNITY_SAMPLE_TEX2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
+				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 scene = UNITY_SAMPLE_TEX2D(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
@@ -474,6 +477,7 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			float4 frag(v2f input) : COLOR0
 			{
@@ -492,11 +496,12 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			
 			float4 frag(v2f input) : COLOR0
 			{
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
 				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 				float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, input.uv);
@@ -512,20 +517,17 @@ SubShader
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
-					//UNITY_DECLARE_TEX2D(GITexture);
 					sampler2D GITexture;
 					
 			float4 frag(v2f input) : COLOR0
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-
-				float4 albedoTex = UNITY_SAMPLE_TEX2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
-				//float4 albedoTex = tex2D(_CameraGBufferTexture0, input.uv.xy);
+				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 				float3 albedo = albedoTex.rgb;
-				//float3 gi = UNITY_SAMPLE_TEX2D(GITexture, input.uv).rgb; //Insert
 				float3 gi = tex2D(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
-				return (gi, 1.0);
+				return float4(gi, 1.0);
 			}		
 		
 		ENDCG
@@ -538,6 +540,7 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			float4 frag(v2f input) : COLOR0
 			{
@@ -553,6 +556,7 @@ SubShader
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 
 			float LayerToVisualize;
 			int MipLevelToVisualize;
@@ -575,6 +579,7 @@ ZTest Always
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			float4x4 CameraToWorld;
 			
@@ -645,6 +650,7 @@ ZTest Always
 		CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma multi_compile_instancing
 			
 			//float2 Kernel;
 			//

@@ -239,7 +239,7 @@ public class SEGICascaded : MonoBehaviour
     internal static SEGICascaded calculationSEGIObject = null;
 
     int updateGIcounter = 0;
-    public int updateGIevery = 4;
+    public int updateGIevery = 1;
 
     #endregion // InternalVariables
 
@@ -760,11 +760,13 @@ public class SEGICascaded : MonoBehaviour
         if (!material)
         {
             material = new Material(Shader.Find("Hidden/SEGI_C"));
+            material.enableInstancing = true;
             material.hideFlags = HideFlags.HideAndDontSave;
         }
         if (!m_CopyShadowParamsMaterial)
         {
             m_CopyShadowParamsMaterial = new Material(m_CopyShadowParamsShader);
+            m_CopyShadowParamsMaterial.enableInstancing = true;
             m_CopyShadowParamsMaterial.hideFlags = HideFlags.HideAndDontSave;
         }
 
