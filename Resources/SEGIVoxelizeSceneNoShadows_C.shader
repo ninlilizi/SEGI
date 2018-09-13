@@ -234,7 +234,7 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = UNITY_SAMPLE_TEX2D(_MainTex, input.uv);
+					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
 					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(UNITY_ACCESS_INSTANCED_PROP(Props, _EmissionMap), input.uv);
 					
 					float4 color = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);

@@ -107,7 +107,7 @@
 				[maxvertexcount(3)]
 				void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 				{
-					UNITY_SETUP_INSTANCE_ID(input);
+					//UNITY_SETUP_INSTANCE_ID(input);
 
 					v2g p[3];
 					int i = 0;
