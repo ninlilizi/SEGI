@@ -65,7 +65,15 @@ CGINCLUDE
 			//sampler2D _CameraGBufferTexture2;
 			
 			UNITY_DECLARE_TEX2D(_CameraGBufferTexture2);
-			
+
+			//Fix Stereo View Matrix
+			float4x4 _LeftEyeProjection;
+			float4x4 _RightEyeProjection;
+			float4x4 _LeftEyeToWorld;
+			float4x4 _RightEyeToWorld;
+			//Fix Stereo View Matrix/
+
+
 			//sampler2D NoiseTexture;
 
 			float hash(uint2 x)
@@ -91,22 +99,49 @@ CGINCLUDE
 			float4 frag(v2f input) : SV_Target
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-				float3 gi = UNITY_SAMPLE_TEX2D(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)); //Insert
 
-				#if UNITY_UV_STARTS_AT_TOP
-					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
-				#else
-					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
-				#endif
-				
-				//Get view space position and view vector
-				float4 viewSpacePosition = GetViewSpacePosition(coord);
-				//float3 viewVector = normalize(viewSpacePosition.xyz);
+			//Fix Stereo View Matrix
+			float d = UNITY_SAMPLE_TEX2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv)).r; // non-linear Z
+			float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 
-				//Get voxel space position
-				float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
+			float4x4 proj, eyeToWorld;
 
-				//float3 viewDir = WorldSpaceViewDir(voxelSpacePosition);
+			if (uv.x < .5) // Left Eye
+			{
+				uv.x = saturate(uv.x * 2); // 0..1 for left side of buffer
+				proj = _LeftEyeProjection;
+				eyeToWorld = _LeftEyeToWorld;
+			}
+			else // Right Eye
+			{
+				uv.x = saturate((uv.x - 0.5) * 2); // 0..1 for right side of buffer
+				proj = _RightEyeProjection;
+				eyeToWorld = _RightEyeToWorld;
+			}
+
+			float2 uvClip = uv * 2.0 - 1.0;
+			float4 clipPos = float4(uvClip, d, 1.0);
+			float4 viewPos = mul(proj, clipPos); // inverse projection by clip position
+			viewPos /= viewPos.w; // perspective division
+			float3 worldPos = mul(eyeToWorld, viewPos).xyz;
+			//Fix Stereo View Matrix/
+
+			float3 gi = UNITY_SAMPLE_TEX2D(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)); //Insert
+
+			#if UNITY_UV_STARTS_AT_TOP
+				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
+			#else
+				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
+			#endif
+			
+			//Get view space position and view vector
+				float4 viewSpacePosition = viewPos;
+			//float3 viewVector = normalize(viewSpacePosition.xyz);
+
+			//Get voxel space position
+				float3 voxelSpacePosition = worldPos;
+
+			//float3 viewDir = WorldSpaceViewDir(voxelSpacePosition);
 
 				voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
 				voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
@@ -588,17 +623,51 @@ ZTest Always
 			sampler2D _CameraGBufferTexture2;
 			
 			float4 CameraPosition;
+
+			//Fix Stereo View Matrix
+			float4x4 _LeftEyeProjection;
+			float4x4 _RightEyeProjection;
+			float4x4 _LeftEyeToWorld;
+			float4x4 _RightEyeToWorld;
+			//Fix Stereo View Matrix/
 			
 			float4 frag(v2f input) : SV_Target
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
+
+				//Fix Stereo View Matrix
+				float d = UNITY_SAMPLE_TEX2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv)).r; // non-linear Z
+				float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
+
+				float4x4 proj, eyeToWorld;
+
+				if (uv.x < .5) // Left Eye
+				{
+					uv.x = saturate(uv.x * 2); // 0..1 for left side of buffer
+					proj = _LeftEyeProjection;
+					eyeToWorld = _LeftEyeToWorld;
+				}
+				else // Right Eye
+				{
+					uv.x = saturate((uv.x - 0.5) * 2); // 0..1 for right side of buffer
+					proj = _RightEyeProjection;
+					eyeToWorld = _RightEyeToWorld;
+				}
+
+				float2 uvClip = uv * 2.0 - 1.0;
+				float4 clipPos = float4(uvClip, d, 1.0);
+				float4 viewPos = mul(proj, clipPos); // inverse projection by clip position
+				viewPos /= viewPos.w; // perspective division
+				float3 worldPos = mul(eyeToWorld, viewPos).xyz;
+				//Fix Stereo View Matrix/
+
 				#if UNITY_UV_STARTS_AT_TOP
 					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 				#else
 					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 				#endif
 				
-				float4 viewSpacePosition = GetViewSpacePosition(coord);
+				float4 viewSpacePosition = viewPos;
 				float3 viewVector = normalize(viewSpacePosition.xyz);
 				float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
@@ -663,11 +732,44 @@ ZTest Always
 			//int SourceScale;
 			//sampler2D CurrentDepth;
 			//sampler2D CurrentNormal;
+
+			//Fix Stereo View Matrix
+			float4x4 _LeftEyeProjection;
+			float4x4 _RightEyeProjection;
+			float4x4 _LeftEyeToWorld;
+			float4x4 _RightEyeToWorld;
+			//Fix Stereo View Matrix/
 			
 					
 			float4 frag(v2f input) : COLOR0
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+				//Fix Stereo View Matrix
+				float d = UNITY_SAMPLE_TEX2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv)).r; // non-linear Z
+				float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
+
+				float4x4 proj, eyeToWorld;
+	
+				if (uv.x < .5) // Left Eye
+				{
+					uv.x = saturate(uv.x * 2); // 0..1 for left side of buffer
+					proj = _LeftEyeProjection;
+					eyeToWorld = _LeftEyeToWorld;
+				}
+				else // Right Eye
+				{
+					uv.x = saturate((uv.x - 0.5) * 2); // 0..1 for right side of buffer
+					proj = _RightEyeProjection;
+					eyeToWorld = _RightEyeToWorld;
+				}
+
+				float2 uvClip = uv * 2.0 - 1.0;
+				float4 clipPos = float4(uvClip, d, 1.0);
+				float4 viewPos = mul(proj, clipPos); // inverse projection by clip position
+				viewPos /= viewPos.w; // perspective division
+				float3 worldPos = mul(eyeToWorld, viewPos).xyz;
+				//Fix Stereo View Matrix/
 
 				float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 				float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
@@ -677,7 +779,7 @@ ZTest Always
 				half3 normal = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)));
 				float thresh = 0.26;
 				
-				float3 viewPosition = GetViewSpacePosition(input.uv.xy).xyz;
+				float3 viewPosition = viewPos;
 				float3 viewVector = normalize(viewPosition);
 				
 				float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);

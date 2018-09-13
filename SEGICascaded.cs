@@ -1652,6 +1652,31 @@ public class SEGICascaded : MonoBehaviour
         Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
         Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
 
+        //Fix stereo rendering matrix
+        Camera cam = GetComponent<Camera>();
+        if (cam.stereoEnabled)
+        {
+            // Left and Right Eye inverse View Matrices
+            Matrix4x4 leftToWorld = cam.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse;
+            Matrix4x4 rightToWorld = cam.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse;
+            material.SetMatrix("_LeftEyeToWorld", leftToWorld);
+            material.SetMatrix("_RightEyeToWorld", rightToWorld);
+
+            Matrix4x4 leftEye = cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
+            Matrix4x4 rightEye = cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
+
+            // Compensate for RenderTexture...
+            leftEye = GL.GetGPUProjectionMatrix(leftEye, true).inverse;
+            rightEye = GL.GetGPUProjectionMatrix(rightEye, true).inverse;
+            // Negate [1,1] to reflect Unity's CBuffer state
+            leftEye[1, 1] *= -1;
+            rightEye[1, 1] *= -1;
+
+            material.SetMatrix("_LeftEyeProjection", leftEye);
+            material.SetMatrix("_RightEyeProjection", rightEye);
+        }
+        //Fix stereo rendering matrix/
+
         RenderTexture.active = previousActive;
 
         //Set the sun's shadow setting back to what it was before voxelization
