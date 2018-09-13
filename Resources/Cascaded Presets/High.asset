@@ -9,18 +9,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 195d4ee8e5f057f4590c043b132f9c86, type: 3}
-  m_Name: VR
+  m_Name: High
   m_EditorClassIdentifier: 
-  voxelResolution: 64
+  voxelResolution: 128
   voxelAA: 1
   innerOcclusionLayers: 1
   infiniteBounces: 0
   temporalBlendWeight: 1
   useBilateralFiltering: 1
-  GIResolution: 4
-  stochasticSampling: 0
+  GIResolution: 1
+  stochasticSampling: 1
   doReflections: 0
-  noiseDistribution: 0.001
+  noiseDistribution: 0.35
   cones: 4
   coneTraceSteps: 10
   coneLength: 1
@@ -29,8 +29,8 @@ MonoBehaviour:
   occlusionStrength: 0.15
   nearOcclusionStrength: 0.5
   occlusionPower: 0.65
-  nearLightGain: 0.72
-  giGain: 2
+  nearLightGain: 0.36
+  giGain: 1
   secondaryBounceGain: 0.9
   reflectionSteps: 64
   reflectionOcclusionPower: 1

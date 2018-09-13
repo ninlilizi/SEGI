@@ -16,7 +16,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty shadowVolumeMask;
     SerializedProperty showVolumeObjects;
     SerializedProperty shadowSpaceSize;
-    //SerializedProperty temporalBlendWeight;
+    SerializedProperty temporalBlendWeight;
     SerializedProperty visualizeVoxels;
     SerializedProperty visualizeShadowmapCopy;
     SerializedProperty useVolumeRayCast;
@@ -26,11 +26,12 @@ public class SEGICascadedEditor : Editor
     SerializedProperty skyColor;
     SerializedProperty voxelSpaceSize;
     SerializedProperty useBilateralFiltering;
-    SerializedProperty halfResolution;
+    SerializedProperty GIResolution;
     SerializedProperty stochasticSampling;
     SerializedProperty infiniteBounces;
     SerializedProperty infiniteBouncesRerenderObjects;
     SerializedProperty followTransform;
+    SerializedProperty noiseDistribution;
     SerializedProperty cones;
     SerializedProperty coneTraceSteps;
     SerializedProperty coneLength;
@@ -73,7 +74,6 @@ public class SEGICascadedEditor : Editor
         }
     }
 
-
     static bool showMainConfig = true;
     static bool showVolumeConfig = false;
     static bool showDebugTools = true;
@@ -98,7 +98,7 @@ public class SEGICascadedEditor : Editor
         shadowVolumeMask = serObj.FindProperty("shadowVolumeMask");
         showVolumeObjects = serObj.FindProperty("showVolumeObjects");
         shadowSpaceSize = serObj.FindProperty("shadowSpaceSize");
-        //temporalBlendWeight = serObj.FindProperty("temporalBlendWeight");
+        temporalBlendWeight = serObj.FindProperty("temporalBlendWeight");
         visualizeVoxels = serObj.FindProperty("visualizeVoxels");
         visualizeShadowmapCopy = serObj.FindProperty("visualizeShadowmapCopy");
         useVolumeRayCast = serObj.FindProperty("useVolumeRayCast");
@@ -108,11 +108,12 @@ public class SEGICascadedEditor : Editor
         skyColor = serObj.FindProperty("skyColor");
         voxelSpaceSize = serObj.FindProperty("voxelSpaceSize");
         useBilateralFiltering = serObj.FindProperty("useBilateralFiltering");
-        halfResolution = serObj.FindProperty("halfResolution");
+        GIResolution = serObj.FindProperty("GIResolution");
         stochasticSampling = serObj.FindProperty("stochasticSampling");
         infiniteBounces = serObj.FindProperty("infiniteBounces");
         infiniteBouncesRerenderObjects = serObj.FindProperty("infiniteBouncesRerenderObjects");
         followTransform = serObj.FindProperty("followTransform");
+        noiseDistribution = serObj.FindProperty("noiseDistribution");
         cones = serObj.FindProperty("cones");
         coneTraceSteps = serObj.FindProperty("coneTraceSteps");
         coneLength = serObj.FindProperty("coneLength");
@@ -271,11 +272,12 @@ public class SEGICascadedEditor : Editor
         if (showTracingProperties)
         {
             EditorGUI.indentLevel++;
-            //EditorGUILayout.PropertyField(temporalBlendWeight, new GUIContent("Temporal Blend Weight", "The lower the value, the more previous frames will be blended with the current frame. Lower values result in smoother GI that updates less quickly."));
+            EditorGUILayout.PropertyField(temporalBlendWeight, new GUIContent("Temporal Blend Weight", "The lower the value, the more previous frames will be blended with the current frame. Lower values result in smoother GI that updates less quickly."));
             EditorGUILayout.PropertyField(useBilateralFiltering, new GUIContent("Bilateral Filtering", "Enables filtering of the GI result to reduce noise."));
-            EditorGUILayout.PropertyField(halfResolution, new GUIContent("Half Resolution", "If enabled, GI tracing will be done at half screen resolution. Improves speed of GI tracing."));
             EditorGUILayout.PropertyField(stochasticSampling, new GUIContent("Stochastic Sampling", "If enabled, uses random jitter to reduce banding and discontinuities during GI tracing."));
+            EditorGUILayout.PropertyField(GIResolution, new GUIContent("Subsampling Resolution", "GI tracing resolution will be subsampled at this screen resolution. Improves speed of GI tracing."));
 
+            EditorGUILayout.PropertyField(noiseDistribution, new GUIContent("Noise Distribution", "Lower values increase performance at expense of lowered shadow resolution"));
             EditorGUILayout.PropertyField(cones, new GUIContent("Cones", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
             EditorGUILayout.PropertyField(coneTraceSteps, new GUIContent("Cone Trace Steps", "The number of tracing steps for each cone. Too few results in skipping thin features. Higher values result in more accuracy at the cost of performance."));
             EditorGUILayout.PropertyField(coneLength, new GUIContent("Cone length", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
@@ -347,13 +349,14 @@ public class SEGICascadedEditor : Editor
         preset.innerOcclusionLayers = instance.innerOcclusionLayers;
         preset.infiniteBounces = instance.infiniteBounces;
 
-        //preset.temporalBlendWeight = instance.temporalBlendWeight;
+        preset.temporalBlendWeight = instance.temporalBlendWeight;
         preset.useBilateralFiltering = instance.useBilateralFiltering;
-        preset.halfResolution = instance.halfResolution;
+        preset.GIResolution = instance.GIResolution;
         preset.stochasticSampling = instance.stochasticSampling;
         //preset.doReflections = instance.doReflections;
         preset.doReflections = false;
 
+        preset.noiseDistribution = instance.noiseDistribution;
         preset.cones = instance.cones;
         preset.coneTraceSteps = instance.coneTraceSteps;
         preset.coneLength = instance.coneLength;

@@ -62,7 +62,7 @@
 					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
 					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-					UNITY_TRANSFER_INSTANCE_ID(v, o);
+					//UNITY_TRANSFER_INSTANCE_ID(v, o);
 
 					
 					float4 vertex = v.vertex;
@@ -159,7 +159,7 @@
 				float4 frag (g2f input) : SV_TARGET
 				{
 					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-					UNITY_SETUP_INSTANCE_ID(input);
+					//UNITY_SETUP_INSTANCE_ID(input);
 
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					

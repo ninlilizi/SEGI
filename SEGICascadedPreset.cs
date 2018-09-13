@@ -10,19 +10,23 @@ public class SEGICascadedPreset : ScriptableObject
 	public bool infiniteBounces = true;
 
 	[Range(0.01f, 1.0f)]
-	public float temporalBlendWeight = 0.15f;
+	public float temporalBlendWeight = 1.0f;
 	public bool useBilateralFiltering = true;
-	public bool halfResolution = false;
-	public bool stochasticSampling = true;
+    [Range(1, 4)]
+    public int GIResolution = 1;
+    public bool stochasticSampling = true;
 	public bool doReflections = true;
 
-	[Range(1, 128)]
+    [Range(0.001f, 0.5f)]
+    public float noiseDistribution = 0.32f;
+
+    [Range(1, 128)]
 	public int cones = 13;
 	[Range(1, 32)]
 	public int coneTraceSteps = 8;
 	[Range(0.1f, 2.0f)]
 	public float coneLength = 1.0f;
-	[Range(0.5f, 6.0f)]
+	[Range(0.5f, 12.0f)]
 	public float coneWidth = 6.0f;
 	[Range(0.0f, 4.0f)]
 	public float coneTraceBias = 0.63f;

@@ -18,16 +18,16 @@ CGINCLUDE
 		half4 uv2 : TEXCOORD1;
 		#endif
 
-		UNITY_VERTEX_OUTPUT_STEREO //Insert
+		UNITY_VERTEX_OUTPUT_STEREO
 	};
 	
 	v2f vert(appdata_img v)
 	{
 		v2f o;
 
-		UNITY_SETUP_INSTANCE_ID(v); //Insert
-		UNITY_INITIALIZE_OUTPUT(v2f, o); //Insert
-		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
+		UNITY_SETUP_INSTANCE_ID(v);
+		UNITY_INITIALIZE_OUTPUT(v2f, o);
+		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 		
 		o.pos = UnityObjectToClipPos (v.vertex);
 		o.uv = float4(v.texcoord.xy, 1, 1);		
@@ -41,22 +41,24 @@ CGINCLUDE
 		return o; 
 	}
 
-ENDCG
+	ENDCG
 
 
-SubShader
-{
-	ZTest Off
-	Cull Off
-	ZWrite Off
-	Fog { Mode off }
-		
-	Pass //0 diffuse GI trace
+		SubShader
 	{
-		CGPROGRAM
-			#pragma vertex vert
-			#pragma fragment frag
-			#pragma multi_compile_instancing
+		ZTest Off
+		Cull Off
+		ZWrite Off
+		Fog { Mode off }
+
+		Pass //0 diffuse GI trace
+		{
+			CGPROGRAM
+				#pragma vertex vert
+				#pragma fragment frag
+				#pragma multi_compile_instancing
+
+				uniform float noiseDistribution;
 			
 			float4x4 CameraToWorld;
 			
@@ -70,7 +72,7 @@ SubShader
 			{
 				uint2 q = 1103515245U * ((x >> 1U) ^ (x.yx));
 				uint  n = 1103515245U * ((q.x) ^ (q.y >> 3U));
-				return float(n) * (1.0 / float(0xffffffffU));
+				return float(n) * (noiseDistribution / float(0xffffffffU));
 			}
 			//float whangHashNoise(uint u, uint v, uint s)
 			//{
@@ -125,7 +127,7 @@ SubShader
 
 				//Get noise
 				float2 noiseCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-				//noiseCoord = (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
+				//float2 noiseCoord = (UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw) / (64.0).xx;
 				float2 blueNoise = hash(noiseCoord * 64);
 				blueNoise.y = hash(noiseCoord.yx * 128);
 				//blueNoise.xy = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).rg;
@@ -185,7 +187,7 @@ SubShader
 				float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
 				thresh *= 1.0 + NdotV * 2.0;
 				
-				for (int i = -4; i <= 4; i++)
+				for (int i = -1; i <= 1; i++)
 				{
 					float2 offs = Kernel.xy * (i) * _MainTex_TexelSize.xy;
 					float sampleDepth = LinearEyeDepth(UNITY_SAMPLE_TEX2DARRAY_LOD(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0), 0).x);
@@ -223,7 +225,7 @@ SubShader
 			
 			int DoReflections;
 
-			int HalfResolution;
+			int GIResolution;
 				
 			float4 frag(v2f input) : COLOR0
 			{
@@ -312,16 +314,16 @@ SubShader
 				float3 m1, m2 = (0.0).xxx;
 				{
 					float width = 0.7;
-					float3 samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					float3 samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 = samp;
 					m2 = samp * samp;
-					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
-					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
-					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoScreenSpaceUVAdjust(input.uv, _MainTex_ST).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
+					samp = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy + float2(width, width) * _MainTex_TexelSize.xy).rgb;
 					m1 += samp;
 					m2 += samp * samp;
 				}
@@ -353,7 +355,7 @@ SubShader
 
 				//Get motion vectors and calculate reprojection coord
 				float2 motionVectors = tex2Dlod(_CameraMotionVectorsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).xy;
-				float2 reprojCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy - motionVectors.xy;
+				float2 reprojCoord = input.uv.xy - motionVectors.xy;
 
 				
 				//Calculate world space position for the previous frame reprojected to the current frame
