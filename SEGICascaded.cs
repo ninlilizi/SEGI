@@ -387,6 +387,7 @@ public class SEGICascaded : MonoBehaviour
 #else
 			volumeTexture0.generateMips = false;
 #endif
+            volumeTexture0.enableRandomWrite = true;
             volumeTexture0.useMipMap = true;
             volumeTexture0.Create();
             volumeTexture0.hideFlags = HideFlags.HideAndDontSave;
@@ -548,6 +549,7 @@ public class SEGICascaded : MonoBehaviour
         integerVolumeArray = new RenderTexture((int)size2D[0], (int)size2D[1], 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
         if (UnityEngine.XR.XRSettings.enabled) integerVolumeArray.vrUsage = VRTextureUsage.TwoEyes;
         integerVolumeArray.dimension = TextureDimension.Tex2DArray;
+        integerVolumeArray.enableRandomWrite = true;
         integerVolumeArray.volumeDepth = useVolumeRayCast ? 6 : 1;
         integerVolumeArray.useMipMap = true;
         integerVolumeArray.autoGenerateMips = true;
