@@ -19,7 +19,7 @@ MonoBehaviour:
   useBilateralFiltering: 1
   GIResolution: 1
   stochasticSampling: 1
-  doReflections: 0
+  doReflections: 1
   noiseDistribution: 0.35
   cones: 4
   coneTraceSteps: 10

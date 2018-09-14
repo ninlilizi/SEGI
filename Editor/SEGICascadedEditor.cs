@@ -44,12 +44,12 @@ public class SEGICascadedEditor : Editor
     SerializedProperty giGain;
     SerializedProperty secondaryBounceGain;
     SerializedProperty softSunlight;
-    //SerializedProperty doReflections;
+    SerializedProperty doReflections;
     SerializedProperty voxelAA;
-    //SerializedProperty reflectionSteps;
-    //SerializedProperty skyReflectionIntensity;
-    //SerializedProperty gaussianMipFilter;
-    //SerializedProperty reflectionOcclusionPower;
+    SerializedProperty reflectionSteps;
+    SerializedProperty skyReflectionIntensity;
+    SerializedProperty gaussianMipFilter;
+    SerializedProperty reflectionOcclusionPower;
     SerializedProperty farOcclusionStrength;
     SerializedProperty farthestOcclusionStrength;
     SerializedProperty secondaryCones;
@@ -80,7 +80,7 @@ public class SEGICascadedEditor : Editor
     static bool showTracingProperties = true;
     static bool showEnvironmentProperties = true;
     static bool showPresets = true;
-    //bool showReflectionProperties = true;
+    bool showReflectionProperties = true;
 
     string presetToSaveName;
 
@@ -126,12 +126,12 @@ public class SEGICascadedEditor : Editor
         giGain = serObj.FindProperty("giGain");
         secondaryBounceGain = serObj.FindProperty("secondaryBounceGain");
         softSunlight = serObj.FindProperty("softSunlight");
-        //doReflections = serObj.FindProperty("doReflections");
+        doReflections = serObj.FindProperty("doReflections");
         voxelAA = serObj.FindProperty("voxelAA");
-        //reflectionSteps = serObj.FindProperty("reflectionSteps");
-        //skyReflectionIntensity = serObj.FindProperty("skyReflectionIntensity");
-        //gaussianMipFilter = serObj.FindProperty("gaussianMipFilter");
-        //reflectionOcclusionPower = serObj.FindProperty("reflectionOcclusionPower");
+        reflectionSteps = serObj.FindProperty("reflectionSteps");
+        skyReflectionIntensity = serObj.FindProperty("skyReflectionIntensity");
+        gaussianMipFilter = serObj.FindProperty("gaussianMipFilter");
+        reflectionOcclusionPower = serObj.FindProperty("reflectionOcclusionPower");
         farOcclusionStrength = serObj.FindProperty("farOcclusionStrength");
         farthestOcclusionStrength = serObj.FindProperty("farthestOcclusionStrength");
         secondaryCones = serObj.FindProperty("secondaryCones");
@@ -300,18 +300,18 @@ public class SEGICascadedEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.Space();
 
-        /*
+        
 		showReflectionProperties = EditorGUILayout.Foldout(showReflectionProperties, new GUIContent("Reflection Properties"));
 		if (showReflectionProperties)
 		{
 			EditorGUI.indentLevel++;
-			//EditorGUILayout.PropertyField(doReflections, new GUIContent("Do Reflections", "Enable this for cone-traced reflections."));
+			EditorGUILayout.PropertyField(doReflections, new GUIContent("Do Reflections", "Enable this for cone-traced reflections."));
 			EditorGUILayout.PropertyField(reflectionSteps, new GUIContent("Reflection Steps", "Number of reflection trace steps."));
 			EditorGUILayout.PropertyField(reflectionOcclusionPower, new GUIContent("Reflection Occlusion Power", "Strength of light blocking during reflection tracing."));
 			EditorGUILayout.PropertyField(skyReflectionIntensity, new GUIContent("Sky Reflection Intensity", "Intensity of sky reflections."));
 			EditorGUI.indentLevel--;
 		}
-		*/
+		
 
         EditorGUILayout.Space();
         EditorGUILayout.Space();
@@ -353,7 +353,7 @@ public class SEGICascadedEditor : Editor
         preset.useBilateralFiltering = instance.useBilateralFiltering;
         preset.GIResolution = instance.GIResolution;
         preset.stochasticSampling = instance.stochasticSampling;
-        //preset.doReflections = instance.doReflections;
+        preset.doReflections = instance.doReflections;
         preset.doReflections = false;
 
         preset.noiseDistribution = instance.noiseDistribution;

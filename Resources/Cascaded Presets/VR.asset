@@ -19,7 +19,7 @@ MonoBehaviour:
   useBilateralFiltering: 1
   GIResolution: 4
   stochasticSampling: 0
-  doReflections: 0
+  doReflections: 1
   noiseDistribution: 0.001
   cones: 4
   coneTraceSteps: 10
@@ -32,7 +32,7 @@ MonoBehaviour:
   nearLightGain: 0.72
   giGain: 2
   secondaryBounceGain: 0.9
-  reflectionSteps: 64
+  reflectionSteps: 6
   reflectionOcclusionPower: 1
   skyReflectionIntensity: 1
   gaussianMipFilter: 0

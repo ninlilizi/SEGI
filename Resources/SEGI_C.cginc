@@ -89,6 +89,11 @@ float3 TransformClipSpace(float3 pos, float4 transform)
 	return pos;
 }
 
+float3 TransformClipSpace0(float3 pos)
+{
+	return TransformClipSpace(pos, SEGIClipTransform0);
+}
+
 float3 TransformClipSpace1(float3 pos)
 {
 	return TransformClipSpace(pos, SEGIClipTransform1);
@@ -198,11 +203,12 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 		float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
-		//if (mipLevel == 0)
-		//{
-		//	sample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		//}
-		if (mipLevel == 1 || mipLevel == 0)
+		if (mipLevel == 0)
+		{
+			voxelCheckCoord = TransformClipSpace0(voxelCheckCoord);
+			giSample = tex3Dlod(SEGIVolumeLevel0, float4(float3(voxelCheckCoord.xy, voxelCheckCoord.z), coneSize)) * GISampleWeight(voxelCheckCoord);
+		}
+		if (mipLevel == 1)
 		{
 			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
 			giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
@@ -266,7 +272,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	gi.rgb *= GIGain * 0.15;
 
 	gi += skyColor * skyVisibility * skyMult * 10.0;
-
+	
 	return float4(gi.rgb * 0.8, 0.0f);
 }
 

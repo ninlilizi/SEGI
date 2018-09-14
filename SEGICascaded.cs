@@ -88,8 +88,8 @@ public class SEGICascaded : MonoBehaviour
     public float skyIntensity = 1.0f;
 
     [HideInInspector]
-    public bool doReflections
-    {
+    public bool doReflections = false;
+    /*{
         get
         {
             return false;   //Locked to keep reflections disabled since they're in a broken state with cascades at the moment
@@ -98,10 +98,10 @@ public class SEGICascaded : MonoBehaviour
         {
             value = false;
         }
-    }
+    }*/
 
-    [Range(12, 128)]
-    public int reflectionSteps = 64;
+    [Range(6, 128)]
+    public int reflectionSteps = 12;
     [Range(0.001f, 4.0f)]
     public float reflectionOcclusionPower = 1.0f;
     [Range(0.0f, 1.0f)]
@@ -618,7 +618,7 @@ public class SEGICascaded : MonoBehaviour
             //DestroyImmediate(dummyVoxelTextureAAScaled);
         }
         dummyVoxelTextureAAScaled = new RenderTexture(dummyVoxelResolution, dummyVoxelResolution, 0, RenderTextureFormat.ARGBHalf);
-        if (UnityEngine.XR.XRSettings.enabled) dummyVoxelTextureAAScaled.vrUsage = VRTextureUsage.TwoEyes;
+        //if (UnityEngine.XR.XRSettings.enabled) dummyVoxelTextureAAScaled.vrUsage = VRTextureUsage.TwoEyes;
         dummyVoxelTextureAAScaled.Create();
         dummyVoxelTextureAAScaled.hideFlags = HideFlags.HideAndDontSave;
 
@@ -629,7 +629,7 @@ public class SEGICascaded : MonoBehaviour
             //DestroyImmediate(dummyVoxelTextureFixed);
         }
         dummyVoxelTextureFixed = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf);
-        if (UnityEngine.XR.XRSettings.enabled) dummyVoxelTextureFixed.vrUsage = VRTextureUsage.TwoEyes;
+        //if (UnityEngine.XR.XRSettings.enabled) dummyVoxelTextureFixed.vrUsage = VRTextureUsage.TwoEyes;
         dummyVoxelTextureFixed.Create();
         dummyVoxelTextureFixed.hideFlags = HideFlags.HideAndDontSave;
     }
@@ -1686,6 +1686,7 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
+    [ImageEffectOpaque]
     void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         if (notReadyToRender)
@@ -1727,6 +1728,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetTexture("NoiseTexture", blueNoise[frameCounter]);
         material.SetFloat("BlendWeight", temporalBlendWeight);
         material.SetFloat("noiseDistribution", noiseDistribution);
+        material.SetFloat("currentClipmapIndex", currentClipmapIndex);
 
         if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
         {
@@ -1767,7 +1769,15 @@ public class SEGICascaded : MonoBehaviour
         //If reflections are enabled, create a temporary render buffer to hold them
         if (doReflections)
         {
-            reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+            if (UnityEngine.XR.XRSettings.enabled)
+            {
+                reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+            }
+            else
+            {
+                reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            }
+
         }
 
         ////Get the camera depth and normals
@@ -1790,12 +1800,15 @@ public class SEGICascaded : MonoBehaviour
         //Render diffuse GI tracing result
         Graphics.Blit(source, gi2, material, Pass.DiffuseTrace);
 
-        /*if (doReflections)
+        if (doReflections)
         {
             //Render GI reflections result
-            Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
-            material.SetTexture("Reflections", reflections);
-        }*/
+            if (currentClipmapIndex >= 1)
+            {
+                Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
+                material.SetTexture("Reflections", reflections);
+            }
+        }
 
         
         //Perform bilateral filtering

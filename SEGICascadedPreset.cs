@@ -42,8 +42,8 @@ public class SEGICascadedPreset : ScriptableObject
 	public float giGain = 1.0f;
 	[Range(0.0f, 2.0f)]
 	public float secondaryBounceGain = 1.0f;
-	[Range(12, 128)]
-	public int reflectionSteps = 64;
+	[Range(6, 128)]
+	public int reflectionSteps = 12;
 	[Range(0.001f, 4.0f)]
 	public float reflectionOcclusionPower = 1.0f;
 	[Range(0.0f, 1.0f)]
