@@ -76,7 +76,7 @@ CGINCLUDE
 			float4x4 _RightEyeToWorld;
 			//Fix Stereo View Matrix/
 
-			UNITY_DECLARE_TEX2D(CurrentNormal);
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
 			int ForwardPath;
 
 
@@ -126,7 +126,7 @@ CGINCLUDE
 			}
 			else
 			{
-				gi = UNITY_SAMPLE_TEX2D(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv));
+				gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv));
 			}
 
 			#if UNITY_UV_STARTS_AT_TOP
@@ -155,7 +155,7 @@ CGINCLUDE
 				}
 				else
 				{
-					worldNormal = normalize(UNITY_SAMPLE_TEX2D(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+					worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
 				}
 				float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;	//Apply bias of cone trace origin towards the surface normal to avoid self-occlusion artifacts
 				
@@ -169,7 +169,7 @@ CGINCLUDE
 				//Get noise
 				float2 noiseCoord = coord * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 				float2 blueNoise = hash(noiseCoord * 64);
-				blueNoise.y = hash(noiseCoord.yx * 128);
+				//blueNoise.y = hash(noiseCoord.yx * 128);
 
 				//Trace GI cones
 				int numSamples = TraceDirections;
