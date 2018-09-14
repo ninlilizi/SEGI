@@ -381,14 +381,13 @@ public class SEGICascaded : MonoBehaviour
 			volumeTexture0.isVolume = true;
 #endif
             volumeTexture0.volumeDepth = resolution;
-            volumeTexture0.enableRandomWrite = true;
             volumeTexture0.filterMode = filterMode;
 #if UNITY_5_4_OR_NEWER
-            volumeTexture0.autoGenerateMips = false;
+            volumeTexture0.autoGenerateMips = true;
 #else
 			volumeTexture0.generateMips = false;
 #endif
-            volumeTexture0.useMipMap = false;
+            volumeTexture0.useMipMap = true;
             volumeTexture0.Create();
             volumeTexture0.hideFlags = HideFlags.HideAndDontSave;
         }
@@ -550,9 +549,8 @@ public class SEGICascaded : MonoBehaviour
         if (UnityEngine.XR.XRSettings.enabled) integerVolumeArray.vrUsage = VRTextureUsage.TwoEyes;
         integerVolumeArray.dimension = TextureDimension.Tex2DArray;
         integerVolumeArray.volumeDepth = useVolumeRayCast ? 6 : 1;
-        //integerVolumeArray.useMipMap = true;
-        integerVolumeArray.autoGenerateMips = false;
-        integerVolumeArray.enableRandomWrite = true;
+        integerVolumeArray.useMipMap = true;
+        integerVolumeArray.autoGenerateMips = true;
         integerVolumeArray.filterMode = FilterMode.Point;
         integerVolumeArray.hideFlags = HideFlags.HideAndDontSave;
         integerVolumeArray.Create();
