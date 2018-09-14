@@ -1695,6 +1695,16 @@ public class SEGICascaded : MonoBehaviour
             return;
         }
 
+        if (GetComponent<Camera>().renderingPath == RenderingPath.Forward)
+        {
+            material.SetInt("ForwardPath", 1);
+            material.SetTexture("_Albedo", source);
+        }
+        else
+        {
+            material.SetInt("ForwardPath", 0);
+        }
+
         //Set parameters
         Shader.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);//TODO needed?
         Shader.SetGlobalInt("SEGIFrameSwitch", frameCounter);//TODO needed?
@@ -1783,14 +1793,22 @@ public class SEGICascaded : MonoBehaviour
         ////Get the camera depth and normals
         //RenderTexture currentDepth = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
         //currentDepth.filterMode = FilterMode.Point;
-        //RenderTexture currentNormal = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-        //currentNormal.filterMode = FilterMode.Point;
 
-        ////Get the camera depth and normals
-        //Graphics.Blit(source, currentDepth, material, Pass.GetCameraDepthTexture);//TODO needed?
-        //material.SetTexture("CurrentDepth", currentDepth);
-        //Graphics.Blit(source, currentNormal, material, Pass.GetWorldNormals);//TODO needed?
-        //material.SetTexture("CurrentNormal", currentNormal);
+        RenderTexture currentNormal;
+        if (GetComponent<Camera>().renderingPath == RenderingPath.Forward)
+        {
+            currentNormal = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            currentNormal.filterMode = FilterMode.Point;
+
+            ////Get the camera depth and normals
+            //Graphics.Blit(source, currentDepth, material, Pass.GetCameraDepthTexture);//TODO needed?
+            //material.SetTexture("CurrentDepth", currentDepth);
+            
+            Graphics.Blit(source, currentNormal, material, Pass.GetWorldNormals);//TODO needed?
+            material.SetTexture("CurrentNormal", currentNormal);
+
+            RenderTexture.ReleaseTemporary(currentNormal);
+        }
 
         //Set the previous GI result and camera depth textures to access them in the shader
         material.SetTexture("PreviousGITexture", previousGIResult);
@@ -1999,7 +2017,6 @@ public class SEGICascaded : MonoBehaviour
 
         ////Release temporary textures
         //RenderTexture.ReleaseTemporary(currentDepth);
-        //RenderTexture.ReleaseTemporary(currentNormal);
 
 
         //Release the temporary reflections result texture

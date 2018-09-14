@@ -76,6 +76,9 @@ CGINCLUDE
 			float4x4 _RightEyeToWorld;
 			//Fix Stereo View Matrix/
 
+			UNITY_DECLARE_TEX2D(CurrentNormal);
+			int ForwardPath;
+
 
 			//sampler2D NoiseTexture;
 
@@ -85,28 +88,15 @@ CGINCLUDE
 				uint  n = 1103515245U * ((q.x) ^ (q.y >> 3U));
 				return float(n) * (noiseDistribution / float(0xffffffffU));
 			}
-			//float whangHashNoise(uint u, uint v, uint s)
-			//{
-			//	uint seed = (u * 1664525u + v) + s;
-
-			//	seed = (seed ^ 61u) ^ (seed >> 16u);
-			//	seed *= 9u;
-			//	seed = seed ^ (seed >> 4u);
-			//	seed *= uint(0x27d4eb2d);
-			//	seed = seed ^ (seed >> 15u);
-
-			//	float value = float(seed) / (4294967296.0);
-			//	return value;
-			//}
 
 			float4 frag(v2f input) : SV_Target
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
 			//Fix Stereo View Matrix
+
 			float d = UNITY_SAMPLE_TEX2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv)).r; // non-linear Z
 			float2 uv = input.uv;
-
 			float4x4 proj, eyeToWorld;
 
 			if (uv.x < .5) // Left Eye
@@ -129,7 +119,15 @@ CGINCLUDE
 			float3 worldPos = mul(eyeToWorld, viewPos).xyz;
 			//Fix Stereo View Matrix/
 
-			float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)); //Insert
+			float3 gi;
+			if (ForwardPath == 0)
+			{
+				gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv));
+			}
+			else
+			{
+				gi = UNITY_SAMPLE_TEX2D(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv));
+			}
 
 			#if UNITY_UV_STARTS_AT_TOP
 				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
@@ -139,11 +137,6 @@ CGINCLUDE
 			
 			//Get view space position and view vector
 				float4 viewSpacePosition = d;
-				//float4 viewSpacePosition = d;
-				//float3 viewVector = normalize(float3(viewSpacePosition.xy, viewSpacePosition.z));
-				//float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0))
-			//float3 viewVector = normalize(viewSpacePosition.xyz);
-
 			//Get voxel space position
 				float3 voxelSpacePosition = float3(UnityStereoTransformScreenSpaceTex(viewPos).xy, viewPos.z);
 
@@ -154,10 +147,16 @@ CGINCLUDE
 				voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
 				
 
-				//Prepare for cone trace
-				//float3 worldNormal = normalize(UNITY_SAMPLE_TEX2D(_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
-				float3 worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
-				
+				//Prepare for cone trace			
+				float3 worldNormal;
+				if (ForwardPath == 0)
+				{
+					worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+				}
+				else
+				{
+					worldNormal = normalize(UNITY_SAMPLE_TEX2D(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+				}
 				float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;	//Apply bias of cone trace origin towards the surface normal to avoid self-occlusion artifacts
 				
 				//float3 gi = float3(0.0, 0.0, 0.0);
@@ -169,10 +168,8 @@ CGINCLUDE
 
 				//Get noise
 				float2 noiseCoord = coord * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-				//float2 noiseCoord = (UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw) / (64.0).xx;
 				float2 blueNoise = hash(noiseCoord * 64);
 				blueNoise.y = hash(noiseCoord.yx * 128);
-				//blueNoise.xy = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).rg;
 
 				//Trace GI cones
 				int numSamples = TraceDirections;
@@ -199,7 +196,7 @@ CGINCLUDE
 				gi = traceResult.rgb * 1.18;
 
 
-				return float4(gi, 1.0);//float4(gi, 1.0);
+				return float4(gi, 1.0);
 			}
 			
 		ENDCG
@@ -261,12 +258,14 @@ CGINCLUDE
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
-			
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
+			UNITY_DECLARE_TEX2D(CurrentNormal);
+
 			float4x4 CameraToWorld;
 			
 			int DoReflections;
-
-			int GIResolution;
+			int GIResolution;		
+			int ForwardPath;
 
 			//Fix Stereo View Matrix
 			float4x4 _LeftEyeProjection;
@@ -310,7 +309,15 @@ CGINCLUDE
 #else
 				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 #endif
-				float4 albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
+				float4 albedoTex;
+				if (ForwardPath == 0)
+				{
+					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
+				}
+				else
+				{
+					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv));
+				}
 				float3 albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 scene = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
@@ -331,8 +338,15 @@ CGINCLUDE
 					float smoothness = spec.a;
 					float3 specularColor = spec.rgb;
 
-					//float3 worldNormal = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb;
-					float3 worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+					float3 worldNormal;
+					if (ForwardPath == 0)
+					{
+						worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+					}
+					else
+					{
+						worldNormal = normalize(UNITY_SAMPLE_TEX2D(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+					}
 					float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
 
 					float3 fresnel = pow(saturate(dot(worldViewVector.xyz, reflectionKernel.xyz)) * (smoothness * 0.5 + 0.5), 5.0);
@@ -488,8 +502,10 @@ CGINCLUDE
 
 			half4 _CameraGBufferTexture1_ST;
 			half4 _CameraGBufferTexture2_ST;
+			UNITY_DECLARE_TEX2D(CurrentNormal);
 			
 			int FrameSwitch;
+			int ForwardPath;
 
 			//Fix Stereo View Matrix
 			float4x4 _LeftEyeProjection;
@@ -557,8 +573,15 @@ CGINCLUDE
 				voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
 				voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
 
-				//float3 worldNormal = normalize(tex2D(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb * 2.0 - 1.0);
-				float3 worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+				float3 worldNormal;
+				if (ForwardPath == 0)
+				{
+					worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+				}
+				else
+				{
+					worldNormal = normalize(UNITY_SAMPLE_TEX2D(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb* 2.0 - 1.0);
+				}
 				
 				float3 voxelOrigin = worldPos.xyz + worldNormal.xyz * 0.006 * ConeTraceBias;
 
@@ -643,12 +666,22 @@ CGINCLUDE
 					#pragma fragment frag
 					#pragma multi_compile_instancing
 
+					int ForwardPath;
 					sampler2D GITexture;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
 					
 			float4 frag(v2f input) : COLOR0
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-				float4 albedoTex = tex2D(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+				float4 albedoTex;
+				if (ForwardPath == 0)
+				{
+					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
+				}
+				else
+				{
+					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv));
+				}
 				float3 albedo = albedoTex.rgb;
 				float3 gi = tex2D(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
 				return float4(gi, 1.0);
