@@ -757,7 +757,7 @@ public class SEGICascaded : MonoBehaviour
         GaussianBlur_Shader = Shader.Find("hidden/two_pass_linear_sampling_gaussian_blur");
         GaussianBlur_Material = new Material(GaussianBlur_Shader);
         GaussianBlur_Material.EnableKeyword("SMALL_KERNEL");
-        GaussianBlur_Material.enableInstancing = true;
+        GaussianBlur_Material.enableInstancing = false;
 
         //Setup shaders and materials
         sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
@@ -1928,13 +1928,20 @@ public class SEGICascaded : MonoBehaviour
                     Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);*/
                 }
             }
-            if (GIResolution >= 3)
+            /*if (GIResolution >= 3 && GetComponent<Camera>().renderingPath == RenderingPath.DeferredShading)
             {
                 GaussianBlur_Material.SetFloat("_Sigma", sigma);
                 Graphics.Blit(gi3, gi4, GaussianBlur_Material);
                 Graphics.Blit(gi4, gi3, GaussianBlur_Material);
-            }
+            }*/
+            if (GIResolution >= 3)
+            {
+                material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                Graphics.Blit(gi3, gi4, material, Pass.BilateralBlur);
 
+                material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);
+            }
 
             //Set the result to be accessed in the shader
             material.SetTexture("GITexture", gi3);
