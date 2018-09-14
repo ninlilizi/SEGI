@@ -213,6 +213,7 @@ CGINCLUDE
 				
 			float4 frag(v2f input) : COLOR0
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 				float validWeights = 0.0;
 				float depth = LinearEyeDepth(UNITY_SAMPLE_TEX2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
@@ -309,16 +310,18 @@ CGINCLUDE
 #else
 				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 #endif
+				float3 albedo;
 				float4 albedoTex;
 				if (ForwardPath == 0)
 				{
 					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
+					albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
 				}
 				else
 				{
 					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv));
+					albedo = albedoTex.rgb;
 				}
-				float3 albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv));
 				float3 scene = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
 				
@@ -722,6 +725,7 @@ CGINCLUDE
 			
 			float4 frag(v2f input) : COLOR0
 			{
+				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				return float4(tex3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
 			}
 			
