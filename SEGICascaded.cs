@@ -44,6 +44,7 @@ public class SEGICascaded : MonoBehaviour
     public bool useVolumeRayCast = false;
     bool useVolumeRayCastPrev = false;
 
+    public bool MatchAmbiantColor;
     public Color skyColor;
 
     public float voxelSpaceSize = 25.0f;
@@ -1233,6 +1234,13 @@ public class SEGICascaded : MonoBehaviour
         if (attachedCamera != Camera.main)
         {
             return;
+        }
+
+        //Update SkyColor
+        if (MatchAmbiantColor)
+        {
+            skyColor = RenderSettings.ambientLight;
+            skyIntensity = RenderSettings.ambientIntensity;
         }
 
         //calculationSEGIObject = this;

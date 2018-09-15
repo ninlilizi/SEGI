@@ -23,6 +23,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty useUnityShadowMap;
     SerializedProperty shadowmapCopySize;
     SerializedProperty updateGI;
+    SerializedProperty MatchAmbientColor;
     SerializedProperty skyColor;
     SerializedProperty voxelSpaceSize;
     SerializedProperty useBilateralFiltering;
@@ -105,6 +106,7 @@ public class SEGICascadedEditor : Editor
         useUnityShadowMap = serObj.FindProperty("useUnityShadowMap");
         shadowmapCopySize = serObj.FindProperty("shadowmapCopySize");
         updateGI = serObj.FindProperty("updateGI");
+        MatchAmbientColor = serObj.FindProperty("MatchAmbiantColor");
         skyColor = serObj.FindProperty("skyColor");
         voxelSpaceSize = serObj.FindProperty("voxelSpaceSize");
         useBilateralFiltering = serObj.FindProperty("useBilateralFiltering");
@@ -257,6 +259,7 @@ public class SEGICascadedEditor : Editor
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(sun, new GUIContent("Sun", "The main directional light that will cast indirect light into the scene (sunlight or moonlight)."));
             EditorGUILayout.PropertyField(softSunlight, new GUIContent("Soft Sunlight", "The amount of soft diffuse sunlight that will be added to the scene. Use this to simulate the effect of clouds/haze scattering soft sunlight onto the scene."));
+            EditorGUILayout.PropertyField(MatchAmbientColor, new GUIContent("Match Scene Lighting", "Sync Sky Color and intensity to scene lighting"));
             EditorGUILayout.PropertyField(skyColor, new GUIContent("Sky Color", "The color of the light scattered onto the scene coming from the sky."));
             EditorGUILayout.PropertyField(skyIntensity, new GUIContent("Sky Intensity", "The brightness of the sky light."));
             EditorGUILayout.PropertyField(sphericalSkylight, new GUIContent("Spherical Skylight", "If enabled, light from the sky will come from all directions. If disabled, light from the sky will only come from the top hemisphere."));
