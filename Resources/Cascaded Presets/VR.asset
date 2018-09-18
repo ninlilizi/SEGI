@@ -15,6 +15,7 @@ MonoBehaviour:
   voxelAA: 1
   innerOcclusionLayers: 1
   infiniteBounces: 0
+  useReflectionProbes: 1
   temporalBlendWeight: 1
   useBilateralFiltering: 1
   GIResolution: 4

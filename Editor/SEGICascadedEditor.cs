@@ -59,6 +59,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty sphericalSkylight;
     SerializedProperty innerOcclusionLayers;
     SerializedProperty sunDepthTextureDepth;
+    SerializedProperty useReflectionProbes;
 
     SEGICascaded instance;
 
@@ -76,6 +77,7 @@ public class SEGICascadedEditor : Editor
     }
 
     static bool showMainConfig = true;
+    static bool showForwardConfig = true;
     static bool showVolumeConfig = false;
     static bool showDebugTools = true;
     static bool showTracingProperties = true;
@@ -142,6 +144,7 @@ public class SEGICascadedEditor : Editor
         sphericalSkylight = serObj.FindProperty("sphericalSkylight");
         innerOcclusionLayers = serObj.FindProperty("innerOcclusionLayers");
         sunDepthTextureDepth = serObj.FindProperty("sunDepthTextureDepth");
+        useReflectionProbes = serObj.FindProperty("useReflectionProbes");
 
         instance = target as SEGICascaded;
     }
@@ -245,7 +248,17 @@ public class SEGICascadedEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.Space();
 
+        //Forward
+        showForwardConfig = EditorGUILayout.Foldout(showForwardConfig, new GUIContent("Forward Rendering Configuration"));
+        if (showForwardConfig)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(useReflectionProbes, new GUIContent("Use Reflection Probe", "Approximates path traced Specular values using a Reflection Probe."));
+            EditorGUI.indentLevel--;
+        }
 
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
 
 
         //Environment
@@ -357,7 +370,7 @@ public class SEGICascadedEditor : Editor
         preset.GIResolution = instance.GIResolution;
         preset.stochasticSampling = instance.stochasticSampling;
         preset.doReflections = instance.doReflections;
-        preset.doReflections = false;
+        preset.doReflections = instance.doReflections;
 
         preset.noiseDistribution = instance.noiseDistribution;
         preset.cones = instance.cones;
@@ -381,6 +394,8 @@ public class SEGICascadedEditor : Editor
         preset.farthestOcclusionStrength = instance.farthestOcclusionStrength;
         preset.secondaryCones = instance.secondaryCones;
         preset.secondaryOcclusionStrength = instance.secondaryOcclusionStrength;
+
+        preset.useReflectionProbes = instance.useReflectionProbes;
 
         string path = "Assets/Plugins/Features/SEGI";
 #if UNITY_EDITOR
