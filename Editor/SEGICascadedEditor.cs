@@ -45,7 +45,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty giGain;
     SerializedProperty secondaryBounceGain;
     SerializedProperty softSunlight;
-    SerializedProperty doReflections;
+
     SerializedProperty voxelAA;
     SerializedProperty reflectionSteps;
     SerializedProperty skyReflectionIntensity;
@@ -131,7 +131,6 @@ public class SEGICascadedEditor : Editor
         giGain = serObj.FindProperty("giGain");
         secondaryBounceGain = serObj.FindProperty("secondaryBounceGain");
         softSunlight = serObj.FindProperty("softSunlight");
-        doReflections = serObj.FindProperty("doReflections");
         voxelAA = serObj.FindProperty("voxelAA");
         reflectionSteps = serObj.FindProperty("reflectionSteps");
         skyReflectionIntensity = serObj.FindProperty("skyReflectionIntensity");
@@ -324,7 +323,6 @@ public class SEGICascadedEditor : Editor
 		if (showReflectionProperties)
 		{
 			EditorGUI.indentLevel++;
-			EditorGUILayout.PropertyField(doReflections, new GUIContent("Do Reflections", "Enable this for cone-traced reflections."));
 			EditorGUILayout.PropertyField(reflectionSteps, new GUIContent("Reflection Steps", "Number of reflection trace steps."));
 			EditorGUILayout.PropertyField(reflectionOcclusionPower, new GUIContent("Reflection Occlusion Power", "Strength of light blocking during reflection tracing."));
 			EditorGUILayout.PropertyField(skyReflectionIntensity, new GUIContent("Sky Reflection Intensity", "Intensity of sky reflections."));
@@ -372,8 +370,6 @@ public class SEGICascadedEditor : Editor
         preset.useBilateralFiltering = instance.useBilateralFiltering;
         preset.GIResolution = instance.GIResolution;
         preset.stochasticSampling = instance.stochasticSampling;
-        preset.doReflections = instance.doReflections;
-        preset.doReflections = instance.doReflections;
 
         preset.noiseDistribution = instance.noiseDistribution;
         preset.cones = instance.cones;

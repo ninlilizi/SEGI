@@ -88,19 +88,6 @@ public class SEGICascaded : MonoBehaviour
     [Range(0.0f, 8.0f)]
     public float skyIntensity = 1.0f;
 
-    [HideInInspector]
-    public bool doReflections = false;
-    /*{
-        get
-        {
-            return false;   //Locked to keep reflections disabled since they're in a broken state with cascades at the moment
-        }
-        set
-        {
-            value = false;
-        }
-    }*/
-
     [Range(6, 128)]
     public int reflectionSteps = 12;
     [Range(0.001f, 4.0f)]
@@ -468,7 +455,6 @@ public class SEGICascaded : MonoBehaviour
         useBilateralFiltering = preset.useBilateralFiltering;
         GIResolution = preset.GIResolution;
         stochasticSampling = preset.stochasticSampling;
-        doReflections = preset.doReflections;
 
         noiseDistribution = preset.noiseDistribution;
         cones = preset.cones;
@@ -817,6 +803,7 @@ public class SEGICascaded : MonoBehaviour
 
             reflectionProbeGameObject.transform.parent = attachedCamera.transform;
             reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
+            reflectionProbe.farClipPlane = voxelSpaceSize;
             reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
             reflectionProbe.mode = ReflectionProbeMode.Realtime;
             reflectionProbe.enabled = false;
@@ -1790,7 +1777,6 @@ public class SEGICascaded : MonoBehaviour
         material.SetFloat("GIGain", giGain);
         material.SetFloat("NearLightGain", nearLightGain);
         material.SetFloat("NearOcclusionStrength", nearOcclusionStrength);
-        material.SetInt("DoReflections", doReflections ? 1 : 0);
         material.SetInt("GIResolution", GIResolution);
         material.SetInt("ReflectionSteps", reflectionSteps);
         material.SetFloat("ReflectionOcclusionPower", reflectionOcclusionPower);
@@ -1840,18 +1826,13 @@ public class SEGICascaded : MonoBehaviour
         }
         RenderTexture reflections = null;
 
-        //If reflections are enabled, create a temporary render buffer to hold them
-        if (doReflections)
+        if (UnityEngine.XR.XRSettings.enabled)
         {
-            if (UnityEngine.XR.XRSettings.enabled)
-            {
-                reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
-            }
-            else
-            {
-                reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-            }
-
+            reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+        }
+        else
+        {
+            reflections = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         }
 
         ////Get the camera depth and normals
@@ -1878,17 +1859,13 @@ public class SEGICascaded : MonoBehaviour
         //Render diffuse GI tracing result
         Graphics.Blit(source, gi2, material, Pass.DiffuseTrace);
 
-        if (doReflections)
+        //Render GI reflections result
+        if (currentClipmapIndex <= 2)
         {
-            //Render GI reflections result
-            if (currentClipmapIndex <= 2)
-            {
-                Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
-                material.SetTexture("Reflections", reflections);
-            }
+            Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
+            material.SetTexture("Reflections", reflections);
         }
-
-        
+   
         //Perform bilateral filtering
         if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
         {
@@ -2088,10 +2065,7 @@ public class SEGICascaded : MonoBehaviour
 
 
         //Release the temporary reflections result texture
-        if (doReflections)
-        {
-            RenderTexture.ReleaseTemporary(reflections);
-        }
+        RenderTexture.ReleaseTemporary(reflections);
 
         //Set matrices/vectors for use during temporal reprojection
         material.SetMatrix("ProjectionPrev", attachedCamera.projectionMatrix);

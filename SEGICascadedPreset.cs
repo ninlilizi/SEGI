@@ -19,7 +19,6 @@ public class SEGICascadedPreset : ScriptableObject
     [Range(1, 4)]
     public int GIResolution = 1;
     public bool stochasticSampling = true;
-	public bool doReflections = true;
 
     [Range(0.001f, 0.5f)]
     public float noiseDistribution = 0.32f;

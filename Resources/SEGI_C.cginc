@@ -49,6 +49,7 @@ float4x4 GIProjectionInverse;
 float4x4 GIToWorld;
 
 float4x4 GIToVoxelProjection;
+float4x4 CameraToWorld;
 
 half4 SEGISkyColor;
 
@@ -71,8 +72,9 @@ uniform half4 _MainTex_TexelSize;
 float4x4 ProjectionMatrixInverse;
 
 UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture);
-UNITY_DECLARE_TEX2D(_CameraDepthTexture);
+UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
 sampler2D PreviousGITexture;
 UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
 //sampler2D _CameraGBufferTexture0;
@@ -81,6 +83,13 @@ float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;
 
 int SEGISphericalSkylight;
+
+//Fix Stereo View Matrix
+float4x4 _LeftEyeProjection;
+float4x4 _RightEyeProjection;
+float4x4 _LeftEyeToWorld;
+float4x4 _RightEyeToWorld;
+//Fix Stereo View Matrix/
 
 float3 TransformClipSpace(float3 pos, float4 transform)
 {
@@ -122,13 +131,37 @@ float3 TransformClipSpace5(float3 pos)
 	return TransformClipSpace(pos, SEGIClipTransform5);
 }
 
-float4 GetViewSpacePosition(float2 coord)
+float4 GetViewSpacePosition(float2 coord, float2 uv)
 {
-	float depth = UNITY_SAMPLE_TEX2DARRAY_LOD(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0), 0).x;
+	float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
 
 #if defined(UNITY_REVERSED_Z)
 	depth = 1.0 - depth;
 #endif
+
+	//Fix Stereo View Matrix
+	float d = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(uv)); // non-linear Z
+	float4x4 proj, eyeToWorld;
+
+	if (uv.x < .5) // Left Eye
+	{
+		uv.x = saturate(uv.x * 2); // 0..1 for left side of buffer
+		proj = _LeftEyeProjection;
+		eyeToWorld = _LeftEyeToWorld;
+	}
+	else // Right Eye
+	{
+		uv.x = saturate((uv.x - 0.5) * 2); // 0..1 for right side of buffer
+		proj = _RightEyeProjection;
+		eyeToWorld = _RightEyeToWorld;
+	}
+
+	float2 uvClip = uv * 2.0 - 1.0;
+	float4 clipPos = float4(uvClip, d, 1.0);
+	float4 viewPos = mul(proj, clipPos); // inverse projection by clip position
+	viewPos /= viewPos.w; // perspective division
+	float3 worldPos = mul(eyeToWorld, viewPos).xyz;
+	//Fix Stereo View Matrix/
 
 	float4 viewPosition = mul(ProjectionMatrixInverse, float4(coord.x * 2.0 - 1.0, coord.y * 2.0 - 1.0, 2.0 * depth - 1.0, 1.0));
 	viewPosition /= viewPosition.w;
@@ -304,7 +337,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 float ReflectionOcclusionPower;
 float SkyReflectionIntensity;
 
-float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float smoothness, float2 uv, float dither)
+float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float smoothness, float2 uv, float dither, float3 viewDir)
 {
 	float skyVisibility = 1.0;
 
@@ -367,6 +400,24 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		gi.rgb += giSample.rgb * (coneSize * 5.0 + 1.0) * occlusion * 0.5;
 		giSample.a *= lerp(saturate(fi / 0.2), 1.0, NearOcclusionStrength);
 		skyVisibility *= pow(saturate(1.0 - giSample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
+	}
+
+	if (useReflectionProbes  && ForwardPath)
+	{
+		float3 reflectedDir = reflect(viewDir, worldNormal);
+		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
+		half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
+
+		//half4 lightColor = UNITY_SAMPLE_TEX2D(_LightmapTexture, uv);
+
+		//skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
+		//skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+		//probeColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
+		probeColor = (probeColor.rgb * 0.5) * (1 - reflectionProbeIntensity);
+
+		//gi.rgb *= GIGain * 0.15;
+		gi = (gi + probeColor) * 0.5;// *skyVisibility * skyMult * 10.0;
 	}
 
 	skyVisibility *= saturate(dot(worldNormal, kernel) * 0.7 + 0.3);
@@ -723,4 +774,13 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 	gi += skyColor * skyVisibility * 10.0;
 
 	return float4(gi.rgb, 0.0f);
+}
+
+float3 GetWorldNormal(float2 screenspaceUV)
+{
+	float4 dn = tex2D(_CameraDepthNormalsTexture, screenspaceUV);
+	float3 n = DecodeViewNormalStereo(dn);
+	float3 worldN = mul((float3x3)CameraToWorld, n);
+
+	return worldN;
 }
