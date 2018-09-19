@@ -26,3 +26,7 @@ Please refer to the User Guide.pdf for usage instructions.
 
 # Community
 If you need some help, feel free to ask any questions in the [official thread](https://forum.unity.com/threads/segi-fully-dynamic-global-illumination.410310) on Unity forums.
+
+# Known issues
+Voxelisation is broken when using Single Pass Instancing.
+Otherwise every functions as it should.
