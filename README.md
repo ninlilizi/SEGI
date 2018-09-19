@@ -7,7 +7,8 @@
 
 # Features.
 * Deferred and Forward render paths.
-* 2D, Single Pass Rendering and Single Pass Instanced Rendering.
+* 2D, Single Pass Rendering
+* Limited Single Pass Instanced Rendering.
 * Runs on Unity versions 2017 and 2018
 
 A fully-dynamic voxel-based global illumination system for Unity. More details at http://www.sonicether.com/segi/
