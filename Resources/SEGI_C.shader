@@ -76,11 +76,7 @@
 			float4x4 _RightEyeToWorld;
 			//Fix Stereo View Matrix/
 
-<<<<<<< HEAD
 			//UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
-=======
-			UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
->>>>>>> c504122bd8027341b685a9680f3c9f471a0087b8
 
 
 			//sampler2D NoiseTexture;
@@ -161,15 +157,10 @@
 							}
 							else
 							{
-<<<<<<< HEAD
 								float depthValue;
 								float3 normalValues;
 								DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
 								worldNormal = normalize(float4(normalValues, 1).rgb * 2.0 - 1.0);
-=======
-								worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb * 2.0 - 1.0);
-								//worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)));
->>>>>>> c504122bd8027341b685a9680f3c9f471a0087b8
 							}
 							float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;	//Apply bias of cone trace origin towards the surface normal to avoid self-occlusion artifacts
 
@@ -274,11 +265,7 @@
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
-<<<<<<< HEAD
 						//UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
-=======
-						UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
->>>>>>> c504122bd8027341b685a9680f3c9f471a0087b8
 
 						float4x4 CameraToWorld;
 
@@ -365,14 +352,10 @@
 								}
 								else
 								{
-<<<<<<< HEAD
 									float depthValue;
 									float3 normalValues;
 									DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
 									worldNormal = normalize(float4(normalValues, 1).rgb * 2.0 - 1.0);
-=======
-									worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb * 2.0 - 1.0);
->>>>>>> c504122bd8027341b685a9680f3c9f471a0087b8
 								}
 								float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
 
@@ -529,11 +512,7 @@
 
 						half4 _CameraGBufferTexture1_ST;
 						half4 _CameraGBufferTexture2_ST;
-<<<<<<< HEAD
 						//UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
-=======
-						UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
->>>>>>> c504122bd8027341b685a9680f3c9f471a0087b8
 
 						int FrameSwitch;
 
@@ -610,14 +589,10 @@
 						}
 						else
 						{
-<<<<<<< HEAD
 							float depthValue;
 							float3 normalValues;
 							DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
 							worldNormal = normalize(float4(normalValues, 1).rgb * 2.0 - 1.0);
-=======
-							worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(CurrentNormal, UnityStereoTransformScreenSpaceTex(input.uv)).rgb * 2.0 - 1.0);
->>>>>>> c504122bd8027341b685a9680f3c9f471a0087b8
 						}
 
 						float3 voxelOrigin = worldPos.xyz + worldNormal.xyz * 0.006 * ConeTraceBias;
