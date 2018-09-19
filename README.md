@@ -29,4 +29,8 @@ If you need some help, feel free to ask any questions in the [official thread](h
 
 # Known issues
 Voxelisation is broken when using Single Pass Instancing.
-Otherwise every functions as it should.
+Otherwise everything functions as it should.
+
+# Credits.
+Sonic Ether for SEGI (https://github.com/sonicether/SEGI)
+CK85 aka Nexusmaster for the 2017/2018 compatible fork (https://github.com/CK85)
