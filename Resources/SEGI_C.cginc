@@ -60,6 +60,7 @@ float4 SEGIClipTransform3;
 float4 SEGIClipTransform4;
 float4 SEGIClipTransform5;
 
+float reflectionProbeIntensity;
 int useReflectionProbes;
 int ReflectionSteps;
 int ForwardPath;
@@ -280,7 +281,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 		//probeColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
-		probeColor = lerp(skyColor.rgb * 0.5, (0.5).xxx, probeColor.rgb * 0.5);
+		probeColor = lerp(skyColor.rgb * 0.5, (0.5).xxx, (probeColor.rgb * 0.5) * reflectionProbeIntensity);
 
 		gi.rgb *= GIGain * 0.15;
 		gi += probeColor * skyVisibility * skyMult * 10.0;

@@ -60,6 +60,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty innerOcclusionLayers;
     SerializedProperty sunDepthTextureDepth;
     SerializedProperty useReflectionProbes;
+    SerializedProperty reflectionProbeIntensity;
 
     SEGICascaded instance;
 
@@ -145,6 +146,7 @@ public class SEGICascadedEditor : Editor
         innerOcclusionLayers = serObj.FindProperty("innerOcclusionLayers");
         sunDepthTextureDepth = serObj.FindProperty("sunDepthTextureDepth");
         useReflectionProbes = serObj.FindProperty("useReflectionProbes");
+        reflectionProbeIntensity = serObj.FindProperty("reflectionProbeIntensity");
 
         instance = target as SEGICascaded;
     }
@@ -254,6 +256,7 @@ public class SEGICascadedEditor : Editor
         {
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(useReflectionProbes, new GUIContent("Use Reflection Probe", "Approximates path traced Specular values using a Reflection Probe."));
+            EditorGUILayout.PropertyField(reflectionProbeIntensity, new GUIContent("Reflection Probe Intensity", "Intensity of Reflection Probe influence."));
             EditorGUI.indentLevel--;
         }
 
@@ -396,6 +399,7 @@ public class SEGICascadedEditor : Editor
         preset.secondaryOcclusionStrength = instance.secondaryOcclusionStrength;
 
         preset.useReflectionProbes = instance.useReflectionProbes;
+        preset.reflectionProbeIntensity = instance.reflectionProbeIntensity;
 
         string path = "Assets/Plugins/Features/SEGI";
 #if UNITY_EDITOR

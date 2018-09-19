@@ -450,6 +450,8 @@ public class SEGICascaded : MonoBehaviour
 
     //Forward Rendering
     public bool useReflectionProbes = true;
+    [Range(0, 1)]
+    public float reflectionProbeIntensity = 0.5f;
 
     #endregion // SupportingObjectsAndProperties
 
@@ -492,6 +494,7 @@ public class SEGICascaded : MonoBehaviour
         secondaryOcclusionStrength = preset.secondaryOcclusionStrength;
 
         useReflectionProbes = preset.useReflectionProbes;
+        reflectionProbeIntensity = preset.reflectionProbeIntensity;
     }
 
     public virtual void Start()
@@ -1799,6 +1802,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetFloat("noiseDistribution", noiseDistribution);
         material.SetFloat("currentClipmapIndex", currentClipmapIndex);
         material.SetInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
+        material.SetFloat("reflectionProbeIntensity", reflectionProbeIntensity);
 
         if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
         {

@@ -10,6 +10,8 @@ public class SEGICascadedPreset : ScriptableObject
 	public bool infiniteBounces = true;
 
     public bool useReflectionProbes = true;
+    [Range(0, 1)]
+    public float reflectionProbeIntensity = 0.5f;
 
     [Range(0.01f, 1.0f)]
 	public float temporalBlendWeight = 1.0f;
