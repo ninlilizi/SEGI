@@ -33,4 +33,5 @@ Otherwise everything functions as it should.
 
 # Credits.
 Sonic Ether for SEGI (https://github.com/sonicether/SEGI)
+
 CK85 aka Nexusmaster for the 2017/2018 compatible fork (https://github.com/CK85)
