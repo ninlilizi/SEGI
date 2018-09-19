@@ -1,7 +1,11 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using System.Collections;
+using UnityEngine.Rendering.PostProcessing;
 
-public class SEGICascadedPreset : ScriptableObject
+[Serializable]
+[PostProcess(typeof(SEGICascadedRenderer), PostProcessEvent.AfterStack, "NKLI/SEGI")]
+public sealed class SEGICascadedPreset : PostProcessEffectSettings
 {
 	public SEGICascaded.VoxelResolution voxelResolution = SEGICascaded.VoxelResolution.high;
 	public bool voxelAA = false;

@@ -19,17 +19,17 @@ float FarthestOcclusionStrength;
 
 half4 GISunColor;
 
-sampler3D SEGIVolumeLevel0;
-sampler3D SEGIVolumeLevel1;
-sampler3D SEGIVolumeLevel2;
-sampler3D SEGIVolumeLevel3;
-sampler3D SEGIVolumeLevel4;
-sampler3D SEGIVolumeLevel5;
-sampler3D SEGIVolumeLevel6;
-sampler3D SEGIVolumeLevel7;
-sampler3D VolumeTexture1;
-sampler3D VolumeTexture2;
-sampler3D VolumeTexture3;
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel0);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel1);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel2);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel3);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel4);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel5);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel6);
+UNITY_DECLARE_TEX3D(SEGIVolumeLevel7);
+UNITY_DECLARE_TEX3D(VolumeTexture1);
+UNITY_DECLARE_TEX3D(VolumeTexture2);
+UNITY_DECLARE_TEX3D(VolumeTexture3);
 
 float4x4 SEGIVoxelProjection;
 float4x4 SEGIVoxelProjection0;
@@ -69,18 +69,19 @@ int ForwardPath;
 
 uniform half4 _MainTex_TexelSize;
 
-float4x4 ProjectionMatrixInverse;
-
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture);
-UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
-sampler2D PreviousGITexture;
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
-sampler2D _CameraMotionVectorsTexture;
 float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;
+float4x4 ProjectionMatrixInverse;
+
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousGITexture);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture);
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture);
+UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 
 int SEGISphericalSkylight;
 
@@ -242,32 +243,32 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		if (mipLevel == 0)
 		{
 			voxelCheckCoord = TransformClipSpace0(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel0, float4(float3(voxelCheckCoord.xy, voxelCheckCoord.z), coneSize)) * GISampleWeight(voxelCheckCoord);
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(float3(voxelCheckCoord.xy, voxelCheckCoord.z), coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		if (mipLevel == 1)
 		{
 			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else if (mipLevel == 2)
 		{
 			voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else if (mipLevel == 3)
 		{
 			voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else if (mipLevel == 4)
 		{
 			voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else
 		{
 			voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 
 		float occlusion = skyVisibility;
@@ -366,32 +367,32 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
-			giSample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize), 0);
 		}
 		else if (mipLevel == 1)
 		{
 			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0);
 		}
 		else if (mipLevel == 2)
 		{
 			voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0);
 		}
 		else if (mipLevel == 3)
 		{
 			voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0);
 		}
 		else if (mipLevel == 4)
 		{
 			voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0);
 		}
 		else
 		{
 			voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0);
 		}
 
 		float occlusion = skyVisibility;
@@ -451,17 +452,17 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel, float skyVisibility, i
 
 
 		if (volumeLevel == 0)
-			giSample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, 0.0));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, 0.0), 0);
 		else if (volumeLevel == 1)
-			giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, 0.0));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, 0.0), 0);
 		else if (volumeLevel == 2)
-			giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, 0.0));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, 0.0), 0);
 		else if (volumeLevel == 3)
-			giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, 0.0));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, 0.0), 0);
 		else if (volumeLevel == 4)
-			giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, 0.0));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, 0.0), 0);
 		else
-			giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, 0.0));
+			giSample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, 0.0), 0);
 
 
 		if (voxelCheckCoord.x < 0.0 || voxelCheckCoord.x > 1.0 ||
@@ -718,27 +719,27 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 		if (mipLevel == 0 || mipLevel == 1)
 		{
 			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
-			sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else if (mipLevel == 2)
 		{
 			voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
-			sample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else if (mipLevel == 3)
 		{
 			voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
-			sample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else if (mipLevel == 4)
 		{
 			voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
-			sample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 		else
 		{
 			voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
-			sample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0) * GISampleWeight(voxelCheckCoord);
 		}
 
 		float occlusion = skyVisibility;

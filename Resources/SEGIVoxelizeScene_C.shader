@@ -5,18 +5,18 @@
 		_MainTex ("Base (RGB)", 2D) = "white" {}
 		_EmissionColor("Color", Color) = (0,0,0)
 		_EmissionMap("Emission", 2D) = "white" {}
-		_Cutoff ("Alpha Cutoff", Range(0,1)) = 0.333
-		_BlockerValue ("Blocker Value", Range(0, 10)) = 0
+		_Cutoff("Alpha Cutoff", Range(0,1)) = 0.333
+		_BlockerValue("Blocker Value", Range(0, 10)) = 0
 	}
-	SubShader 
-	{
-		Cull Off
-		ZTest Always
-		
-		Pass
+		SubShader
 		{
+			Cull Off
+			ZTest Always
+
+			Pass
+			{
 			CGPROGRAM
-			
+
 				#pragma target 5.0
 				#pragma vertex vert
 				#pragma fragment frag
@@ -26,16 +26,16 @@
 				#include "SEGIUnityShadowInput.cginc"
 				#include "SEGI_C.cginc"
 
-				UNITY_INSTANCING_BUFFER_START(Props)
+				UNITY_INSTANCING_BUFFER_START(SEGIVoxelizeScene)
 				UNITY_DEFINE_INSTANCED_PROP(half4, _Color)
 				UNITY_DEFINE_INSTANCED_PROP(half4, _EmissionColor)
 				UNITY_DEFINE_INSTANCED_PROP(float, _Cutoff)
 				UNITY_DEFINE_INSTANCED_PROP(float, _BlockerValue)
-				UNITY_DEFINE_INSTANCED_PROP(sampler2D, _EmissionMap)
-				UNITY_INSTANCING_BUFFER_END(Props)
+				UNITY_INSTANCING_BUFFER_END(SEGIVoxelizeScene)
 
-
-				RWTexture2D<uint> RG0;
+				UNITY_DECLARE_TEX2D(_EmissionMap);
+			
+		RWTexture2D<uint> RG0;
 				
 				int LayerToVisualize;
 				
@@ -110,6 +110,7 @@
 				void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 				{
 					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+					UNITY_SETUP_INSTANCE_ID(input);
 
 					v2g p[3];
 					int i = 0;
@@ -204,9 +205,8 @@
 			
 				float4 frag (g2f input) : SV_TARGET
 				{
-					#if UNITY_VERSION >= 560
-					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); // required for sampling the correct slice of the shadow map render texture array
-					#endif
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+					UNITY_SETUP_INSTANCE_ID(input);
 
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					
@@ -277,11 +277,11 @@
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
 					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
-					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(UNITY_ACCESS_INSTANCED_PROP(Props, _EmissionMap), input.uv);
+					float4 emissionTex = UNITY_SAMPLE_TEX2D(_EmissionMap, input.uv);
 					
-					float4 color = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+					float4 color = UNITY_ACCESS_INSTANCED_PROP(SEGIVoxelizeScene, _Color);
 
-					if (length(UNITY_ACCESS_INSTANCED_PROP(Props, _Color).rgb) < 0.0001)
+					if (length(UNITY_ACCESS_INSTANCED_PROP(SEGIVoxelizeScene, _Color).rgb) < 0.0001)
 					{
 						color.rgb = float3(1, 1, 1);
 					}
@@ -290,7 +290,7 @@
 						color.rgb *= color.a;
 					}
 
-					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + UNITY_ACCESS_INSTANCED_PROP(Props, _EmissionColor).rgb * 0.9 * emissionTex.rgb;
+					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + UNITY_ACCESS_INSTANCED_PROP(SEGIVoxelizeScene, _EmissionColor).rgb * 0.9 * emissionTex.rgb;
 
 					float4 prevBounce = tex3D(SEGICurrentIrradianceVolume, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
 					col.rgb += prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * tex.rgb * color.rgb;
@@ -304,10 +304,10 @@
 					coord /= (uint)SEGIVoxelAA + 1u;
 
 
-					if (UNITY_ACCESS_INSTANCED_PROP(Props, _BlockerValue) > 0.01)
+					if (UNITY_ACCESS_INSTANCED_PROP(SEGIVoxelizeScene, _BlockerValue) > 0.01)
 					{
 						result.a += 20.0;
-						result.a += UNITY_ACCESS_INSTANCED_PROP(Props, _BlockerValue);
+						result.a += UNITY_ACCESS_INSTANCED_PROP(SEGIVoxelizeScene, _BlockerValue);
 						result.rgb = float3(0.0, 0.0, 0.0);
 					}
 

@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine.Rendering.PostProcessing;
+using UnityEditor.Rendering.PostProcessing;
 
 [CustomEditor(typeof(SEGICascaded))]
 public class SEGICascadedEditor : Editor
@@ -49,7 +51,6 @@ public class SEGICascadedEditor : Editor
     SerializedProperty voxelAA;
     SerializedProperty reflectionSteps;
     SerializedProperty skyReflectionIntensity;
-    //SerializedProperty gaussianMipFilter;
     SerializedProperty reflectionOcclusionPower;
     SerializedProperty farOcclusionStrength;
     SerializedProperty farthestOcclusionStrength;
@@ -90,8 +91,10 @@ public class SEGICascadedEditor : Editor
 
     int presetPopupIndex;
 
-    void OnEnable()
+    public void OnEnable()
     {
+        //Object[] selection = Selection.GetFiltered(typeof(SEGICascadedPreset), SelectionMode.Assets);
+
         serObj = new SerializedObject(target);
 
         voxelResolution = serObj.FindProperty("voxelResolution");
@@ -414,4 +417,63 @@ public class SEGICascadedEditor : Editor
     {
 
     }
+}
+
+[PostProcessEditor(typeof(SEGICascadedPreset))]
+public sealed class SEGICascadedEditorSRP : PostProcessEffectEditor<SEGICascadedPreset>
+{
+    SerializedObject serObj;
+
+    SerializedParameterOverride voxelResolution;
+    SerializedProperty visualizeSunDepthTexture;
+    SerializedProperty visualizeGI;
+    SerializedProperty sun;
+    SerializedProperty giCullingMask;
+    SerializedProperty shadowVolumeMask;
+    SerializedProperty showVolumeObjects;
+    SerializedProperty shadowSpaceSize;
+    SerializedProperty temporalBlendWeight;
+    SerializedProperty visualizeVoxels;
+    SerializedProperty visualizeShadowmapCopy;
+    SerializedProperty useVolumeRayCast;
+    SerializedProperty useUnityShadowMap;
+    SerializedProperty shadowmapCopySize;
+    SerializedProperty updateGI;
+    SerializedProperty MatchAmbientColor;
+    SerializedProperty skyColor;
+    SerializedProperty voxelSpaceSize;
+    SerializedProperty useBilateralFiltering;
+    SerializedProperty GIResolution;
+    SerializedProperty stochasticSampling;
+    SerializedProperty infiniteBounces;
+    SerializedProperty infiniteBouncesRerenderObjects;
+    SerializedProperty followTransform;
+    SerializedProperty noiseDistribution;
+    SerializedProperty cones;
+    SerializedProperty coneTraceSteps;
+    SerializedProperty coneLength;
+    SerializedProperty coneWidth;
+    SerializedProperty occlusionStrength;
+    SerializedProperty nearOcclusionStrength;
+    SerializedProperty occlusionPower;
+    SerializedProperty coneTraceBias;
+    SerializedProperty nearLightGain;
+    SerializedProperty giGain;
+    SerializedProperty secondaryBounceGain;
+    SerializedProperty softSunlight;
+
+    SerializedProperty voxelAA;
+    SerializedProperty reflectionSteps;
+    SerializedProperty skyReflectionIntensity;
+    SerializedProperty reflectionOcclusionPower;
+    SerializedProperty farOcclusionStrength;
+    SerializedProperty farthestOcclusionStrength;
+    SerializedProperty secondaryCones;
+    SerializedProperty secondaryOcclusionStrength;
+    SerializedProperty skyIntensity;
+    SerializedProperty sphericalSkylight;
+    SerializedProperty innerOcclusionLayers;
+    SerializedProperty sunDepthTextureDepth;
+    SerializedProperty useReflectionProbes;
+    SerializedProperty reflectionProbeIntensity;
 }

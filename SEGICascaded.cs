@@ -1,10 +1,11 @@
-using UnityEngine;
-using UnityEngine.Rendering;
-using System.Collections;
 using System;
 using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.PostProcessing;
+
+
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -13,9 +14,7 @@ using UnityEditor;
 [RequireComponent(typeof(Camera))]
 [AddComponentMenu("Image Effects/Sonic Ether/SEGI (Cascaded)")]
 public class SEGICascaded : MonoBehaviour
-{
-    #region Parameters
-    [Serializable]
+{ 
     public enum VoxelResolution
     {
         potato = 16,
@@ -108,7 +107,6 @@ public class SEGICascaded : MonoBehaviour
     public bool sphericalSkylight = false;
 
     public bool useUnityShadowMap = false;
-    #endregion // Parameters
 
     #region InternalVariables
     object initChecker;
@@ -439,6 +437,8 @@ public class SEGICascaded : MonoBehaviour
     public bool useReflectionProbes = true;
     [Range(0, 1)]
     public float reflectionProbeIntensity = 0.5f;
+
+    // SRP Investigation
 
     #endregion // SupportingObjectsAndProperties
 
@@ -1148,10 +1148,10 @@ public class SEGICascaded : MonoBehaviour
 #if UNITY_EDITOR
         int line_to_edit = 1; // Warning: 1-based indexing!
 
-        string path = "Assets/Plugins/Features/SEGI";
+        string path = "Assets/SEGI";
 
-        MonoScript ms = MonoScript.FromScriptableObject(new SEGICascadedPreset());
-        path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(ms));
+        //SEGICascadedPreset ms = ScriptableObject.CreateInstance<SEGICascadedPreset>() ;
+        //path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(ms));
 
         string filePath = path + "/Resources/" + "SEGIUnityShadowInput.cginc";
 
@@ -1235,7 +1235,11 @@ public class SEGICascaded : MonoBehaviour
         InitCheck();
 
         if (notReadyToRender)
+        {
+            Debug.Log("<SEGI> (" + name + ") " + "Not Ready to Render");
             return;
+        }
+            
 
         if (!updateGI)
         {
@@ -1246,25 +1250,16 @@ public class SEGICascaded : MonoBehaviour
         updateGIcounter++;
         if (!updateGI || (updateGIevery > 1 && updateGIcounter < updateGIevery))
         {//MINE			
-            return;
+            //return;
         }
         else
         {
             updateGIcounter = 0;//MINE
         }
 
-        if (attachedCamera.renderingPath == RenderingPath.Forward)
+        if (attachedCamera.renderingPath == RenderingPath.Forward && reflectionProbe.enabled)
         {
-            if (useReflectionProbes)
-            {
-                reflectionProbe.enabled = true;
-            }
-            else
-            {
-                reflectionProbe.enabled = false;
-            }
-
-
+            reflectionProbe.enabled = true;
         }
         else
         {
@@ -1276,6 +1271,7 @@ public class SEGICascaded : MonoBehaviour
         // only use main camera for voxel simulations
         if (attachedCamera != Camera.main)
         {
+            Debug.Log("<SEGI> (" + name + ") " + "Instance not attached to Main Camera. Please ensure the attached camera has the 'MainCamera' tag.");
             return;
         }
 
@@ -1461,6 +1457,7 @@ public class SEGICascaded : MonoBehaviour
 
                 Graphics.SetRandomWriteTarget(1, integerVolumeArray);
                 voxelCamera.targetTexture = dummyVoxelTextureAAScaled;
+//                voxelCamera.stereoTargetEye = StereoTargetEyeMask.Both;
                 voxelCamera.RenderWithShader(voxelizationShaderNoShadows, "");
                 Graphics.ClearRandomWriteTargets();
 
@@ -1737,8 +1734,7 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
-    [ImageEffectOpaque]
-    void OnRenderImage(RenderTexture source, RenderTexture destination)
+    public void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         if (notReadyToRender)
         {
@@ -1765,7 +1761,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetMatrix("ProjectionMatrixInverse", attachedCamera.projectionMatrix.inverse);
         material.SetMatrix("ProjectionMatrix", attachedCamera.projectionMatrix);
         material.SetInt("FrameSwitch", frameCounter);
-        material.SetVector("CameraPosition", transform.position);
+        material.SetVector("CameraPosition", attachedCamera.transform.position);
         material.SetFloat("DeltaTime", Time.deltaTime);
 
         material.SetInt("StochasticSampling", stochasticSampling ? 1 : 0);
@@ -2176,5 +2172,15 @@ public class SEGICascaded : MonoBehaviour
             }
             repeat_x++;
         }
+    }
+}
+
+//SRP Stuff
+[UnityEngine.Rendering.PostProcessing.PostProcess(typeof(SEGICascadedPreset), PostProcessEvent.AfterStack, "NKLI/SEGI")]
+public sealed class SEGICascadedRenderer : PostProcessEffectRenderer<SEGICascadedPreset>
+{
+    public override void Render(PostProcessRenderContext context)
+    {
+
     }
 }

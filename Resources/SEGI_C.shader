@@ -3,49 +3,50 @@
 		_MainTex("Base (RGB)", 2D) = "white" {}
 	}
 
-		CGINCLUDE
-#include "UnityCG.cginc"
-#include "SEGI_C.cginc"
-#pragma target 5.0
+	HLSLINCLUDE
+	#include "UnityCG.cginc"
+	#include "SEGI_C.cginc"
+	#pragma target 5.0
 
 
-		struct v2f
+	struct v2f
 	{
 		float4 pos : SV_POSITION;
 		float4 uv : TEXCOORD0;
 
-#if UNITY_UV_STARTS_AT_TOP
+		#if UNITY_UV_STARTS_AT_TOP
 		half4 uv2 : TEXCOORD1;
-#endif
+		#endif
 
 		UNITY_VERTEX_INPUT_INSTANCE_ID
 		UNITY_VERTEX_OUTPUT_STEREO
 	};
 
-	v2f vert(appdata_img v)
+	v2f vert(appdata_base v)
 	{
 		v2f o;
 
 		UNITY_SETUP_INSTANCE_ID(v);
 		UNITY_INITIALIZE_OUTPUT(v2f, o);
 		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+		UNITY_TRANSFER_INSTANCE_ID(v, o);
 
 		o.pos = UnityObjectToClipPos(v.vertex);
 		o.uv = float4(v.texcoord.xy, 1, 1);
 
-#if UNITY_UV_STARTS_AT_TOP
+		#if UNITY_UV_STARTS_AT_TOP
 		o.uv2 = float4(v.texcoord.xy, 1, 1);
 		if (_MainTex_TexelSize.y < 0.0)
 			o.uv.y = 1.0 - o.uv.y;
-#endif
+		#endif
 
 		return o;
 	}
 
-	ENDCG
+	ENDHLSL
 
 
-		SubShader
+	SubShader
 	{
 		ZTest Off
 		Cull Off
@@ -54,19 +55,12 @@
 
 		Pass //0 diffuse GI trace
 		{
-			CGPROGRAM
-				#pragma vertex vert
-				#pragma fragment frag
-				#pragma multi_compile_instancing
+			HLSLPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+			#pragma multi_compile_instancing
 
-				uniform float noiseDistribution;
-
-			//sampler2D _CameraGBufferTexture2;
-
-			UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
-
-			//UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
-
+			uniform float noiseDistribution;
 
 			//sampler2D NoiseTexture;
 
@@ -80,6 +74,7 @@
 			float4 frag(v2f input) : SV_Target
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+				UNITY_SETUP_INSTANCE_ID(input);
 
 			float3 gi;
 			if (ForwardPath == 0)
@@ -120,10 +115,6 @@
 			}
 			else
 			{
-				//float depthValue;
-				//float3 normalValues;
-				//DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
-				//worldNormal = normalize(float4(normalValues, 1).rgb * 2.0 - 1.0);
 				worldNormal = GetWorldNormal(UnityStereoTransformScreenSpaceTex(input.uv));
 			}
 			float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;	//Apply bias of cone trace origin towards the surface normal to avoid self-occlusion artifacts
@@ -168,63 +159,64 @@
 			return float4(gi, 1.0);
 		}
 
-		ENDCG
+		ENDHLSL
 	}
 
-				Pass //1 Bilateral Blur
+		Pass //1 Bilateral Blur
+		{
+			HLSLPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+			#pragma multi_compile_instancing
+
+			float2 Kernel;
+
+			float4 frag(v2f input) : COLOR0
 				{
-					CGPROGRAM
-						#pragma vertex vert
-						#pragma fragment frag
-						#pragma multi_compile_instancing
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+					UNITY_SETUP_INSTANCE_ID(input);
 
-						float2 Kernel;
+					float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
+					float validWeights = 0.0;
+					float depth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
+					half3 normal = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
+					float thresh = 0.26;
 
-						float4 frag(v2f input) : COLOR0
-						{
-							UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-							float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
-							float validWeights = 0.0;
-							float depth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
-							half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
-							float thresh = 0.26;
+					float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, input.uv).xyz;
+					float3 viewVector = normalize(viewPosition);
 
-							float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, input.uv).xyz;
-							float3 viewVector = normalize(viewPosition);
+					float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
+					thresh *= 1.0 + NdotV * 2.0;
 
-							float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
-							thresh *= 1.0 + NdotV * 2.0;
+					for (int i = -1; i <= 1; i++)
+					{
+						float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy;
+						float sampleDepth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).x);
+						half3 sampleNormal = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)));
 
-							for (int i = -1; i <= 1; i++)
-							{
-								float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy;
-								float sampleDepth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).x);
-								half3 sampleNormal = DecodeViewNormalStereo(tex2Dlod(_CameraDepthNormalsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)));
+						float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
+						weight *= pow(saturate(dot(sampleNormal, normal)), 14.0);
 
-								float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
-								weight *= pow(saturate(dot(sampleNormal, normal)), 14.0);
+						float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0)).rgba;
+						blurred += blurSample * weight;
+						validWeights += weight;
+					}
 
-								float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0)).rgba;
-								blurred += blurSample * weight;
-								validWeights += weight;
-							}
+					blurred /= validWeights + 0.0001;
 
-							blurred /= validWeights + 0.0001;
+					return blurred;
+				}
 
-							return blurred;
-						}
-
-					ENDCG
+				ENDHLSL
 				}
 
 				Pass //2 Blend with scene
 				{
-					CGPROGRAM
+					HLSLPROGRAM
 						#pragma vertex vert
 						#pragma fragment frag
 						#pragma multi_compile_instancing
 
-						UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
 
@@ -233,6 +225,7 @@
 						float4 frag(v2f input) : COLOR0
 						{
 							UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+							UNITY_SETUP_INSTANCE_ID(input);
 
 			#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
@@ -272,14 +265,15 @@
 							return float4(result, 1.0);
 						}
 
-					ENDCG
+					ENDHLSL
 				}
 
 				Pass //3 Temporal blend (with unity motion vectors)
 				{
-					CGPROGRAM
+					HLSLPROGRAM
 						#pragma vertex vert
 						#pragma fragment frag
+						#pragma multi_compile_instancing
 
 						sampler2D GITexture;
 						sampler2D PreviousDepth;
@@ -295,20 +289,14 @@
 						float DeltaTime;
 						float BlendWeight;
 
-						sampler2D BlurredGI;
-
-						half4 _MainTex_ST;
-						half4 PreviousDepth_ST;
-						half4 PreviousGITexture_ST;
-						half4 BlurredGI_ST;
-
-						half4 _CameraMotionVectorsTexture_ST;
+						UNITY_DECLARE_SCREENSPACE_TEXTURE(BlurredGI);
 
 						float4 frag(v2f input) : COLOR0
 						{
 							UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+							UNITY_SETUP_INSTANCE_ID(input);
 
-							float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv).rgb;
+							float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv)).rgb;
 
 							//Calculate moments and width of color deviation of neighbors for color clamping
 							float3 m1, m2 = (0.0).xxx;
@@ -354,12 +342,12 @@
 
 
 							//Get motion vectors and calculate reprojection coord
-							float2 motionVectors = tex2Dlod(_CameraMotionVectorsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).xy;
+							float2 motionVectors = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).xy;
 							float2 reprojCoord = input.uv.xy - motionVectors.xy;
 
 
 							//Calculate world space position for the previous frame reprojected to the current frame
-							float prevDepth = (tex2Dlod(PreviousDepth, UnityStereoScreenSpaceUVAdjust(float4(reprojCoord + _MainTex_TexelSize.xy * 0.0, 0.0, 0.0), PreviousDepth_ST)).x);
+							float prevDepth = (UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousDepth, UnityStereoTransformScreenSpaceTex(float4(reprojCoord + _MainTex_TexelSize.xy * 0.0, 0.0, 0.0))).x);
 
 							#if defined(UNITY_REVERSED_Z)
 							prevDepth = 1.0 - prevDepth;
@@ -373,7 +361,7 @@
 							//Apply blending
 							float blendWeight = BlendWeight;
 
-							float3 blurredGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(BlurredGI, UnityStereoScreenSpaceUVAdjust(input.uv, BlurredGI_ST).xy).rgb;
+							float3 blurredGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(BlurredGI, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
 
 							if (reprojCoord.x > 1.0 || reprojCoord.x < 0.0 || reprojCoord.y > 1.0 || reprojCoord.y < 0.0)
 							{
@@ -386,7 +374,7 @@
 							gi = lerp(blurredGI, gi, posSimilarity);
 
 
-							float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, UnityStereoScreenSpaceUVAdjust(reprojCoord, PreviousGITexture_ST)).rgb;
+							float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, UnityStereoTransformScreenSpaceTex(reprojCoord)).rgb;
 							prevGI = clamp(prevGI, minc, maxc);
 							gi = lerp(prevGI, gi, float3(blendWeight, blendWeight, blendWeight));
 
@@ -394,27 +382,26 @@
 							return float4(result, 1.0);
 						}
 
-					ENDCG
+					ENDHLSL
 				}
 
-				Pass //4 Specular/reflections trace (CURRENTLY UNUSED)
+				Pass //4 Specular/reflections trace
 				{
 					ZTest Always
 
-					CGPROGRAM
+					HLSLPROGRAM
 						#pragma vertex vert
 						#pragma fragment frag
+						#pragma multi_compile_instancing
 
-						sampler2D _CameraGBufferTexture2;
-
-						half4 _CameraGBufferTexture1_ST;
-						half4 _CameraGBufferTexture2_ST;
+						//UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
 
 						int FrameSwitch;
 
 						float4 frag(v2f input) : SV_Target
 						{
 							UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+							UNITY_SETUP_INSTANCE_ID(input);
 
 						#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
@@ -476,12 +463,12 @@
 						return float4(reflection.rgb, 1.0);
 					}
 
-				ENDCG
+				ENDHLSL
 			}
 
 			Pass //5 Get camera depth texture
 			{
-				CGPROGRAM
+				HLSLPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
 					#pragma multi_compile_instancing
@@ -491,18 +478,19 @@
 					float4 frag(v2f input) : COLOR0
 					{
 						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+						UNITY_SETUP_INSTANCE_ID(input);
 
 					//float2 coord = input.uv.xy;
 					float4 tex = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoScreenSpaceUVAdjust(input.uv, _CameraDepthTexture_ST));
 					return tex;
 				}
 
-					ENDCG
+					ENDHLSL
 		}
 
 			Pass //6 Get camera normals texture
 				{
-					CGPROGRAM
+					HLSLPROGRAM
 						#pragma vertex vert
 						#pragma fragment frag
 						#pragma multi_compile_instancing
@@ -510,6 +498,7 @@
 				float4 frag(v2f input) : COLOR0
 				{
 					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+					UNITY_SETUP_INSTANCE_ID(input);
 
 					float depthValue;
 					float3 normalValues;
@@ -518,13 +507,13 @@
 					return float4(normalValues, 1);
 			}
 
-		ENDCG
+		ENDHLSL
 			}
 
 
 				Pass //7 Visualize GI
 			{
-				CGPROGRAM
+				HLSLPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
 					#pragma multi_compile_instancing
@@ -535,6 +524,7 @@
 			float4 frag(v2f input) : COLOR0
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+				UNITY_SETUP_INSTANCE_ID(input);
 				float4 albedoTex;
 				if (ForwardPath == 0)
 				{
@@ -549,14 +539,14 @@
 				return float4(gi, 1.0);
 			}
 
-		ENDCG
+		ENDHLSL
 	}
 
 
 
 	Pass //8 Write black
 	{
-		CGPROGRAM
+		HLSLPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile_instancing
@@ -564,15 +554,16 @@
 			float4 frag(v2f input) : COLOR0
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+				UNITY_SETUP_INSTANCE_ID(input);
 				return float4(0.0, 0.0, 0.0, 1.0);
 			}
 
-		ENDCG
+		ENDHLSL
 	}
 
 	Pass //9 Visualize slice of GI Volume (CURRENTLY UNUSED)
 	{
-		CGPROGRAM
+		HLSLPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile_instancing
@@ -580,15 +571,16 @@
 			float LayerToVisualize;
 			int MipLevelToVisualize;
 
-			sampler3D SEGIVolumeTexture1;
+			UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
 			float4 frag(v2f input) : COLOR0
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-				return float4(tex3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
+				UNITY_SETUP_INSTANCE_ID(input);
+				return float4(UNITY_SAMPLE_TEX3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
 			}
 
-		ENDCG
+		ENDHLSL
 	}
 
 
@@ -596,94 +588,84 @@
 	{
 ZTest Always
 
-		CGPROGRAM
-			#pragma vertex vert
-			#pragma fragment frag
-			#pragma multi_compile_instancing
+	HLSLPROGRAM
+	#pragma vertex vert
+	#pragma fragment frag
+	#pragma multi_compile_instancing
 
-			sampler2D _CameraGBufferTexture2;
+	float4 CameraPosition;
 
-			float4 CameraPosition;
+	float4 frag(v2f input) : SV_Target
+	{
+		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+		UNITY_SETUP_INSTANCE_ID(input);
 
-			float4 frag(v2f input) : SV_Target
-			{
-				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); //Insert
+		#if UNITY_UV_STARTS_AT_TOP
+			float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
+		#else
+			float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
+		#endif
 
-				#if UNITY_UV_STARTS_AT_TOP
-					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
-				#else
-					float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
-				#endif
+		float3 viewSpacePosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, input.uv).xyz;
+		float3 viewVector = normalize(viewSpacePosition.xyz);
+		float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-					float3 viewSpacePosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, input.uv).xyz;
-				float3 viewVector = normalize(viewSpacePosition.xyz);
-				float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
+		float4 voxelCameraPosition0 = mul(SEGIWorldToVoxel0, float4(CameraPosition.xyz, 1.0));
+			   voxelCameraPosition0 = mul(SEGIVoxelProjection0, voxelCameraPosition0);
+			   voxelCameraPosition0.xyz = voxelCameraPosition0.xyz * 0.5 + 0.5;
 
-				float4 voxelCameraPosition0 = mul(SEGIWorldToVoxel0, float4(CameraPosition.xyz, 1.0));
-					   voxelCameraPosition0 = mul(SEGIVoxelProjection0, voxelCameraPosition0);
-					   voxelCameraPosition0.xyz = voxelCameraPosition0.xyz * 0.5 + 0.5;
-
-				float3 voxelCameraPosition1 = TransformClipSpace1(voxelCameraPosition0);
-				float3 voxelCameraPosition2 = TransformClipSpace2(voxelCameraPosition0);
-				float3 voxelCameraPosition3 = TransformClipSpace3(voxelCameraPosition0);
-				float3 voxelCameraPosition4 = TransformClipSpace4(voxelCameraPosition0);
-				float3 voxelCameraPosition5 = TransformClipSpace5(voxelCameraPosition0);
-
-
-				float4 result = float4(0,0,0,1);
-				float4 trace;
+		float3 voxelCameraPosition1 = TransformClipSpace1(voxelCameraPosition0);
+		float3 voxelCameraPosition2 = TransformClipSpace2(voxelCameraPosition0);
+		float3 voxelCameraPosition3 = TransformClipSpace3(voxelCameraPosition0);
+		float3 voxelCameraPosition4 = TransformClipSpace4(voxelCameraPosition0);
+		float3 voxelCameraPosition5 = TransformClipSpace5(voxelCameraPosition0);
 
 
-				trace = VisualConeTrace(voxelCameraPosition0.xyz, worldViewVector.xyz, 1.0, 0);
-				result.rgb += trace.rgb;
-				result.a *= trace.a;
+		float4 result = float4(0,0,0,1);
+		float4 trace;
 
-				trace = VisualConeTrace(voxelCameraPosition1.xyz, worldViewVector.xyz, result.a, 1);
-				result.rgb += trace.rgb;
-				result.a *= trace.a;
 
-				trace = VisualConeTrace(voxelCameraPosition2.xyz, worldViewVector.xyz, result.a, 2);
-				result.rgb += trace.rgb;
-				result.a *= trace.a;
+		trace = VisualConeTrace(voxelCameraPosition0.xyz, worldViewVector.xyz, 1.0, 0);
+		result.rgb += trace.rgb;
+		result.a *= trace.a;
 
-				trace = VisualConeTrace(voxelCameraPosition3.xyz, worldViewVector.xyz, result.a, 3);
-				result.rgb += trace.rgb;
-				result.a *= trace.a;
+		trace = VisualConeTrace(voxelCameraPosition1.xyz, worldViewVector.xyz, result.a, 1);
+		result.rgb += trace.rgb;
+		result.a *= trace.a;
 
-				trace = VisualConeTrace(voxelCameraPosition4.xyz, worldViewVector.xyz, result.a, 4);
-				result.rgb += trace.rgb;
-				result.a *= trace.a;
+		trace = VisualConeTrace(voxelCameraPosition2.xyz, worldViewVector.xyz, result.a, 2);
+		result.rgb += trace.rgb;
+		result.a *= trace.a;
 
-				trace = VisualConeTrace(voxelCameraPosition5.xyz, worldViewVector.xyz, result.a, 5);
-				result.rgb += trace.rgb;
-				result.a *= trace.a;
+		trace = VisualConeTrace(voxelCameraPosition3.xyz, worldViewVector.xyz, result.a, 3);
+		result.rgb += trace.rgb;
+		result.a *= trace.a;
 
-				return float4(result.rgb, 1.0);
-			}
+		trace = VisualConeTrace(voxelCameraPosition4.xyz, worldViewVector.xyz, result.a, 4);
+		result.rgb += trace.rgb;
+		result.a *= trace.a;
 
-		ENDCG
+		trace = VisualConeTrace(voxelCameraPosition5.xyz, worldViewVector.xyz, result.a, 5);
+		result.rgb += trace.rgb;
+		result.a *= trace.a;
+
+		return float4(result.rgb, 1.0);
+	}
+
+	ENDHLSL
 	}
 
 	Pass //11 Bilateral upsample
 	{
-		CGPROGRAM
+		HLSLPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
 			#pragma multi_compile_instancing
 
-		//float2 Kernel;
-		//
-		//float DepthTolerance;
-
-		//sampler2D DepthNormalsLow;
-		//sampler2D DepthLow;
-		//int SourceScale;
-		//sampler2D CurrentDepth;
-		//sampler2D CurrentNormal;
-
 		float4 frag(v2f input) : COLOR0
 		{
 			UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+			UNITY_SETUP_INSTANCE_ID(input);
 
 		float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 		float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
@@ -748,7 +730,7 @@ ZTest Always
 		return blurred;
 	}
 
-ENDCG
+ENDHLSL
 }
 
 
