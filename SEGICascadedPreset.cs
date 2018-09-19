@@ -9,7 +9,9 @@ public class SEGICascadedPreset : ScriptableObject
 	public int innerOcclusionLayers = 1;
 	public bool infiniteBounces = true;
 
-	[Range(0.01f, 1.0f)]
+    public bool useReflectionProbes = true;
+
+    [Range(0.01f, 1.0f)]
 	public float temporalBlendWeight = 1.0f;
 	public bool useBilateralFiltering = true;
     [Range(1, 4)]

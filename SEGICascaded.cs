@@ -131,6 +131,8 @@ public class SEGICascaded : MonoBehaviour
     Transform shadowCamTransform;
     public Camera shadowCam;
     GameObject shadowCamGameObject;
+    public ReflectionProbe reflectionProbe;
+    GameObject reflectionProbeGameObject;
     //public GameObject volumeGroup;
     public bool showVolumeObjects = false;
     public GameObject volumeCube;
@@ -446,6 +448,9 @@ public class SEGICascaded : MonoBehaviour
         BIG_KERNEL
     };
 
+    //Forward Rendering
+    public bool useReflectionProbes = true;
+
     #endregion // SupportingObjectsAndProperties
 
 
@@ -485,6 +490,8 @@ public class SEGICascaded : MonoBehaviour
         farthestOcclusionStrength = preset.farthestOcclusionStrength;
         secondaryCones = preset.secondaryCones;
         secondaryOcclusionStrength = preset.secondaryOcclusionStrength;
+
+        useReflectionProbes = preset.useReflectionProbes;
     }
 
     public virtual void Start()
@@ -794,6 +801,31 @@ public class SEGICascaded : MonoBehaviour
         attachedCamera.depthTextureMode |= DepthTextureMode.MotionVectors;
 #endif
 
+        //Find the proxy shadow rendering camera if it exists
+        GameObject rfgo = GameObject.Find("SEGI_REFLECTIONPROBE");
+
+
+        //If not, create it
+        if (!rfgo)
+        {
+            reflectionProbeGameObject = new GameObject("SEGI_REFLECTIONPROBE");
+            reflectionProbe = reflectionProbeGameObject.AddComponent<ReflectionProbe>();
+            reflectionProbeGameObject.hideFlags = HideFlags.HideAndDontSave;
+
+            reflectionProbeGameObject.transform.parent = attachedCamera.transform;
+            reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
+            reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
+            reflectionProbe.mode = ReflectionProbeMode.Realtime;
+            reflectionProbe.enabled = false;
+
+            reflectionProbe.transform.localPosition = new Vector3(0, 0, 0);
+        }
+        else
+        {
+            reflectionProbeGameObject = rfgo;
+            reflectionProbe = rfgo.GetComponent<ReflectionProbe>();
+        }
+
 
         //Find the proxy shadow rendering camera if it exists
         GameObject scgo = GameObject.Find("SEGI_SHADOWCAM");
@@ -981,6 +1013,7 @@ public class SEGICascaded : MonoBehaviour
         DestroyImmediate(topViewPoint);
         DestroyImmediate(shadowCamGameObject);
         DestroyImmediate(volumeCube);
+        DestroyImmediate(reflectionProbeGameObject);
         initChecker = null;
         CleanupTextures();
     }
@@ -1226,6 +1259,24 @@ public class SEGICascaded : MonoBehaviour
         else
         {
             updateGIcounter = 0;//MINE
+        }
+
+        if (attachedCamera.renderingPath == RenderingPath.Forward)
+        {
+            if (useReflectionProbes)
+            {
+                reflectionProbe.enabled = true;
+            }
+            else
+            {
+                reflectionProbe.enabled = false;
+            }
+
+
+        }
+        else
+        {
+            reflectionProbe.enabled = false;
         }
 
         if (useVolumeRayCast != useVolumeRayCastPrev) SetupVolumeRayCasting();
@@ -1747,6 +1798,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetFloat("BlendWeight", temporalBlendWeight);
         material.SetFloat("noiseDistribution", noiseDistribution);
         material.SetFloat("currentClipmapIndex", currentClipmapIndex);
+        material.SetInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
 
         if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
         {
@@ -1802,7 +1854,7 @@ public class SEGICascaded : MonoBehaviour
         //RenderTexture currentDepth = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
         //currentDepth.filterMode = FilterMode.Point;
 
-        RenderTexture currentNormal = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        /*RenderTexture currentNormal = RenderTexture.GetTemporary(source.width / giRenderRes, source.height / giRenderRes, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         currentNormal.filterMode = FilterMode.Point;
         if (GetComponent<Camera>().renderingPath == RenderingPath.Forward)
         {
@@ -1812,7 +1864,7 @@ public class SEGICascaded : MonoBehaviour
             
             Graphics.Blit(source, currentNormal, material, Pass.GetWorldNormals);//TODO needed?
             material.SetTexture("CurrentNormal", currentNormal);
-        }
+        }*/
 
         //Set the previous GI result and camera depth textures to access them in the shader
         material.SetTexture("PreviousGITexture", previousGIResult);
@@ -1825,7 +1877,7 @@ public class SEGICascaded : MonoBehaviour
         if (doReflections)
         {
             //Render GI reflections result
-            if (currentClipmapIndex >= 1)
+            if (currentClipmapIndex <= 2)
             {
                 Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
                 material.SetTexture("Reflections", reflections);
@@ -2028,7 +2080,7 @@ public class SEGICascaded : MonoBehaviour
 
         ////Release temporary textures
         //RenderTexture.ReleaseTemporary(currentDepth);
-        RenderTexture.ReleaseTemporary(currentNormal);
+        //RenderTexture.ReleaseTemporary(currentNormal);
 
 
         //Release the temporary reflections result texture

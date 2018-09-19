@@ -60,7 +60,9 @@ float4 SEGIClipTransform3;
 float4 SEGIClipTransform4;
 float4 SEGIClipTransform5;
 
+int useReflectionProbes;
 int ReflectionSteps;
+int ForwardPath;
 
 
 uniform half4 _MainTex_TexelSize;
@@ -170,7 +172,7 @@ float GISampleWeight(float3 pos)
 	return weight;
 }
 
-float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult)
+float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float3 viewDir)
 {
 	float skyVisibility = 1.0;
 
@@ -266,13 +268,32 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	//float3 probe = unity_SpecCube0.Sample(samplerunity_SpecCube0, reflectedDir).rgb;// UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal);
 	//probe = DecodeHDR(probe, unity_SpecCube0_HDR);
 
-	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
-	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+	if (useReflectionProbes  && ForwardPath)
+	{
+		float3 reflectedDir = reflect(viewDir, worldNormal);
+		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
+		half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
 
-	gi.rgb *= GIGain * 0.15;
+		//half4 lightColor = UNITY_SAMPLE_TEX2D(_LightmapTexture, uv);
 
-	gi += skyColor * skyVisibility * skyMult * 10.0;
-	
+		skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
+		skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+		//probeColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
+		probeColor = lerp(skyColor.rgb * 0.5, (0.5).xxx, probeColor.rgb * 0.5);
+
+		gi.rgb *= GIGain * 0.15;
+		gi += probeColor * skyVisibility * skyMult * 10.0;
+	}
+	else
+	{
+		skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
+		skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+
+		gi.rgb *= GIGain * 0.15;
+		gi += skyColor * skyVisibility * skyMult * 10.0;
+	}
+
 	return float4(gi.rgb * 0.8, 0.0f);
 }
 
