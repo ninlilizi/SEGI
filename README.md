@@ -29,5 +29,5 @@ Please refer to the User Guide.pdf for usage instructions.
 If you need some help, feel free to ask any questions in the [official thread](https://forum.unity.com/threads/segi-fully-dynamic-global-illumination.410310) on Unity forums.
 
 # Credits
-Sonic Ether for SEGI (https://github.com/sonicether/SEGI)
-CK85 aka Nexusmaster for Unity 2017/2018 support (https://github.com/CK85/SEGI)
+* Sonic Ether for SEGI (https://github.com/sonicether/SEGI)<br>
+* CK85 aka Nexusmaster for Unity 2017/2018 support (https://github.com/CK85/SEGI)
