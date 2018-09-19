@@ -25,6 +25,7 @@ SubShader
 				float3 normal : TEXCOORD1;
 				//half4 color : COLOR;
 
+				UNITY_VERTEX_INPUT_INSTANCE_ID
 				UNITY_VERTEX_OUTPUT_STEREO
 			};
 
@@ -41,8 +42,10 @@ SubShader
 			{
 				v2f o;
 
+				UNITY_SETUP_INSTANCE_ID(v);
 				UNITY_INITIALIZE_OUTPUT(v2f, o);
 				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
 				
 				o.pos = UnityObjectToClipPos(v.vertex);
 				
@@ -68,7 +71,7 @@ SubShader
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				float depth = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GILightCookie, UnityStereoTransformScreenSpaceTex(input).uv);
 
-				depth = input.pos.z;
+				//depth = input.pos.z;
 				
 				return depth;
 			}

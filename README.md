@@ -26,12 +26,3 @@ Please refer to the User Guide.pdf for usage instructions.
 
 # Community
 If you need some help, feel free to ask any questions in the [official thread](https://forum.unity.com/threads/segi-fully-dynamic-global-illumination.410310) on Unity forums.
-
-# Known issues
-Voxelisation is broken when using Single Pass Instancing.
-Otherwise everything functions as it should.
-
-# Credits.
-Sonic Ether for SEGI (https://github.com/sonicether/SEGI)
-
-CK85 aka Nexusmaster for the 2017/2018 compatible fork (https://github.com/CK85)

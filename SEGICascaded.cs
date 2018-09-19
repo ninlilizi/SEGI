@@ -720,6 +720,7 @@ public class SEGICascaded : MonoBehaviour
 
             GameObject frontCam = GameObject.Find("VolumeFrontCam");
             if (frontCam != null) volumeFrontCam = frontCam.GetComponent<Camera>();
+            if (UnityEngine.XR.XRSettings.enabled) volumeFrontCam.stereoTargetEye = StereoTargetEyeMask.Both;
             if (!volumeFrontCam)
             {
                 var goFrontCam = new GameObject("VolumeFrontCam");
@@ -734,6 +735,7 @@ public class SEGICascaded : MonoBehaviour
 
             GameObject backCam = GameObject.Find("VolumeBackCam");
             if (backCam != null) volumeBackCam = backCam.GetComponent<Camera>();
+            if (UnityEngine.XR.XRSettings.enabled) volumeBackCam.stereoTargetEye = StereoTargetEyeMask.Both;
             if (!volumeBackCam)
             {
                 var goBackCam = new GameObject("VolumeBackCam");
@@ -793,7 +795,6 @@ public class SEGICascaded : MonoBehaviour
         //Find the proxy shadow rendering camera if it exists
         GameObject rfgo = GameObject.Find("SEGI_REFLECTIONPROBE");
 
-
         //If not, create it
         if (!rfgo)
         {
@@ -816,7 +817,6 @@ public class SEGICascaded : MonoBehaviour
             reflectionProbe = rfgo.GetComponent<ReflectionProbe>();
         }
 
-
         //Find the proxy shadow rendering camera if it exists
         GameObject scgo = GameObject.Find("SEGI_SHADOWCAM");
 
@@ -825,6 +825,7 @@ public class SEGICascaded : MonoBehaviour
         {
             shadowCamGameObject = new GameObject("SEGI_SHADOWCAM");
             shadowCam = shadowCamGameObject.AddComponent<Camera>();
+            if (UnityEngine.XR.XRSettings.enabled) shadowCam.stereoTargetEye = StereoTargetEyeMask.Both;
             shadowCamGameObject.hideFlags = HideFlags.HideAndDontSave;
 
 
@@ -857,8 +858,9 @@ public class SEGICascaded : MonoBehaviour
         {
             voxelCameraGO = new GameObject("SEGI_VOXEL_CAMERA");
             voxelCameraGO.hideFlags = HideFlags.HideAndDontSave;
-
+            //if (UnityEngine.XR.XRSettings.enabled) voxelCamera.stereoTargetEye = StereoTargetEyeMask.Both;
             voxelCamera = voxelCameraGO.AddComponent<Camera>();
+            
             voxelCamera.enabled = false;
             voxelCamera.orthographic = true;
             voxelCamera.orthographicSize = voxelSpaceSize * 0.5f;
@@ -1556,7 +1558,7 @@ public class SEGICascaded : MonoBehaviour
                 {
                     // Copy directional shadowmap params - they're only set for regular shaders, but we need them in compute
                     if (m_ShadowParamsCB == null)
-                        m_ShadowParamsCB = new ComputeBuffer(2, 336);//sizeof(float) * 16 * 4 + sizeof(float) * 4 * 4 + sizeof(float) * 4
+                        m_ShadowParamsCB = new ComputeBuffer(4, 336);//sizeof(float) * 16 * 4 + sizeof(float) * 4 * 4 + sizeof(float) * 4
                     Graphics.SetRandomWriteTarget(2, m_ShadowParamsCB);
                     m_CopyShadowParamsMaterial.SetPass(0);
                     Graphics.DrawProcedural(MeshTopology.Points, 1);

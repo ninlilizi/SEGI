@@ -49,7 +49,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty voxelAA;
     SerializedProperty reflectionSteps;
     SerializedProperty skyReflectionIntensity;
-    SerializedProperty gaussianMipFilter;
+    //SerializedProperty gaussianMipFilter;
     SerializedProperty reflectionOcclusionPower;
     SerializedProperty farOcclusionStrength;
     SerializedProperty farthestOcclusionStrength;
@@ -134,7 +134,7 @@ public class SEGICascadedEditor : Editor
         voxelAA = serObj.FindProperty("voxelAA");
         reflectionSteps = serObj.FindProperty("reflectionSteps");
         skyReflectionIntensity = serObj.FindProperty("skyReflectionIntensity");
-        gaussianMipFilter = serObj.FindProperty("gaussianMipFilter");
+        //gaussianMipFilter = serObj.FindProperty("gaussianMipFilter");
         reflectionOcclusionPower = serObj.FindProperty("reflectionOcclusionPower");
         farOcclusionStrength = serObj.FindProperty("farOcclusionStrength");
         farthestOcclusionStrength = serObj.FindProperty("farthestOcclusionStrength");

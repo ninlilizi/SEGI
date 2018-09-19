@@ -18,6 +18,7 @@
 		half4 uv2 : TEXCOORD1;
 #endif
 
+		UNITY_VERTEX_INPUT_INSTANCE_ID
 		UNITY_VERTEX_OUTPUT_STEREO
 	};
 
@@ -224,11 +225,9 @@
 						#pragma multi_compile_instancing
 
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
-						UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
 
-						int DoReflections;
 						int GIResolution;
 
 						float4 frag(v2f input) : COLOR0
@@ -257,9 +256,16 @@
 
 							gi *= 0.75 + 1 * 0.25;
 
-							float4 reflections = UNITY_SAMPLE_SCREENSPACE_TEXTURE(Reflections, UnityStereoTransformScreenSpaceTex(input.uv));
+							if (!ForwardPath || useReflectionProbes)
+							{
+								float4 reflections = UNITY_SAMPLE_SCREENSPACE_TEXTURE(Reflections, UnityStereoTransformScreenSpaceTex(input.uv));
 
-							gi = lerp(gi, (0.5).xxx, reflections);
+								gi = lerp(gi, reflections, (0.5).xxx) * 0.5;
+							}
+							else
+							{
+								gi *= 0.5;
+							}
 
 							float3 result = scene + gi * albedoTex.a * albedoTex.rgb;
 
@@ -367,7 +373,7 @@
 							//Apply blending
 							float blendWeight = BlendWeight;
 
-							float3 blurredGI = tex2D(BlurredGI, UnityStereoScreenSpaceUVAdjust(input.uv, BlurredGI_ST).xy).rgb;
+							float3 blurredGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(BlurredGI, UnityStereoScreenSpaceUVAdjust(input.uv, BlurredGI_ST).xy).rgb;
 
 							if (reprojCoord.x > 1.0 || reprojCoord.x < 0.0 || reprojCoord.y > 1.0 || reprojCoord.y < 0.0)
 							{
@@ -380,7 +386,7 @@
 							gi = lerp(blurredGI, gi, posSimilarity);
 
 
-							float3 prevGI = tex2D(PreviousGITexture, UnityStereoScreenSpaceUVAdjust(reprojCoord, PreviousGITexture_ST)).rgb;
+							float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, UnityStereoScreenSpaceUVAdjust(reprojCoord, PreviousGITexture_ST)).rgb;
 							prevGI = clamp(prevGI, minc, maxc);
 							gi = lerp(prevGI, gi, float3(blendWeight, blendWeight, blendWeight));
 
@@ -399,12 +405,10 @@
 						#pragma vertex vert
 						#pragma fragment frag
 
-						sampler2D _CameraGBufferTexture1;
 						sampler2D _CameraGBufferTexture2;
 
 						half4 _CameraGBufferTexture1_ST;
 						half4 _CameraGBufferTexture2_ST;
-						//UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
 
 						int FrameSwitch;
 
@@ -421,18 +425,6 @@
 						float3 viewSpacePosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, input.uv).xyz;
 						float3 viewVector = normalize(viewSpacePosition.xyz);
 						float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
-					
-						/*float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
-						float3 worldPosition = voxelSpacePosition.xyz;
-						voxelSpacePosition = mul(SEGIWorldToVoxel, voxelSpacePosition);
-						voxelSpacePosition = mul(SEGIVoxelProjection, voxelSpacePosition);
-						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;*/
-						
-
-						/*float3 voxelSpacePosition = float4(viewSpacePosition.xy, viewSpacePosition.z, 0);
-						voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
-						voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
-						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;*/
 
 						float3 worldNormal;
 						if (ForwardPath == 0)
@@ -441,11 +433,7 @@
 						}
 						else
 						{
-							//float depthValue;
-							//float3 normalValues;
-							//DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
 							worldNormal = GetWorldNormal(UnityStereoTransformScreenSpaceTex(input.uv));
-							//worldNormal = float4(normalValues, 1);
 						}
 						float4 voxelSpacePosition = float4(viewSpacePosition.xy, viewSpacePosition.z, 0);
 						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.006 * ConeTraceBias;
@@ -541,7 +529,7 @@
 					#pragma fragment frag
 					#pragma multi_compile_instancing
 
-					sampler2D GITexture;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 
 
 			float4 frag(v2f input) : COLOR0
@@ -557,7 +545,7 @@
 					albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv));
 				}
 				float3 albedo = albedoTex.rgb;
-				float3 gi = tex2D(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
+				float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv)).rgb;
 				return float4(gi, 1.0);
 			}
 
@@ -722,10 +710,10 @@ ZTest Always
 		depthSamples.z = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0).x));
 		depthSamples.w = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0).x));
 
-		half3 normal00 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));//TODO? use CurrentNormal ....
-		half3 normal10 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
-		half3 normal11 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
-		half3 normal01 = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
+		half3 normal00 = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 0.0)));//TODO? use CurrentNormal ....
+		half3 normal10 = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 0.0)));
+		half3 normal11 = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(1.0, 1.0)));
+		half3 normal01 = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.0, 1.0)));
 
 		float4 depthWeights = saturate(1.0 - abs(depthSamples - depth.xxxx) / thresh);
 

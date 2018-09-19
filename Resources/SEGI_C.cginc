@@ -77,7 +77,7 @@ UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
 UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
 sampler2D PreviousGITexture;
 UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
-//sampler2D _CameraGBufferTexture0;
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
 sampler2D _CameraMotionVectorsTexture;
 float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;
@@ -350,6 +350,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
+	float4 giSample;
 	for (int i = 0; i < numSamples; i++)
 	{
 		float fi = ((float)i) / numSamples;
@@ -360,7 +361,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 0.12 * coneLength + 0.001);
 
-		float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
+		giSample = float4(0.0, 0.0, 0.0, 0.0);
 		coneSize = pow(coneSize / 5.0, 2.0) * 5.0;
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
@@ -402,7 +403,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		skyVisibility *= pow(saturate(1.0 - giSample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
 	}
 
-	if (useReflectionProbes  && ForwardPath)
+	if (ForwardPath )
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
 		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
@@ -778,7 +779,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 
 float3 GetWorldNormal(float2 screenspaceUV)
 {
-	float4 dn = tex2D(_CameraDepthNormalsTexture, screenspaceUV);
+	float4 dn = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, screenspaceUV);
 	float3 n = DecodeViewNormalStereo(dn);
 	float3 worldN = mul((float3x3)CameraToWorld, n);
 
