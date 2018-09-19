@@ -341,9 +341,9 @@
 								float3 viewVector = normalize(float3(viewSpacePosition.xy, viewSpacePosition.z));
 								float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-								float4 spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
-								float smoothness = spec.a;
-								float3 specularColor = spec.rgb;
+								float4 spec;
+								float smoothness;
+								float3 specularColor;
 
 								float3 worldNormal;
 								if (ForwardPath == 0)
@@ -357,6 +357,24 @@
 									DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
 									worldNormal = normalize(float4(normalValues, 1).rgb * 2.0 - 1.0);
 								}
+								if (useReflectionProbes && ForwardPath)
+								{
+									float4 voxelSpacePosition = float4(UnityStereoTransformScreenSpaceTex(viewSpacePosition).xy, viewSpacePosition.z, 0);
+									float3 viewDir = WorldSpaceViewDir(voxelSpacePosition);
+									float3 reflectedDir = reflect(viewDir, worldNormal);
+									half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
+									spec = float4((DecodeHDR(probeData, unity_SpecCube0_HDR) * 0.25) * reflectionProbeIntensity, probeData.a);
+									smoothness = spec.a;
+									specularColor = spec.rgb;
+
+								}
+								else
+								{
+									float4 spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
+									float smoothness = spec.a;
+									float3 specularColor = spec.rgb;
+								}
+
 								float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
 
 								float3 fresnel = pow(saturate(dot(worldViewVector.xyz, reflectionKernel.xyz)) * (smoothness * 0.5 + 0.5), 5.0);
@@ -559,7 +577,7 @@
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 						#endif
 
-						float4 spec = tex2D(_CameraGBufferTexture1, UnityStereoScreenSpaceUVAdjust(input.uv, _CameraGBufferTexture1_ST));
+						
 
 						//float4 viewSpacePosition = viewPos;
 						//float3 viewVector = normalize(viewSpacePosition.xyz);
@@ -599,8 +617,37 @@
 
 						float2 dither = rand(coord + (float)FrameSwitch * 0.11734);
 
-						float smoothness = spec.a * 0.5;
-						float3 specularColor = spec.rgb;
+						float4 spec;
+						float smoothness;
+						float3 specularColor;
+						if (ForwardPath == 0)
+						{
+							worldNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv)).rgb * 2.0 - 1.0);
+						}
+						else
+						{
+							float depthValue;
+							float3 normalValues;
+							DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
+							worldNormal = normalize(float4(normalValues, 1).rgb * 2.0 - 1.0);
+						}
+						if (useReflectionProbes && ForwardPath)
+						{
+							float4 voxelSpacePosition = float4(UnityStereoTransformScreenSpaceTex(viewSpacePosition).xy, viewSpacePosition.z, 0);
+							float3 viewDir = WorldSpaceViewDir(voxelSpacePosition);
+							float3 reflectedDir = reflect(viewDir, worldNormal);
+							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
+							spec = float4((DecodeHDR(probeData, unity_SpecCube0_HDR) * 0.25) * reflectionProbeIntensity, probeData.a);
+							smoothness = spec.a;
+							specularColor = spec.rgb;
+
+						}
+						else
+						{
+							spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
+							smoothness = spec.a;
+							specularColor = spec.rgb;
+						}
 
 						//float4 reflection;// = (0.0).xxxx;
 

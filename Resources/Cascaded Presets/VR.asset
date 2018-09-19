@@ -11,11 +11,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 195d4ee8e5f057f4590c043b132f9c86, type: 3}
   m_Name: VR
   m_EditorClassIdentifier: 
-  voxelResolution: 64
+  voxelResolution: 128
   voxelAA: 1
   innerOcclusionLayers: 1
   infiniteBounces: 0
   useReflectionProbes: 1
+  reflectionProbeIntensity: 0.5
   temporalBlendWeight: 1
   useBilateralFiltering: 1
   GIResolution: 4
