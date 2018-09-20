@@ -420,6 +420,8 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
+    public bool useFXAA;
+
     //FXAA
     private Shader FXAA_Shader;
     private Material FXAA_Material;
@@ -472,6 +474,8 @@ public class SEGICascaded : MonoBehaviour
 
         useReflectionProbes = preset.useReflectionProbes;
         reflectionProbeIntensity = preset.reflectionProbeIntensity;
+
+        useFXAA = preset.useFXAA;
     }
 
     public virtual void Start()
@@ -1456,7 +1460,7 @@ public class SEGICascaded : MonoBehaviour
 
                 Graphics.SetRandomWriteTarget(1, integerVolumeArray);
                 voxelCamera.targetTexture = dummyVoxelTextureAAScaled;
-//                voxelCamera.stereoTargetEye = StereoTargetEyeMask.Both;
+                voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
                 voxelCamera.RenderWithShader(voxelizationShaderNoShadows, "");
                 Graphics.ClearRandomWriteTargets();
 
@@ -1733,6 +1737,7 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
+    [ImageEffectOpaque]
     public void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
         if (notReadyToRender)
@@ -1749,6 +1754,16 @@ public class SEGICascaded : MonoBehaviour
         else
         {
             material.SetInt("ForwardPath", 0);
+        }
+
+        RenderTexture FXAART;
+        if (UnityEngine.XR.XRSettings.enabled)
+        {
+             FXAART = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+        }
+        else
+        {
+            FXAART = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
         }
 
         //Set parameters
@@ -1858,11 +1873,11 @@ public class SEGICascaded : MonoBehaviour
         Graphics.Blit(source, gi2, material, Pass.DiffuseTrace);
 
         //Render GI reflections result
-        //if (currentClipmapIndex <= 1)
-        //{
+        if (currentClipmapIndex <= 2)
+        {
             Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
             material.SetTexture("Reflections", reflections);
-        //}
+        }
    
         //Perform bilateral filtering
         if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
@@ -1871,6 +1886,7 @@ public class SEGICascaded : MonoBehaviour
             FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
             FXAA_Material.SetFloat("_SubpixelBlending", 1f);
             FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+            FXAA_Material.DisableKeyword("LOW_QUALITY");
             Graphics.Blit(gi2, gi1, FXAA_Material, 1);
             Graphics.Blit(gi1, gi2);
         }
@@ -1926,6 +1942,7 @@ public class SEGICascaded : MonoBehaviour
             FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
             FXAA_Material.SetFloat("_SubpixelBlending", 1f);
             FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+            FXAA_Material.DisableKeyword("LOW_QUALITY");
             Graphics.Blit(gi3, blur1, FXAA_Material, 1);
             Graphics.Blit(blur1, blur0);
 
@@ -1963,6 +1980,7 @@ public class SEGICascaded : MonoBehaviour
                 FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
                 FXAA_Material.SetFloat("_SubpixelBlending", 1f);
                 FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+                FXAA_Material.DisableKeyword("LOW_QUALITY");
                 Graphics.Blit(gi3, gi4, FXAA_Material, 1);
                 Graphics.Blit(gi4, gi3);
             }
@@ -1971,7 +1989,7 @@ public class SEGICascaded : MonoBehaviour
             material.SetTexture("GITexture", gi3);
 
             //Actually apply the GI to the scene using gbuffer data
-            Graphics.Blit(source, destination, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
+            Graphics.Blit(source, FXAART, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
 
             //Release temporary textures
             RenderTexture.ReleaseTemporary(blur0);
@@ -1992,6 +2010,7 @@ public class SEGICascaded : MonoBehaviour
                 FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
                 FXAA_Material.SetFloat("_SubpixelBlending", 1f);
                 FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+                FXAA_Material.DisableKeyword("LOW_QUALITY");
                 Graphics.Blit(gi1, blur1, FXAA_Material, 1);
                 Graphics.Blit(blur1, blur0);
 
@@ -2028,12 +2047,30 @@ public class SEGICascaded : MonoBehaviour
 
             //Actually apply the GI to the scene using gbuffer data
             material.SetTexture("GITexture", gi2);
-            Graphics.Blit(source, destination, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
+            Graphics.Blit(source, FXAART, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
 
             //Release temporary textures
             RenderTexture.ReleaseTemporary(gi1);
             RenderTexture.ReleaseTemporary(gi2);
         }
+
+        if (useFXAA)
+        {
+            RenderTexture FXAARTluminance;
+            if (UnityEngine.XR.XRSettings.enabled) FXAARTluminance = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
+            else FXAARTluminance = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+
+            FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
+            FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+            FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+            FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+            Graphics.Blit(FXAART, FXAARTluminance, FXAA_Material, 0);
+            Graphics.Blit(FXAARTluminance, destination, FXAA_Material, 1);
+
+            FXAARTluminance.Release();
+        }
+        else Graphics.Blit(FXAART, destination);
+        FXAART.Release();
 
         ////Release temporary textures
         //RenderTexture.ReleaseTemporary(currentDepth);

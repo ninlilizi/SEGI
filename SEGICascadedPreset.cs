@@ -66,4 +66,6 @@ public sealed class SEGICascadedPreset : PostProcessEffectSettings
 	public int secondaryCones = 6;
 	[Range(0.1f, 4.0f)]
 	public float secondaryOcclusionStrength = 1.0f;
+
+    public bool useFXAA = false;
 }

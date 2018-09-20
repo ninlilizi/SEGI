@@ -63,6 +63,8 @@ public class SEGICascadedEditor : Editor
     SerializedProperty useReflectionProbes;
     SerializedProperty reflectionProbeIntensity;
 
+    SerializedProperty useFXAA;
+
     SEGICascaded instance;
 
     string presetPath = "Assets/SEGI/Resources/Cascaded Presets";
@@ -85,7 +87,8 @@ public class SEGICascadedEditor : Editor
     static bool showTracingProperties = true;
     static bool showEnvironmentProperties = true;
     static bool showPresets = true;
-    bool showReflectionProperties = true;
+    static bool showReflectionProperties = true;
+    static bool showPostEffect = true;
 
     string presetToSaveName;
 
@@ -149,6 +152,7 @@ public class SEGICascadedEditor : Editor
         sunDepthTextureDepth = serObj.FindProperty("sunDepthTextureDepth");
         useReflectionProbes = serObj.FindProperty("useReflectionProbes");
         reflectionProbeIntensity = serObj.FindProperty("reflectionProbeIntensity");
+        useFXAA = serObj.FindProperty("useFXAA");
 
         instance = target as SEGICascaded;
     }
@@ -331,7 +335,18 @@ public class SEGICascadedEditor : Editor
 			EditorGUILayout.PropertyField(skyReflectionIntensity, new GUIContent("Sky Reflection Intensity", "Intensity of sky reflections."));
 			EditorGUI.indentLevel--;
 		}
-		
+
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
+
+        showPostEffect = EditorGUILayout.Foldout(showPostEffect, new GUIContent("Post Processing"));
+        if (showReflectionProperties)
+        {
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(useFXAA, new GUIContent("FXAA", "Apply FXAA Anti-aliasing to the final image."));
+            EditorGUI.indentLevel--;
+        }
+
 
         EditorGUILayout.Space();
         EditorGUILayout.Space();
@@ -399,6 +414,8 @@ public class SEGICascadedEditor : Editor
 
         preset.useReflectionProbes = instance.useReflectionProbes;
         preset.reflectionProbeIntensity = instance.reflectionProbeIntensity;
+
+        preset.useFXAA = instance.useFXAA;
 
         string path = "Assets/Plugins/Features/SEGI";
 #if UNITY_EDITOR
@@ -476,4 +493,6 @@ public sealed class SEGICascadedEditorSRP : PostProcessEffectEditor<SEGICascaded
     SerializedProperty sunDepthTextureDepth;
     SerializedProperty useReflectionProbes;
     SerializedProperty reflectionProbeIntensity;
+
+    SerializedProperty useFXAA;
 }
