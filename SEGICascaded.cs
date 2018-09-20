@@ -431,8 +431,12 @@ public class SEGICascaded : MonoBehaviour
 
     //Forward Rendering
     public bool useReflectionProbes = true;
-    [Range(0, 1)]
+    [Range(0, 2)]
     public float reflectionProbeIntensity = 0.5f;
+    [Range(0, 2)]
+    public float reflectionProbeAttribution = 1f;
+    public LayerMask reflectionProbeLayerMask = 2147483647;
+
 
     // SRP Investigation
 
@@ -477,6 +481,7 @@ public class SEGICascaded : MonoBehaviour
 
         useReflectionProbes = preset.useReflectionProbes;
         reflectionProbeIntensity = preset.reflectionProbeIntensity;
+        reflectionProbeAttribution = preset.reflectionProbeIntensity;
 
         useFXAA = preset.useFXAA;
     }
@@ -759,6 +764,10 @@ public class SEGICascaded : MonoBehaviour
         FXAA_Shader = Shader.Find("Hidden/SEGIFXAA");
         FXAA_Material = new Material(FXAA_Shader);
         FXAA_Material.enableInstancing = true;
+        FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
+        FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+        FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+        FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
 
         //Setup shaders and materials
         sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
@@ -806,12 +815,23 @@ public class SEGICascaded : MonoBehaviour
 
             reflectionProbeGameObject.transform.parent = attachedCamera.transform;
             reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-            reflectionProbe.farClipPlane = voxelSpaceSize;
             reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
+            reflectionProbe.clearFlags = ReflectionProbeClearFlags.SolidColor;
+            reflectionProbe.cullingMask = reflectionProbeLayerMask;
+            reflectionProbe.size = new Vector3(2.5f, 2.5f, 2.5f);
             reflectionProbe.mode = ReflectionProbeMode.Realtime;
-            reflectionProbe.enabled = false;
+            reflectionProbe.farClipPlane = voxelSpaceSize;
+            reflectionProbe.backgroundColor = Color.black;
+            reflectionProbe.boxProjection = true;
+            reflectionProbe.shadowDistance = 0;
+            reflectionProbe.resolution = 128;
+            reflectionProbe.importance = 0;
+            reflectionProbe.enabled = true;
+            reflectionProbe.hdr = false;
 
-            reflectionProbe.transform.localPosition = new Vector3(0, 1, 0);
+            //reflectionProbe. = ReflectionProbeUsage.BlendProbes
+
+            reflectionProbe.transform.localPosition = new Vector3(0, 0, 0);
         }
         else
         {
@@ -1262,6 +1282,9 @@ public class SEGICascaded : MonoBehaviour
         if (attachedCamera.renderingPath == RenderingPath.Forward && reflectionProbe.enabled)
         {
             reflectionProbe.enabled = true;
+            reflectionProbe.intensity = reflectionProbeIntensity;
+            reflectionProbe.cullingMask = reflectionProbeLayerMask;
+            reflectionProbe.RenderProbe();
         }
         else
         {
@@ -1811,6 +1834,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
         material.SetInt("useBilateralFiltering", useBilateralFiltering ? 1 : 0);  
         material.SetFloat("reflectionProbeIntensity", reflectionProbeIntensity);
+        material.SetFloat("reflectionProbeAttribution", reflectionProbeAttribution);
 
         if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
         {
@@ -1889,11 +1913,13 @@ public class SEGICascaded : MonoBehaviour
         }
    
         //Perform bilateral filtering
-        if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
+        /*if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
         {
-            Graphics.Blit(gi2, gi1, Gaussian_Material);
-            Graphics.Blit(gi1, gi2, Gaussian_Material);
-        }
+            material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+            Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
+            material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+            Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
+        }*/
 
         //If Half Resolution tracing is enabled
         if (giRenderRes >= 2)
@@ -1941,8 +1967,8 @@ public class SEGICascaded : MonoBehaviour
                 blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
                 blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             }
-            Graphics.Blit(gi3, blur1, Gaussian_Material);
-            Graphics.Blit(blur1, blur0, Gaussian_Material);
+            Graphics.Blit(gi3, blur1, FXAA_Material, 1);
+            Graphics.Blit(blur1, blur0);
 
             material.SetTexture("BlurredGI", blur0);
             
@@ -1955,12 +1981,14 @@ public class SEGICascaded : MonoBehaviour
                 Graphics.Blit(source, previousDepth, material, Pass.GetCameraDepthTexture);
 
 
-                //Perform bilateral filtering on temporally blended result
-                if (useBilateralFiltering)
-                {
-                    Graphics.Blit(gi3, gi4, Gaussian_Material);
-                    Graphics.Blit(gi4, gi3, Gaussian_Material);
-            }
+            //Perform bilateral filtering on temporally blended result
+            /*if (useBilateralFiltering)
+            {
+                material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                Graphics.Blit(gi3, gi4, material, Pass.BilateralBlur);
+                material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);
+            }*/
             }
             if (GIResolution >= 3)
             {
@@ -2002,11 +2030,13 @@ public class SEGICascaded : MonoBehaviour
 
 
                 //Perform bilateral filtering on temporally blended result
-                if (useBilateralFiltering)
+                /*if (useBilateralFiltering)
                 {
-                    Graphics.Blit(gi1, gi2, Gaussian_Material);
-                    Graphics.Blit(gi2, gi1, Gaussian_Material);
-                }
+                    material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                    Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
+                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                    Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
+                }*/
 
 
                 RenderTexture.ReleaseTemporary(blur0);
@@ -2028,10 +2058,6 @@ public class SEGICascaded : MonoBehaviour
             if (UnityEngine.XR.XRSettings.enabled) FXAARTluminance = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
             else FXAARTluminance = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
 
-            FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
-            FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-            FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-            FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
             Graphics.Blit(FXAART, FXAARTluminance, FXAA_Material, 0);
             Graphics.Blit(FXAARTluminance, destination, FXAA_Material, 1);
 

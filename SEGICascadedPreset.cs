@@ -14,8 +14,10 @@ public sealed class SEGICascadedPreset : PostProcessEffectSettings
 	public bool infiniteBounces = true;
 
     public bool useReflectionProbes = true;
-    [Range(0, 1)]
+    [Range(0, 2)]
     public float reflectionProbeIntensity = 0.5f;
+    [Range(0, 2)]
+    public float reflectionProbeAttribution = 1f;
 
     [Range(0.01f, 1.0f)]
 	public float temporalBlendWeight = 1.0f;

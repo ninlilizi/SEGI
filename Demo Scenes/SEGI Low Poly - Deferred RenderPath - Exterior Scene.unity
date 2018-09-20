@@ -11065,20 +11065,20 @@ MonoBehaviour:
   MatchAmbiantColor: 0
   skyColor: {r: 0.67058825, g: 0.67058825, b: 0.67058825, a: 0}
   voxelSpaceSize: 40
-  useBilateralFiltering: 1
-  innerOcclusionLayers: 0
+  useBilateralFiltering: 0
+  innerOcclusionLayers: 1
   GIResolution: 1
   stochasticSampling: 1
   infiniteBounces: 1
   infiniteBouncesRerenderObjects: 0
   followTransform: {fileID: 1689627606}
-  cones: 12
-  coneTraceSteps: 1
+  cones: 8
+  coneTraceSteps: 5
   coneLength: 1.5
   coneWidth: 3
   occlusionStrength: 0.15
   nearOcclusionStrength: 0.25
-  occlusionPower: 1
+  occlusionPower: 2
   coneTraceBias: 2.8
   nearLightGain: 0.72
   giGain: 1
@@ -11104,7 +11104,7 @@ MonoBehaviour:
   SEGIShadowScale: 1
   FrontRT: {fileID: 0}
   BackRT: {fileID: 0}
-  noiseDistribution: 0.075
+  noiseDistribution: 0.1
   sunShadowResolution: 128
   m_ShadowmapCopy: {fileID: 0}
   sunDepthTextureDepth: 32
@@ -11116,8 +11116,13 @@ MonoBehaviour:
   vecGridSize: {x: 0, y: 0, z: 0, w: 0}
   updateGIevery: 1
   voxelAA: 1
+  useFXAA: 0
   useReflectionProbes: 1
   reflectionProbeIntensity: 0.33
+  reflectionProbeAttribution: 1
+  reflectionProbeLayerMask:
+    serializedVersion: 2
+    m_Bits: 2147483647
 --- !u!114 &1689627613
 MonoBehaviour:
   m_ObjectHideFlags: 0
