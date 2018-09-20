@@ -1,0 +1,355 @@
+fileFormatVersion: 2
+guid: daac9b4c3995a03419096a650c2a9e7d
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName:
+    100000: arcs_01
+    100002: arcs_02
+    100004: arcs_03
+    100006: arcs_04
+    100008: arcs_floo0
+    100010: arcs_floor
+    100012: arcs_long
+    100014: arcs_small
+    100016: ceiling
+    100018: doors
+    100020: holes
+    100022: object19
+    100024: object21
+    100026: object23
+    100028: object27
+    100030: object28
+    100032: object3
+    100034: object31
+    100036: object32
+    100038: object4
+    100040: object5
+    100042: object6
+    100044: outside01
+    100046: parapet
+    100048: pillar_cor
+    100050: pillar_flo
+    100052: pillar_qua
+    100054: pillar_rou
+    100056: puillar_fl
+    100058: relief
+    100060: round_hole
+    100062: //RootNode
+    100064: walls
+    100066: windows
+    400000: arcs_01
+    400002: arcs_02
+    400004: arcs_03
+    400006: arcs_04
+    400008: arcs_floo0
+    400010: arcs_floor
+    400012: arcs_long
+    400014: arcs_small
+    400016: ceiling
+    400018: doors
+    400020: holes
+    400022: object19
+    400024: object21
+    400026: object23
+    400028: object27
+    400030: object28
+    400032: object3
+    400034: object31
+    400036: object32
+    400038: object4
+    400040: object5
+    400042: object6
+    400044: outside01
+    400046: parapet
+    400048: pillar_cor
+    400050: pillar_flo
+    400052: pillar_qua
+    400054: pillar_rou
+    400056: puillar_fl
+    400058: relief
+    400060: round_hole
+    400062: //RootNode
+    400064: walls
+    400066: windows
+    2300000: arcs_01
+    2300002: arcs_02
+    2300004: arcs_03
+    2300006: arcs_04
+    2300008: arcs_floo0
+    2300010: arcs_floor
+    2300012: arcs_long
+    2300014: arcs_small
+    2300016: ceiling
+    2300018: doors
+    2300020: holes
+    2300022: object19
+    2300024: object21
+    2300026: object23
+    2300028: object27
+    2300030: object28
+    2300032: object3
+    2300034: object31
+    2300036: object32
+    2300038: object4
+    2300040: object5
+    2300042: object6
+    2300044: outside01
+    2300046: parapet
+    2300048: pillar_cor
+    2300050: pillar_flo
+    2300052: pillar_qua
+    2300054: pillar_rou
+    2300056: puillar_fl
+    2300058: relief
+    2300060: round_hole
+    2300062: walls
+    2300064: windows
+    3300000: arcs_01
+    3300002: arcs_02
+    3300004: arcs_03
+    3300006: arcs_04
+    3300008: arcs_floo0
+    3300010: arcs_floor
+    3300012: arcs_long
+    3300014: arcs_small
+    3300016: ceiling
+    3300018: doors
+    3300020: holes
+    3300022: object19
+    3300024: object21
+    3300026: object23
+    3300028: object27
+    3300030: object28
+    3300032: object3
+    3300034: object31
+    3300036: object32
+    3300038: object4
+    3300040: object5
+    3300042: object6
+    3300044: outside01
+    3300046: parapet
+    3300048: pillar_cor
+    3300050: pillar_flo
+    3300052: pillar_qua
+    3300054: pillar_rou
+    3300056: puillar_fl
+    3300058: relief
+    3300060: round_hole
+    3300062: walls
+    3300064: windows
+    4300000: arcs_01
+    4300002: arcs_02
+    4300004: arcs_03
+    4300006: arcs_04
+    4300008: arcs_floo0
+    4300010: arcs_floor
+    4300012: arcs_long
+    4300014: arcs_small
+    4300016: ceiling
+    4300018: doors
+    4300020: holes
+    4300022: object19
+    4300024: object21
+    4300026: object23
+    4300028: object27
+    4300030: object28
+    4300032: object3
+    4300034: object31
+    4300036: object32
+    4300038: object4
+    4300040: object5
+    4300042: object6
+    4300044: outside01
+    4300046: parapet
+    4300048: pillar_cor
+    4300050: pillar_flo
+    4300052: pillar_qua
+    4300054: pillar_rou
+    4300056: puillar_fl
+    4300058: relief
+    4300060: round_hole
+    4300062: walls
+    4300064: windows
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_luk_mal1
+    second: {fileID: 2100000, guid: b7d4d7b3b1e49f04dad6cedfaf694a9a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_luk_mali
+    second: {fileID: 2100000, guid: e9e827f3124f61741b461772373cd267, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_pod
+    second: {fileID: 2100000, guid: 656c694a1c8c4e84caeb5fd25c8dff8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_prozor
+    second: {fileID: 2100000, guid: 19e8c9a22f813d34ca0492dd370f7180, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_stup
+    second: {fileID: 2100000, guid: 35e7a184b17fd4640b744dc2033701a4, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_svod
+    second: {fileID: 2100000, guid: bacc1d754bf6fcf4cb05aa17cab7f82e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_vrata_kock
+    second: {fileID: 2100000, guid: ec758aeddb65cd14c96a0d1f083d5f36, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_vrata_krug
+    second: {fileID: 2100000, guid: 58592d7ed206e5b498e088c81a1ea668, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_00_zid
+    second: {fileID: 2100000, guid: 9747e2dac44ed87429b8fc171bee6266, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_luk_a
+    second: {fileID: 2100000, guid: b9fedc817cb262148b06952a143ce58e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_stub
+    second: {fileID: 2100000, guid: 87fe92cd06e44e24988041302cc62bec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_stub_baza
+    second: {fileID: 2100000, guid: 242c0cc3e7614ca4f9f90689e33bda81, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_stub_baza_
+    second: {fileID: 2100000, guid: 3f502a19415fd1344860df06d7fcdb9b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_stub_kut
+    second: {fileID: 2100000, guid: 2ef58a6fe000be14caf73e5a0d4e90dc, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_stup
+    second: {fileID: 2100000, guid: 80afbb8637e5d5547bd02515ae0c0a89, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_01_stup_baza
+    second: {fileID: 2100000, guid: c41834d56f86b1d4cb049a5ea01f4801, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_02_reljef
+    second: {fileID: 2100000, guid: d14e4f4966af038459a479d450345deb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_svod_kapitel
+    second: {fileID: 2100000, guid: ccf6d0ccc48784b4fa457c89a6da85e1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_vijenac
+    second: {fileID: 2100000, guid: 16ccbf49289a95340b7fb65b4fe99437, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: sp_zid_vani
+    second: {fileID: 2100000, guid: a0c204f48d8111348ad06e53b12339e5, type: 2}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 0
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 1
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15
+    secondaryUVHardAngle: 100
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    previousCalculatedGlobalScale: 1
+    hasPreviousCalculatedGlobalScale: 0
+  tangentSpace:
+    normalSmoothAngle: 100
+    normalImportMode: 1
+    tangentImportMode: 3
+    normalCalculationMode: 0
+  importAnimation: 0
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

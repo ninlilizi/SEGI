@@ -74,27 +74,23 @@
 					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
-				//half4 _Color;
-				
-				v2g vert(appdata_full v, uint id : SV_VertexID)
+				//half4 _Color;				
+
+				v2g vert(appdata_full v)
 				{
 					v2g o;
-
-					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
-					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-					UNITY_TRANSFER_INSTANCE_ID(v, o)
 
 					float4 vertex = v.vertex;
-					
+
 					o.normal = UnityObjectToWorldNormal(v.normal);
-					//float3 absNormal = abs(o.normal);
-					
+					float3 absNormal = abs(o.normal);
+
 					o.pos = vertex;
-					
+
 					o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
-					
-					
+
+
 					return o;
 				}
 				
@@ -110,7 +106,6 @@
 				void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 				{
 					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-					UNITY_SETUP_INSTANCE_ID(input);
 
 					v2g p[3];
 					int i = 0;
@@ -276,8 +271,8 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
-					float4 emissionTex = UNITY_SAMPLE_TEX2D(_EmissionMap, input.uv);
+					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
+					float4 emissionTex = UNITY_SAMPLE_TEX2D(_EmissionMap, UnityStereoTransformScreenSpaceTex(input.uv));
 					
 					float4 color = UNITY_ACCESS_INSTANCED_PROP(SEGIVoxelizeScene, _Color);
 

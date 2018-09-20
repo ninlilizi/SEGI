@@ -299,10 +299,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
 	float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
 
-	//float3 reflectedDir = reflect(viewDir, worldNormal);
-	//float3 probe = unity_SpecCube0.Sample(samplerunity_SpecCube0, reflectedDir).rgb;// UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldNormal);
-	//probe = DecodeHDR(probe, unity_SpecCube0_HDR);
-
 	if (useReflectionProbes  && ForwardPath)
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
@@ -318,7 +314,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		probeColor = lerp(skyColor.rgb * 0.5, (0.5).xxx, (probeColor.rgb * 0.5) * reflectionProbeIntensity);
 
 		gi.rgb *= GIGain * 0.15;
-		gi += probeColor * skyVisibility * skyMult * 10.0;
+		gi += probeColor * skyVisibility * 10.0;
 	}
 	else
 	{
@@ -326,7 +322,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
 		gi.rgb *= GIGain * 0.15;
-		gi += skyColor * skyVisibility * skyMult * 10.0;
+		gi += skyColor * skyVisibility * 10.0;
 	}
 
 	return float4(gi.rgb * 0.8, 0.0f);
@@ -404,7 +400,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		skyVisibility *= pow(saturate(1.0 - giSample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
 	}
 
-	if (ForwardPath )
+	if (ForwardPath)
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
 		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
@@ -777,7 +773,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal)
 
 	return float4(gi.rgb, 0.0f);
 }
-
 float3 GetWorldNormal(float2 screenspaceUV)
 {
 	float4 dn = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, screenspaceUV);

@@ -9,8 +9,6 @@ using UnityEngine.Rendering.PostProcessing;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-[ExecuteInEditMode]
-[ImageEffectAllowedInSceneView]
 [RequireComponent(typeof(Camera))]
 [AddComponentMenu("Image Effects/Sonic Ether/SEGI (Cascaded)")]
 public class SEGICascaded : MonoBehaviour
@@ -422,16 +420,9 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
-    //GaussianBlur
-    private Shader GaussianBlur_Shader;
-    private Material GaussianBlur_Material;
-    public float sigma = 10f;
-    public enum BlurQuality
-    {
-        LITTLE_KERNEL,
-        MEDIUM_KERNEL,
-        BIG_KERNEL
-    };
+    //FXAA
+    private Shader FXAA_Shader;
+    private Material FXAA_Material;
 
     //Forward Rendering
     public bool useReflectionProbes = true;
@@ -752,11 +743,9 @@ public class SEGICascaded : MonoBehaviour
 
     void Init()
     {
-        //GaussianBlur
-        GaussianBlur_Shader = Shader.Find("hidden/two_pass_linear_sampling_gaussian_blur");
-        GaussianBlur_Material = new Material(GaussianBlur_Shader);
-        GaussianBlur_Material.EnableKeyword("SMALL_KERNEL");
-        GaussianBlur_Material.enableInstancing = false;
+        //FXAA
+        FXAA_Shader = Shader.Find("Hidden/SEGIFXAA");
+        FXAA_Material = new Material(FXAA_Shader);
 
         //Setup shaders and materials
         sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
@@ -809,7 +798,7 @@ public class SEGICascaded : MonoBehaviour
             reflectionProbe.mode = ReflectionProbeMode.Realtime;
             reflectionProbe.enabled = false;
 
-            reflectionProbe.transform.localPosition = new Vector3(0, 0, 0);
+            reflectionProbe.transform.localPosition = new Vector3(0, 1, 0);
         }
         else
         {
@@ -922,7 +911,7 @@ public class SEGICascaded : MonoBehaviour
 
         systemSupported.postShader = material.shader.isSupported;
         systemSupported.sunDepthShader = sunDepthShader.isSupported;
-        systemSupported.voxelizationShader = voxelizationShader.isSupported;
+        systemSupported.voxelizationShader = true;// voxelizationShader.isSupported;
         systemSupported.tracingShader = voxelTracingShader.isSupported;
 
         if (!systemSupported.fullFunctionality)
@@ -1176,10 +1165,10 @@ public class SEGICascaded : MonoBehaviour
         if (useUnityShadowMap != useUnityShadowMapPrev)
         {
             useUnityShadowMapPrev = useUnityShadowMap;
-            string path = "Assets/Plugins/Features/SEGI";
+            string path = "Assets//SEGI";
 
-            MonoScript ms = MonoScript.FromScriptableObject(new SEGICascadedPreset());
-            path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(ms));
+            //MonoScript ms = MonoScript.FromScriptableObject(new SEGICascadedPreset());
+            //path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(ms));
 
             string filePath = path + "/Resources/" + "SEGIUnityShadowInput.cginc";
 
@@ -1421,10 +1410,20 @@ public class SEGICascaded : MonoBehaviour
             Shader.SetGlobalColor("GISunColor", sun == null ? Color.black : new Color(Mathf.Pow(sun.color.r, 2.2f), Mathf.Pow(sun.color.g, 2.2f), Mathf.Pow(sun.color.b, 2.2f), Mathf.Pow(sun.intensity, 2.2f)));
             transferIntsCompute.SetVector("GISunColor", sun == null ? Color.black : new Color(Mathf.Pow(sun.color.r, 2.2f), Mathf.Pow(sun.color.g, 2.2f), Mathf.Pow(sun.color.b, 2.2f), Mathf.Pow(sun.intensity, 2.2f)));
 
-            Color skySunColor = sun.color * skyColor; //TODO?
+            Color skySunColor;
+            try
+            {
+                skySunColor = sun.color * skyColor;
+                Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(skySunColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.a, 2.2f)));
+                transferIntsCompute.SetVector("SEGISkyColor", new Color(Mathf.Pow(skySunColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.a, 2.2f)));
+            }
+            catch
+            {
+                Debug.Log("<SEGI> (" + name + ") " + "Main Directional light must be set in Environment Properties");
+            }
+            finally { }
 
-            Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(skySunColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.a, 2.2f)));
-            transferIntsCompute.SetVector("SEGISkyColor", new Color(Mathf.Pow(skySunColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.a, 2.2f)));
+
 
             Shader.SetGlobalFloat("GIGain", giGain);
             Shader.SetGlobalFloat("SEGISecondaryBounceGain", infiniteBounces ? secondaryBounceGain : 0.0f);
@@ -1786,6 +1785,7 @@ public class SEGICascaded : MonoBehaviour
         material.SetFloat("noiseDistribution", noiseDistribution);
         material.SetFloat("currentClipmapIndex", currentClipmapIndex);
         material.SetInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
+        material.SetInt("useBilateralFiltering", useBilateralFiltering ? 1 : 0);  
         material.SetFloat("reflectionProbeIntensity", reflectionProbeIntensity);
 
         if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
@@ -1858,26 +1858,21 @@ public class SEGICascaded : MonoBehaviour
         Graphics.Blit(source, gi2, material, Pass.DiffuseTrace);
 
         //Render GI reflections result
-        if (currentClipmapIndex <= 2)
-        {
+        //if (currentClipmapIndex <= 1)
+        //{
             Graphics.Blit(source, reflections, material, Pass.SpecularTrace);
             material.SetTexture("Reflections", reflections);
-        }
+        //}
    
         //Perform bilateral filtering
         if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
         {
-            material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-            Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
-
-            material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-            Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
-
-            /*material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-            Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
-
-            material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-            Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);*/
+            FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
+            FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+            FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+            FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+            Graphics.Blit(gi2, gi1, FXAA_Material, 1);
+            Graphics.Blit(gi1, gi2);
         }
 
         //If Half Resolution tracing is enabled
@@ -1927,18 +1922,12 @@ public class SEGICascaded : MonoBehaviour
                 blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             }
 
-
-            material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-            Graphics.Blit(gi3, blur1, material, Pass.BilateralBlur);
-
-            material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-            Graphics.Blit(blur1, blur0, material, Pass.BilateralBlur);
-
-            /*material.SetVector("Kernel", new Vector2(0.0f, 2.0f));
-            Graphics.Blit(blur0, blur1, material, Pass.BilateralBlur);
-
-            material.SetVector("Kernel", new Vector2(2.0f, 0.0f));
-            Graphics.Blit(blur1, blur0, material, Pass.BilateralBlur);*/
+            FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
+            FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+            FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+            FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+            Graphics.Blit(gi3, blur1, FXAA_Material, 1);
+            Graphics.Blit(blur1, blur0);
 
             material.SetTexture("BlurredGI", blur0);
             
@@ -1952,34 +1941,30 @@ public class SEGICascaded : MonoBehaviour
 
 
                 //Perform bilateral filtering on temporally blended result
-                if (useBilateralFiltering)
+                /*if (useBilateralFiltering)
                 {
-                    material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                    Graphics.Blit(gi3, gi4, material, Pass.BilateralBlur);
-
-                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                    Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);
-
-                    /*material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                    Graphics.Blit(gi3, gi4, material, Pass.BilateralBlur);
-
-                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                    Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);*/
-                }
-            }
-            /*if (GIResolution >= 3 && GetComponent<Camera>().renderingPath == RenderingPath.DeferredShading)
-            {
-                GaussianBlur_Material.SetFloat("_Sigma", sigma);
-                Graphics.Blit(gi3, gi4, GaussianBlur_Material);
-                Graphics.Blit(gi4, gi3, GaussianBlur_Material);
-            }*/
-            if (GIResolution >= 3)
-            {
+                    /*FXAA_Material.SetFloat("_ContrastThreshold", 0.0.0625);
+                    FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+                    FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+                    FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+                    Graphics.Blit(gi3, gi4, FXAA_Material, 1);
+                    Graphics.Blit(gi4, gi3);*/
+                /*
                 material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
                 Graphics.Blit(gi3, gi4, material, Pass.BilateralBlur);
 
                 material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
                 Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);
+            }*/
+            }
+            if (GIResolution >= 3)
+            {
+                FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
+                FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+                FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+                FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+                Graphics.Blit(gi3, gi4, FXAA_Material, 1);
+                Graphics.Blit(gi4, gi3);
             }
 
             //Set the result to be accessed in the shader
@@ -2003,22 +1988,14 @@ public class SEGICascaded : MonoBehaviour
                 RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
                 RenderTexture blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
 
-                material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                Graphics.Blit(gi2, blur1, material, Pass.BilateralBlur);
-
-                material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                Graphics.Blit(blur1, blur0, material, Pass.BilateralBlur);
-
-                material.SetVector("Kernel", new Vector2(0.0f, 2.0f));
-                Graphics.Blit(blur0, blur1, material, Pass.BilateralBlur);
-
-                material.SetVector("Kernel", new Vector2(2.0f, 0.0f));
-                Graphics.Blit(blur1, blur0, material, Pass.BilateralBlur);
+                FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
+                FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+                FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+                FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+                Graphics.Blit(gi1, blur1, FXAA_Material, 1);
+                Graphics.Blit(blur1, blur0);
 
                 material.SetTexture("BlurredGI", blur0);
-
-
-
 
                 //Perform temporal reprojection and blending
                 Graphics.Blit(gi2, gi1, material, Pass.TemporalBlend);
@@ -2028,20 +2005,21 @@ public class SEGICascaded : MonoBehaviour
 
 
                 //Perform bilateral filtering on temporally blended result
-                if (useBilateralFiltering)
+                /*if (useBilateralFiltering)
                 {
+                    /*FXAA_Material.SetFloat("_ContrastThreshold", 0.0312f);
+                    FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
+                    FXAA_Material.SetFloat("_SubpixelBlending", 1f);
+                    FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
+                    Graphics.Blit(gi1, gi2, FXAA_Material, 1);
+                    Graphics.Blit(gi2, gi1);*/
+                    /*
                     material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
                     Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
 
                     material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
                     Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
-
-                    /*material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                    Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
-
-                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                    Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);*/
-                }
+                }*/
 
 
                 RenderTexture.ReleaseTemporary(blur0);

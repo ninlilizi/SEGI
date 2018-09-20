@@ -62,8 +62,6 @@
 					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
 					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-					UNITY_TRANSFER_INSTANCE_ID(v, o);
-
 					
 					float4 vertex = v.vertex;
 					

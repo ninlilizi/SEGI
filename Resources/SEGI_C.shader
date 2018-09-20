@@ -177,9 +177,9 @@
 					UNITY_SETUP_INSTANCE_ID(input);
 
 					float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
-					float validWeights = 0.0;
-					float depth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
-					half3 normal = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
+					float validWeights = 1;
+					float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x;
+					half3 normal = GetWorldNormal(UnityStereoTransformScreenSpaceTex(input.uv));// DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy));
 					float thresh = 0.26;
 
 					float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, input.uv).xyz;
@@ -191,13 +191,16 @@
 					for (int i = -1; i <= 1; i++)
 					{
 						float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy;
-						float sampleDepth = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).x);
+						float sampleDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).x;
 						half3 sampleNormal = DecodeViewNormalStereo(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)));
+						sampleNormal = mul((float3x3)CameraToWorld, sampleNormal);
 
 						float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
-						weight *= pow(saturate(dot(sampleNormal, normal)), 14.0);
+						weight *= pow(saturate(dot(sampleDepth, sampleNormal)), 1);
 
-						float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0)).rgba;
+						float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 1, 0)).rgba;
+
+						//blurSample = float4(blurSample.r, blurSample.g, blurSample.b, 0);
 						blurred += blurSample * weight;
 						validWeights += weight;
 					}
@@ -219,8 +222,9 @@
 
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 						UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
-
+											   
 						int GIResolution;
+						int useBilateralFiltering;
 
 						float4 frag(v2f input) : COLOR0
 						{
@@ -232,36 +236,29 @@
 			#else
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 			#endif
-							float3 albedo;
-							float4 albedoTex;
-							if (ForwardPath == 0)
-							{
-								albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv));
-								albedo = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, UnityStereoTransformScreenSpaceTex(input.uv));
-							}
-							else
-							{
-								albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv));
-								albedo = albedoTex.rgb;
-							}
-							float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv));
+							float3 result;
+							float4 reflections = UNITY_SAMPLE_SCREENSPACE_TEXTURE(Reflections, UnityStereoTransformScreenSpaceTex(input.uv));
+							float4 albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv));
+							float3 albedo = albedoTex.rgb;
+							float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv)).rgb;
 							float3 scene = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv));
-
-							gi *= 0.75 + 1 * 0.25;
-
-							if (!ForwardPath || useReflectionProbes)
+							if (ForwardPath && useReflectionProbes)
 							{
-								float4 reflections = UNITY_SAMPLE_SCREENSPACE_TEXTURE(Reflections, UnityStereoTransformScreenSpaceTex(input.uv));
-
-								gi = lerp(gi, reflections, (0.5).xxx) * 0.5;
+								gi += max(reflections * reflectionProbeIntensity, gi);
+								scene += gi * 0.5;
+								result = scene + gi * albedoTex.a * albedoTex.rgb;
+							}
+							else if(ForwardPath && !useReflectionProbes)
+							{
+								scene += gi * 2.0;
+								result = scene + gi * albedoTex.a * albedoTex.rgb;
+								result *= 0.25;
 							}
 							else
 							{
-								gi *= 0.5;
+								result = scene + gi * albedoTex.a * albedoTex.rgb;
+								result *= 2;
 							}
-
-							float3 result = scene + gi * albedoTex.a * albedoTex.rgb;
-
 							return float4(result, 1.0);
 						}
 
@@ -275,9 +272,9 @@
 						#pragma fragment frag
 						#pragma multi_compile_instancing
 
-						sampler2D GITexture;
-						sampler2D PreviousDepth;
-						sampler2D PreviousLocalWorldPos;
+						UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
+						UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousDepth);
+						UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousLocalWorldPos);
 
 
 						float4 CameraPosition;
@@ -343,7 +340,7 @@
 
 							//Get motion vectors and calculate reprojection coord
 							float2 motionVectors = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).xy;
-							float2 reprojCoord = input.uv.xy - motionVectors.xy;
+							float2 reprojCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy - motionVectors.xy;
 
 
 							//Calculate world space position for the previous frame reprojected to the current frame
@@ -374,7 +371,7 @@
 							gi = lerp(blurredGI, gi, posSimilarity);
 
 
-							float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, UnityStereoTransformScreenSpaceTex(reprojCoord)).rgb;
+							float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, reprojCoord).rgb;
 							prevGI = clamp(prevGI, minc, maxc);
 							gi = lerp(prevGI, gi, float3(blendWeight, blendWeight, blendWeight));
 

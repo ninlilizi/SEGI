@@ -21,7 +21,7 @@ SubShader
 		{
 			float4 pos : SV_POSITION;
 			float4 uv : TEXCOORD0;
-			float3 normal : TEXCOORD1;
+			//float3 normal : TEXCOORD1;
 			//half4 color : COLOR;
 
 			UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -37,30 +37,29 @@ SubShader
 		float4 _MainTex_ST;
 			
 			
-			v2f vert (appdata_full v)
-			{
-				v2f o;
+		v2f vert(appdata_full v)
+		{
+			v2f o;
 
-				UNITY_SETUP_INSTANCE_ID(v);
-				UNITY_INITIALIZE_OUTPUT(v2f, o);
-				UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-				UNITY_TRANSFER_INSTANCE_ID(v, o)
+			UNITY_SETUP_INSTANCE_ID(v);
+			UNITY_INITIALIZE_OUTPUT(v2f, o);
+			UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+			UNITY_TRANSFER_INSTANCE_ID(v, o);
 
-				
-				o.pos = UnityObjectToClipPos(v.vertex);
-				
-				//float3 pos = o.pos;
-				//
-				//o.pos.xy = (o.pos.xy);
-				//
-				//
-				o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
-				o.normal = UnityObjectToWorldNormal(v.normal);
-				//
-				//o.color = v.color;
-				//
-				return o;
-			}
+			o.pos = UnityObjectToClipPos(v.vertex);
+
+			//float3 pos = o.pos;
+			//
+			//o.pos.xy = (o.pos.xy);
+			//
+			//
+			o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
+			//o.normal = UnityObjectToWorldNormal(v.normal);
+			//
+			//o.color = v.color;
+			//
+			return o;
+		}
 			
 			UNITY_DECLARE_SCREENSPACE_TEXTURE(GILightCookie);
 			//sampler2D GILightCookie;

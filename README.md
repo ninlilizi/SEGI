@@ -1,11 +1,14 @@
+<h1 align=center>NKLI</h1>
+
 <p align="center">
   <img src="https://i.imgur.com/gtkjoxj.png">
 </p>
 
-# NKLI-SEGI
+
 # Features.
 * Deferred and Forward render paths.
-* 2D, Single Pass Rendering and Single Pass Instanced Rendering.
+* 2D, Single Pass Rendering
+* Limited Single Pass Instanced Rendering.
 * Runs on Unity versions 2017 and 2018
 
 A fully-dynamic voxel-based global illumination system for Unity. More details at http://www.sonicether.com/segi/
@@ -26,5 +29,6 @@ Please refer to the User Guide.pdf for usage instructions.
 If you need some help, feel free to ask any questions in the [official thread](https://forum.unity.com/threads/segi-fully-dynamic-global-illumination.410310) on Unity forums.
 
 # Credits
-Sonic Ether for SEGI (https://github.com/sonicether/SEGI)
-CK85 aka Nexusmaster for Unity 2017/2018 support (https://github.com/CK85/SEGI)
+* Sonic Ether for SEGI (https://github.com/sonicether/SEGI)<br>
+* CK85 aka Nexusmaster for Unity 2017/2018 support (https://github.com/CK85/SEGI)<br>
+* Cat Like Coding for FXAA (https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/)
