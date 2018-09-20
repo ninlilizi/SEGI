@@ -21,7 +21,7 @@ A fully-dynamic voxel-based global illumination system for Unity. More details a
 # Installation
 Check the [Releases](https://github.com/ninlilizi/SEGI/releases) section above to download a version of CKGI that is a simple .unitypackage file which is ready for you to import into your project. 
 
-You can also click the "Clone or Download" button and select "Download Zip", then extract the contents to "Assets/Plugins/CKGI" in your project to test out the latest unreleased versions of CKGI.
+You can also click the "Clone or Download" button and select "Download Zip", then extract the contents to "Assets/Plugins/SEGI" in your project to test out the latest unreleased versions of CKGI.
 
 Please refer to the User Guide.pdf for usage instructions.
 
