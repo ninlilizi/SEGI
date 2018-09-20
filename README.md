@@ -32,3 +32,4 @@ If you need some help, feel free to ask any questions in the [official thread](h
 * Sonic Ether for SEGI (https://github.com/sonicether/SEGI)<br>
 * CK85 aka Nexusmaster for Unity 2017/2018 support (https://github.com/CK85/SEGI)<br>
 * Cat Like Coding for FXAA (https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/)
+* keijiro for Gaussian Blur(https://github.com/keijiro)

@@ -1256,6 +1256,7 @@ MonoBehaviour:
   vecGridSize: {x: 128, y: 128, z: 128, w: 16}
   updateGIevery: 1
   voxelAA: 1
+  useFXAA: 1
   useReflectionProbes: 1
   reflectionProbeIntensity: 0.33
 --- !u!20 &1499325570

@@ -420,9 +420,12 @@ public class SEGICascaded : MonoBehaviour
         }
     }
 
-    public bool useFXAA;
+    //Gaussian Filter
+    private Shader Gaussian_Shader;
+    private Material Gaussian_Material;
 
     //FXAA
+    public bool useFXAA;
     private Shader FXAA_Shader;
     private Material FXAA_Material;
 
@@ -747,9 +750,15 @@ public class SEGICascaded : MonoBehaviour
 
     void Init()
     {
+        //Gaussian Filter
+        Gaussian_Shader = Shader.Find("Hidden/SEGI Gaussian Blur Filter");
+        Gaussian_Material = new Material(Gaussian_Shader);
+        Gaussian_Material.enableInstancing = true;
+
         //FXAA
         FXAA_Shader = Shader.Find("Hidden/SEGIFXAA");
         FXAA_Material = new Material(FXAA_Shader);
+        FXAA_Material.enableInstancing = true;
 
         //Setup shaders and materials
         sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
@@ -1882,13 +1891,8 @@ public class SEGICascaded : MonoBehaviour
         //Perform bilateral filtering
         if (useBilateralFiltering && temporalBlendWeight >= 0.99999f)
         {
-            FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
-            FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-            FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-            FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
-            FXAA_Material.DisableKeyword("LOW_QUALITY");
-            Graphics.Blit(gi2, gi1, FXAA_Material, 1);
-            Graphics.Blit(gi1, gi2);
+            Graphics.Blit(gi2, gi1, Gaussian_Material);
+            Graphics.Blit(gi1, gi2, Gaussian_Material);
         }
 
         //If Half Resolution tracing is enabled
@@ -1937,14 +1941,8 @@ public class SEGICascaded : MonoBehaviour
                 blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
                 blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             }
-
-            FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
-            FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-            FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-            FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
-            FXAA_Material.DisableKeyword("LOW_QUALITY");
-            Graphics.Blit(gi3, blur1, FXAA_Material, 1);
-            Graphics.Blit(blur1, blur0);
+            Graphics.Blit(gi3, blur1, Gaussian_Material);
+            Graphics.Blit(blur1, blur0, Gaussian_Material);
 
             material.SetTexture("BlurredGI", blur0);
             
@@ -1958,31 +1956,16 @@ public class SEGICascaded : MonoBehaviour
 
 
                 //Perform bilateral filtering on temporally blended result
-                /*if (useBilateralFiltering)
+                if (useBilateralFiltering)
                 {
-                    /*FXAA_Material.SetFloat("_ContrastThreshold", 0.0.0625);
-                    FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-                    FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-                    FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
-                    Graphics.Blit(gi3, gi4, FXAA_Material, 1);
-                    Graphics.Blit(gi4, gi3);*/
-                /*
-                material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                Graphics.Blit(gi3, gi4, material, Pass.BilateralBlur);
-
-                material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                Graphics.Blit(gi4, gi3, material, Pass.BilateralBlur);
-            }*/
+                    Graphics.Blit(gi3, gi4, Gaussian_Material);
+                    Graphics.Blit(gi4, gi3, Gaussian_Material);
+            }
             }
             if (GIResolution >= 3)
             {
-                FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
-                FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-                FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-                FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
-                FXAA_Material.DisableKeyword("LOW_QUALITY");
-                Graphics.Blit(gi3, gi4, FXAA_Material, 1);
-                Graphics.Blit(gi4, gi3);
+                Graphics.Blit(gi3, gi4, Gaussian_Material);
+                Graphics.Blit(gi4, gi3, Gaussian_Material);
             }
 
             //Set the result to be accessed in the shader
@@ -2006,13 +1989,8 @@ public class SEGICascaded : MonoBehaviour
                 RenderTexture blur0 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
                 RenderTexture blur1 = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default, 1, RenderTextureMemoryless.None, VRTextureUsage.TwoEyes);
 
-                FXAA_Material.SetFloat("_ContrastThreshold", 0.063f);
-                FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-                FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-                FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
-                FXAA_Material.DisableKeyword("LOW_QUALITY");
-                Graphics.Blit(gi1, blur1, FXAA_Material, 1);
-                Graphics.Blit(blur1, blur0);
+                Graphics.Blit(gi1, blur1, Gaussian_Material);
+                Graphics.Blit(blur1, blur0, Gaussian_Material);
 
                 material.SetTexture("BlurredGI", blur0);
 
@@ -2024,21 +2002,11 @@ public class SEGICascaded : MonoBehaviour
 
 
                 //Perform bilateral filtering on temporally blended result
-                /*if (useBilateralFiltering)
+                if (useBilateralFiltering)
                 {
-                    /*FXAA_Material.SetFloat("_ContrastThreshold", 0.0312f);
-                    FXAA_Material.SetFloat("_RelativeThreshold", 0.063f);
-                    FXAA_Material.SetFloat("_SubpixelBlending", 1f);
-                    FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
-                    Graphics.Blit(gi1, gi2, FXAA_Material, 1);
-                    Graphics.Blit(gi2, gi1);*/
-                    /*
-                    material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                    Graphics.Blit(gi1, gi2, material, Pass.BilateralBlur);
-
-                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                    Graphics.Blit(gi2, gi1, material, Pass.BilateralBlur);
-                }*/
+                    Graphics.Blit(gi1, gi2, Gaussian_Material);
+                    Graphics.Blit(gi2, gi1, Gaussian_Material);
+                }
 
 
                 RenderTexture.ReleaseTemporary(blur0);
