@@ -60,34 +60,14 @@
 			#pragma fragment frag
 			#pragma multi_compile_instancing
 
-			uniform float noiseDistribution;
-
-			//sampler2D NoiseTexture;
-
-			float hash(uint2 x)
-			{
-				uint2 q = 1103515245U * ((x >> 1U) ^ (x.yx));
-				uint  n = 1103515245U * ((q.x) ^ (q.y >> 3U));
-				return float(n) * (noiseDistribution / float(0xffffffffU));
-			}
+			UNITY_DECLARE_SCREENSPACE_TEXTURE(NoiseTexture);
+			int HalfResolution;
 
 			float4 frag(v2f input) : SV_Target
 			{
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				UNITY_SETUP_INSTANCE_ID(input);
 
-			float3 gi;
-			if (ForwardPath == 0)
-			{
-				gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv));
-			}
-			else
-			{
-				//float depthValue;
-				//float3 normalValues;
-				//DecodeDepthNormal(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, UnityStereoTransformScreenSpaceTex(input.uv)), depthValue, normalValues);
-				gi = float4(GetWorldNormal(input.uv), 1);
-			}
 
 			#if UNITY_UV_STARTS_AT_TOP
 				float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
@@ -108,6 +88,8 @@
 
 
 			//Prepare for cone trace			
+			float3 gi = float3(0.0, 0.0, 0.0);
+
 			float3 worldNormal;
 			if (ForwardPath == 0)
 			{
@@ -125,22 +107,19 @@
 			const float phi = 1.618033988;
 			const float gAngle = phi * PI;
 
+			//Get blue noise
+			float2 noiseCoord = (UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw) / (64.0).xx;
+			float blueNoise = UNITY_SAMPLE_SCREENSPACE_TEXTURE(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).x;
 
-			//Get noise
-			float2 noiseCoord = coord * _MainTex_TexelSize.zw + _Time.w;// (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-			float2 blueNoise = hash(noiseCoord * 64);
-			//blueNoise.y = hash(noiseCoord.yx * 128);
 
 			//Trace GI cones
 			int numSamples = TraceDirections;
 			for (int i = 0; i < numSamples; i++)
 			{
-				float fi = (float)i + blueNoise.x * StochasticSampling;
+				float fi = (float)i + blueNoise * StochasticSampling;
 				float fiN = fi / numSamples;
 				float longitude = gAngle * fi;
-				float latitude = (fiN * 2.0 - 1.0);
-				latitude += (blueNoise.y * 2.0 - 1.0) * 0.25;
-				latitude = asin(latitude);
+				float latitude = asin(fiN * 2.0 - 1.0);
 
 				float3 kernel;
 				kernel.x = cos(latitude) * cos(longitude);
@@ -155,6 +134,10 @@
 			traceResult /= numSamples;
 			gi = traceResult.rgb * 1.18;
 
+			float fadeout = saturate((distance(voxelSpacePosition.xyz, float3(0.5, 0.5, 0.5)) - 0.5f) * 5.0);
+			float3 fakeGI = saturate(dot(worldNormal, float3(0, 1, 0)) * 0.5 + 0.5) * SEGISkyColor.rgb * 5.0;
+			gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
+			gi *= 0.75 + (float)HalfResolution * 0.25;
 
 			return float4(gi, 1.0);
 		}
