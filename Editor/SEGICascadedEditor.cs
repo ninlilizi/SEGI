@@ -23,10 +23,6 @@ public class SEGICascadedEditor : Editor
     SerializedProperty shadowSpaceSize;
     SerializedProperty temporalBlendWeight;
     SerializedProperty visualizeVoxels;
-    SerializedProperty visualizeShadowmapCopy;
-    SerializedProperty useVolumeRayCast;
-    SerializedProperty useUnityShadowMap;
-    SerializedProperty shadowmapCopySize;
     SerializedProperty updateGI;
     SerializedProperty MatchAmbientColor;
     SerializedProperty skyColor;
@@ -35,9 +31,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty GIResolution;
     SerializedProperty stochasticSampling;
     SerializedProperty infiniteBounces;
-    SerializedProperty infiniteBouncesRerenderObjects;
     SerializedProperty followTransform;
-    SerializedProperty noiseDistribution;
     SerializedProperty cones;
     SerializedProperty coneTraceSteps;
     SerializedProperty coneLength;
@@ -54,6 +48,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty voxelAA;
     SerializedProperty reflectionSteps;
     SerializedProperty skyReflectionIntensity;
+    SerializedProperty gaussianMipFilter;
     SerializedProperty reflectionOcclusionPower;
     SerializedProperty farOcclusionStrength;
     SerializedProperty farthestOcclusionStrength;
@@ -118,10 +113,6 @@ public class SEGICascadedEditor : Editor
         shadowSpaceSize = serObj.FindProperty("shadowSpaceSize");
         temporalBlendWeight = serObj.FindProperty("temporalBlendWeight");
         visualizeVoxels = serObj.FindProperty("visualizeVoxels");
-        visualizeShadowmapCopy = serObj.FindProperty("visualizeShadowmapCopy");
-        useVolumeRayCast = serObj.FindProperty("useVolumeRayCast");
-        useUnityShadowMap = serObj.FindProperty("useUnityShadowMap");
-        shadowmapCopySize = serObj.FindProperty("shadowmapCopySize");
         updateGI = serObj.FindProperty("updateGI");
         MatchAmbientColor = serObj.FindProperty("MatchAmbiantColor");
         skyColor = serObj.FindProperty("skyColor");
@@ -130,9 +121,7 @@ public class SEGICascadedEditor : Editor
         GIResolution = serObj.FindProperty("GIResolution");
         stochasticSampling = serObj.FindProperty("stochasticSampling");
         infiniteBounces = serObj.FindProperty("infiniteBounces");
-        infiniteBouncesRerenderObjects = serObj.FindProperty("infiniteBouncesRerenderObjects");
         followTransform = serObj.FindProperty("followTransform");
-        noiseDistribution = serObj.FindProperty("noiseDistribution");
         cones = serObj.FindProperty("cones");
         coneTraceSteps = serObj.FindProperty("coneTraceSteps");
         coneLength = serObj.FindProperty("coneLength");
@@ -148,7 +137,7 @@ public class SEGICascadedEditor : Editor
         voxelAA = serObj.FindProperty("voxelAA");
         reflectionSteps = serObj.FindProperty("reflectionSteps");
         skyReflectionIntensity = serObj.FindProperty("skyReflectionIntensity");
-        //gaussianMipFilter = serObj.FindProperty("gaussianMipFilter");
+        gaussianMipFilter = serObj.FindProperty("gaussianMipFilter");
         reflectionOcclusionPower = serObj.FindProperty("reflectionOcclusionPower");
         farOcclusionStrength = serObj.FindProperty("farOcclusionStrength");
         farthestOcclusionStrength = serObj.FindProperty("farthestOcclusionStrength");
@@ -245,32 +234,13 @@ public class SEGICascadedEditor : Editor
             EditorGUILayout.PropertyField(voxelResolution, new GUIContent("Voxel Resolution", "The resolution of the voxel texture used to calculate GI."));
             EditorGUILayout.PropertyField(voxelAA, new GUIContent("Voxel AA", "Enables anti-aliasing during voxelization for higher precision voxels."));
             EditorGUILayout.PropertyField(innerOcclusionLayers, new GUIContent("Inner Occlusion Layers", "Enables the writing of additional black occlusion voxel layers on the back face of geometry. Can help with light leaking but may cause artifacts with small objects."));
-            //EditorGUILayout.PropertyField(gaussianMipFilter, new GUIContent("Gaussian Mip Filter", "Enables gaussian filtering during mipmap generation. This can improve visual smoothness and consistency, particularly with large moving objects."));
+            EditorGUILayout.PropertyField(gaussianMipFilter, new GUIContent("Gaussian Mip Filter", "Enables gaussian filtering during mipmap generation. This can improve visual smoothness and consistency, particularly with large moving objects."));
             EditorGUILayout.PropertyField(voxelSpaceSize, new GUIContent("Voxel Space Size", "The size of the voxel volume in world units. Everything inside the voxel volume will contribute to GI."));
             EditorGUILayout.PropertyField(shadowSpaceSize, new GUIContent("Shadow Space Size", "The size of the sun shadow texture used to inject sunlight with shadows into the voxels in world units. It is recommended to set this value similar to Voxel Space Size."));
             EditorGUILayout.PropertyField(giCullingMask, new GUIContent("GI Culling Mask", "Which layers should be voxelized and contribute to GI."));
-            EditorGUILayout.PropertyField(useVolumeRayCast, new GUIContent("Use VolumeRayCasting", "If enabled, VolumeRayCasting shadows will be used."));
-            if(!instance.useVolumeRayCast) GUI.enabled = false;
-            showVolumeConfig = EditorGUILayout.Foldout(showVolumeConfig, new GUIContent("VolumeRayCasting Configuration"));
-            if (showVolumeConfig)
-            {
-                EditorGUILayout.PropertyField(showVolumeObjects, new GUIContent("Show Volume Cube", "Show Cube that gets used for VolumeRayCasting in Hierarchy (Runtime)."));
-                EditorGUILayout.PropertyField(shadowVolumeMask, new GUIContent("Volume Culling Mask", "Which layer has the Volume Object in it."));
-            }
-            GUI.enabled = true;
-            EditorGUILayout.PropertyField(useUnityShadowMap, new GUIContent("Use Unity ShadowMap", "If enabled, unity's shadowmap will be used instead of creating new onces."));
-            GUI.enabled = false;
-            if (instance.useUnityShadowMap) {
-                GUI.enabled = true;
-                EditorGUILayout.HelpBox("This currently works only with no-cascades shadow (one shadowmap).", MessageType.Info);
-            }
-            EditorGUILayout.PropertyField(shadowmapCopySize, new GUIContent("Set Unity ShadowMapCopy Size", "Sets the size of the copied shadowmap."));
-            GUI.enabled = true;
             EditorGUILayout.PropertyField(updateGI, new GUIContent("Update GI", "Whether voxelization and multi-bounce rendering should update every frame. When disabled, GI tracing will use cached data from the last time this was enabled."));
             EditorGUILayout.PropertyField(infiniteBounces, new GUIContent("Infinite Bounces", "Enables infinite bounces. This is expensive for complex scenes and is still experimental."));
-            EditorGUILayout.PropertyField(infiniteBouncesRerenderObjects, new GUIContent("Infinite Bounces Rerender Objects", "This re-renders the scene via the voxel camera. If disabled data will be reused to calc bounces."));
             EditorGUILayout.PropertyField(followTransform, new GUIContent("Follow Transform", "If provided, the voxel volume will follow and be centered on this object instead of the camera. Useful for top-down scenes."));
-            EditorGUILayout.PropertyField(sunDepthTextureDepth, new GUIContent("SunTexture Depth Bits", "Set the depth of the shadow texture(s)."));        
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("VRAM Usage: " + instance.vramUsage.ToString("F2") + " MB", vramLabelStyle);
@@ -328,7 +298,6 @@ public class SEGICascadedEditor : Editor
             EditorGUILayout.PropertyField(stochasticSampling, new GUIContent("Stochastic Sampling", "If enabled, uses random jitter to reduce banding and discontinuities during GI tracing."));
             EditorGUILayout.PropertyField(GIResolution, new GUIContent("Subsampling Resolution", "GI tracing resolution will be subsampled at this screen resolution. Improves speed of GI tracing."));
 
-            EditorGUILayout.PropertyField(noiseDistribution, new GUIContent("Noise Distribution", "Lower values increase performance at expense of lowered shadow resolution"));
             EditorGUILayout.PropertyField(cones, new GUIContent("Cones", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
             EditorGUILayout.PropertyField(coneTraceSteps, new GUIContent("Cone Trace Steps", "The number of tracing steps for each cone. Too few results in skipping thin features. Higher values result in more accuracy at the cost of performance."));
             EditorGUILayout.PropertyField(coneLength, new GUIContent("Cone length", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
@@ -385,7 +354,6 @@ public class SEGICascadedEditor : Editor
             EditorGUILayout.PropertyField(visualizeSunDepthTexture, new GUIContent("Visualize Sun Depth Texture", "Visualize the depth texture used to render proper shadows while injecting sunlight into voxel data."));
             EditorGUILayout.PropertyField(visualizeGI, new GUIContent("Visualize GI", "Visualize GI result only (no textures)."));
             EditorGUILayout.PropertyField(visualizeVoxels, new GUIContent("Visualize Voxels", "Directly view the voxels in the scene."));
-            EditorGUILayout.PropertyField(visualizeShadowmapCopy, new GUIContent("Visualize Shadowmap Copy", "Directly view the Shadowmap of the Sun Light."));
 
             EditorGUI.indentLevel--;
         }
@@ -415,7 +383,6 @@ public class SEGICascadedEditor : Editor
         preset.GIResolution = instance.GIResolution;
         preset.stochasticSampling = instance.stochasticSampling;
 
-        preset.noiseDistribution = instance.noiseDistribution;
         preset.cones = instance.cones;
         preset.coneTraceSteps = instance.coneTraceSteps;
         preset.coneLength = instance.coneLength;
@@ -462,7 +429,7 @@ public class SEGICascadedEditor : Editor
 
     }
 }
-
+/*
 [PostProcessEditor(typeof(SEGICascadedPreset))]
 public sealed class SEGICascadedEditorSRP : PostProcessEffectEditor<SEGICascadedPreset>
 {
@@ -478,10 +445,7 @@ public sealed class SEGICascadedEditorSRP : PostProcessEffectEditor<SEGICascaded
     SerializedProperty shadowSpaceSize;
     SerializedProperty temporalBlendWeight;
     SerializedProperty visualizeVoxels;
-    SerializedProperty visualizeShadowmapCopy;
     SerializedProperty useVolumeRayCast;
-    SerializedProperty useUnityShadowMap;
-    SerializedProperty shadowmapCopySize;
     SerializedProperty updateGI;
     SerializedProperty MatchAmbientColor;
     SerializedProperty skyColor;
@@ -490,9 +454,7 @@ public sealed class SEGICascadedEditorSRP : PostProcessEffectEditor<SEGICascaded
     SerializedProperty GIResolution;
     SerializedProperty stochasticSampling;
     SerializedProperty infiniteBounces;
-    SerializedProperty infiniteBouncesRerenderObjects;
     SerializedProperty followTransform;
-    SerializedProperty noiseDistribution;
     SerializedProperty cones;
     SerializedProperty coneTraceSteps;
     SerializedProperty coneLength;
@@ -525,3 +487,4 @@ public sealed class SEGICascadedEditorSRP : PostProcessEffectEditor<SEGICascaded
 
     SerializedProperty useFXAA;
 }
+*/

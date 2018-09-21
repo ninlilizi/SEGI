@@ -4,8 +4,8 @@ using System.Collections;
 using UnityEngine.Rendering.PostProcessing;
 
 [Serializable]
-[PostProcess(typeof(SEGICascadedRenderer), PostProcessEvent.AfterStack, "NKLI/SEGI")]
-public sealed class SEGICascadedPreset : PostProcessEffectSettings
+//[PostProcess(typeof(SEGICascadedRenderer), PostProcessEvent.AfterStack, "NKLI/SEGI")]
+public sealed class SEGICascadedPreset : ScriptableObject
 {
 	public SEGICascaded.VoxelResolution voxelResolution = SEGICascaded.VoxelResolution.high;
 	public bool voxelAA = false;

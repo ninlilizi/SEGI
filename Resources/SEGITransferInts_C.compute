@@ -1,39 +1,59 @@
 #pragma kernel CSMain
 #pragma kernel CSMain2
-#pragma kernel CSMainShadow
-#pragma kernel CSMainTrace
-#pragma kernel CSMainOctree
-
-//TextureCube unity_SpecCube0;
-//SamplerState samplerunity_SpecCube0;
-
-#include "SEGIUnityShadowInput.cginc"
-#include "SEGI_C-Compute.cginc"
-
-
 
 RWTexture3D<float4> Result;
-//Texture3D<float4> PrevResult;
+Texture3D<float4> PrevResult;
 
-RWTexture2DArray<uint> RG0;
+Texture3D<uint> RG0;
 
-//SamplerState _PointClamp;
+SamplerState _PointClamp;
 
 int Resolution;
 int VoxelAA;
 
-[numthreads(8, 8, 8)]
-void CSMain(uint3 id : SV_DispatchThreadID)
+float4 VoxelOriginDelta;
+
+float2 IntToFloats(uint intval)
 {
-	//for (int i = 0; i < Resolution; i++)
-	//{
-		float4 result = float4(0, 0, 0, 0);
+	float value1 = f16tof32(intval);
+	float value2 = f16tof32(intval / 0x0000FFFF);
+	return float2(value1, value2);
+}
 
-		const float4 gridSize = SEGI_GRID_SIZE;
-		uint3 coord = id;// uint3(id.x, id.y, i);
-		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
+float3 hsv2rgb(float3 c)
+{
+	float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
+	return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
+}
 
-		result = DecodeRGBAuint(RG0[uint3(coord2D, 0)]);
+float4 DecodeRGBAuint(uint value)
+{
+	uint ai = value & 0x0000007F;
+	uint vi = (value / 0x00000080) & 0x000007FF;
+	uint si = (value / 0x00040000) & 0x0000007F;
+	uint hi = value / 0x02000000;
+
+	float h = float(hi) / 127.0;
+	float s = float(si) / 127.0;
+	float v = (float(vi) / 2047.0) * 10.0;
+	float a = ai * 2.0;
+
+	v = pow(v, 3.0);
+
+	float3 color = hsv2rgb(float3(h, s, v));
+
+	return float4(color.rgb, a);
+}
+
+[numthreads(16,16,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    for (int i = 0; i < Resolution; i++)
+    {
+    	float4 result = float4(0,0,0,0);
+
+		result.rgba = DecodeRGBAuint(RG0[uint3(id.x, id.y, i)]);
 
 		result /= 1 + VoxelAA * 3;
 
@@ -46,429 +66,24 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 			blockerValue = max(0.0, result.a - 20.0);
 		}
 
-		result.a = min(result.a, 2.0) * 1.0;
+		result.a = min(result.a, 2.0) * 1.25;
 		result.a += blockerValue;
 
-		Result[id] = result;
-
-	//}
+        Result[uint3(id.xy, i)] = result;
+    }
 }
 
-[numthreads(8,8,8)]
+[numthreads(16,16,1)]
 void CSMain2 (uint3 id : SV_DispatchThreadID)
 {
-    //for (int i = 0; i < Resolution; i++)
-    //{
+    for (int i = 0; i < Resolution; i++)
+    {
     	float4 result = float4(0,0,0,0);
 
-		const float4 gridSize = SEGI_GRID_SIZE;
-		uint3 coord = id;// uint3(id.x, id.y, i);
-		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
-
-		result = DecodeRGBAuint(RG0[uint3(coord2D,0)]);
+		result.rgba = DecodeRGBAuint(RG0[uint3(id.x, id.y, i)]);
 
 		result.rgb /= max(2.0, result.a);
 
-        Result[id] = result;
-    //}
-}
-
-uint SEGICurrentClipmapIndex;
-float SEGIShadowBias;
-float SEGISecondaryBounceGain;
-float4 SEGIVoxelSpaceOriginDelta;
-
-float4 SEGIShadowClipTransform1;
-float4 SEGIShadowClipTransform2;
-float4 SEGIShadowClipTransform3;
-float4 SEGIShadowClipTransform4;
-float4 SEGIShadowClipTransform5;
-float4x4 SEGIVoxelProjectionInverse;
-float4x4 SEGIVoxelProjectionInverse1;
-float4x4 SEGIVoxelProjectionInverse2;
-float4x4 SEGIVoxelProjectionInverse3;
-float4x4 SEGIVoxelProjectionInverse4;
-float4x4 SEGIVoxelProjectionInverse5;
-float4x4 SEGIVoxelToGIProjection;
-float4x4 SEGIVoxelToGIProjection1;
-float4x4 SEGIVoxelToGIProjection2;
-float4x4 SEGIVoxelToGIProjection3;
-float4x4 SEGIVoxelToGIProjection4;
-float4x4 SEGIVoxelToGIProjection5;
-
-sampler2D SEGISunDepth;
-sampler2D SEGISunDepth1;
-sampler2D SEGISunDepth2;
-sampler2D SEGISunDepth3;
-sampler2D SEGISunDepth4;
-sampler2D SEGISunDepth5;
-sampler3D SEGICurrentIrradianceVolume;
-
-
-[numthreads(8, 8, 8)]
-void CSMainShadow(uint3 id : SV_DispatchThreadID)
-{
-	const float4 gridSize = SEGI_GRID_SIZE;
-
-	//for (int i = 0; i < Resolution; i++)
-	//{
-		uint3 coord = id;// uint3(id.x, id.y, i);
-		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
-
-		float4 result = DecodeRGBAuint(RG0[uint3(coord2D, 0)]);
-		float4 colShaded = DecodeRGBAuint(RG0[uint3(coord2D, 1)]);
-		float4 colEmission = DecodeRGBAuint(RG0[uint3(coord2D, 2)]);
-
-		float3 fcoord = coord / float(Resolution);
-
-		float4 shadowPos = mul(SEGIVoxelProjectionInverse5, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform5) * 2.0 - 1.0, 0.0));
-		shadowPos = mul(SEGIVoxelToGIProjection5, shadowPos);
-		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		float sunDepth = tex2Dlod(SEGISunDepth5, float4(shadowPos.xy, 0, 0)).x;
-		#if defined(UNITY_REVERSED_Z)
-		sunDepth = 1.0 - sunDepth;
-		#endif
-		float sunVisibility5 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-
-
-		shadowPos = mul(SEGIVoxelProjectionInverse4, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform4) * 2.0 - 1.0, 0.0));
-		shadowPos = mul(SEGIVoxelToGIProjection4, shadowPos);
-		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		sunDepth = tex2Dlod(SEGISunDepth4, float4(shadowPos.xy, 0, 0)).x;
-		#if defined(UNITY_REVERSED_Z)
-		sunDepth = 1.0 - sunDepth;
-		#endif
-		float sunVisibility4 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-
-		shadowPos = mul(SEGIVoxelProjectionInverse3, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform3) * 2.0 - 1.0, 0.0));
-		shadowPos = mul(SEGIVoxelToGIProjection3, shadowPos);
-		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		sunDepth = tex2Dlod(SEGISunDepth3, float4(shadowPos.xy, 0, 0)).x;
-		#if defined(UNITY_REVERSED_Z)
-		sunDepth = 1.0 - sunDepth;
-		#endif
-		float sunVisibility3 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-
-		shadowPos = mul(SEGIVoxelProjectionInverse2, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform2) * 2.0 - 1.0, 0.0));
-		shadowPos = mul(SEGIVoxelToGIProjection2, shadowPos);
-		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		sunDepth = tex2Dlod(SEGISunDepth2, float4(shadowPos.xy, 0, 0)).x;
-		#if defined(UNITY_REVERSED_Z)
-		sunDepth = 1.0 - sunDepth;
-		#endif
-		float sunVisibility2 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-
-		shadowPos = mul(SEGIVoxelProjectionInverse1, float4(TransformClipSpace(fcoord, SEGIShadowClipTransform1) * 2.0 - 1.0, 0.0));
-		shadowPos = mul(SEGIVoxelToGIProjection1, shadowPos);
-		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		sunDepth = tex2Dlod(SEGISunDepth1, float4(shadowPos.xy, 0, 0)).x;
-		#if defined(UNITY_REVERSED_Z)
-		sunDepth = 1.0 - sunDepth;
-		#endif
-		float sunVisibility1 = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-
-		shadowPos = mul(SEGIVoxelProjectionInverse, float4(fcoord * 2.0 - 1.0, 0.0));
-		shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
-		shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
-		sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
-		#if defined(UNITY_REVERSED_Z)
-		sunDepth = 1.0 - sunDepth;
-		#endif
-		float sunVisibility = saturate((sunDepth - shadowPos.z + SEGIShadowBias) * 1000);
-		float tempSadow = sunVisibility;
-
-		if (SEGICurrentClipmapIndex == 0)
-			sunVisibility = (sunVisibility * 4 + sunVisibility1 * 6 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 19.0f;
-
-		if (SEGICurrentClipmapIndex == 1)
-			sunVisibility = (sunVisibility * 6 + sunVisibility2 * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 14.0f;
-
-		if (SEGICurrentClipmapIndex == 2)
-			sunVisibility = (sunVisibility * 4 + sunVisibility3 * 2 + sunVisibility4 + sunVisibility5) / 8.0f;
-
-		if (SEGICurrentClipmapIndex == 3)
-			sunVisibility = (sunVisibility * 6 + sunVisibility4 + sunVisibility5) / 8.0f;
-
-		if (SEGICurrentClipmapIndex == 4)
-			sunVisibility = (sunVisibility * 8 + sunVisibility5) / 9.0f;
-
-		const float contrast = 3;
-		sunVisibility = saturate(((sunVisibility - 0.5f) * contrast) + 0.5f);
-
-		float sunVisibilityCopy = 1;
-
-#if defined(SEGI_UNITY_SHADOWMAP_ON)
-		float4 wpos = float4(SEGIMinPosVoxel.xyz + fcoord.xyz * SEGIMinPosVoxel.w, 1);
-		float4 cascadeWeights = getCascadeWeights_splitSpheres(wpos.xyz);
-		float4 shadowPosCopy = getShadowCoord(wpos, cascadeWeights);
-		float copyDepth = tex2Dlod(SEGIShadowmapCopy, float4(shadowPosCopy.xy, 0, 0)).x; 
-		copyDepth = saturate((copyDepth - shadowPosCopy.z - 0.005) * 1000);
-#if defined(UNITY_REVERSED_Z)
-		copyDepth = 1.0 - copyDepth;
-#endif
-		sunVisibilityCopy = copyDepth;
-#endif
-		sunVisibility *= sunVisibilityCopy;
-		//sunVisibility = 1;
-
-		float3 color = result.rgb;
-		result.rgb = color * colShaded.rgb * sunVisibility + colEmission.rgb;
-
-		float4 prevBounce = tex3Dlod(SEGICurrentIrradianceVolume, float4(fcoord + SEGIVoxelSpaceOriginDelta.xyz,0));
-		result.rgb += prevBounce.rgb * 0.2 * SEGISecondaryBounceGain * color.rgb;// tex.rgb * color.rgb;
-
-
-		result /= 1 + VoxelAA * 3;
-
-		result.rgb /= max(result.a, 2.0);
-
-		float blockerValue = 0.0;
-
-		if (result.a > 20.0)
-		{
-			blockerValue = max(0.0, result.a - 20.0);
-		}
-
-		result.a = min(result.a, 2.0) * 1.0;
-		result.a += blockerValue;
-
-		Result[id] = result;
-
-	//}
-}
-
-
-uint currentClipmapIndex;
-
-[numthreads(8, 8, 8)]
-void CSMainTrace(uint3 id : SV_DispatchThreadID)
-{
-	const float4 gridSize = SEGI_GRID_SIZE;
-
-	//for (int i = 0; i < Resolution; i++)
-	//{
-		uint3 coord = uint3(id.x, id.y, id.z);
-		uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
-
-		float3 fcoord = coord / float(Resolution);
-
-		const uint clipmapLevel = currentClipmapIndex;
-
-		float4 inputColor = 0;
-		if (clipmapLevel == 0)
-		{
-			inputColor = tex3Dlod(SEGIVolumeLevel0, float4(fcoord.xyz, 0));
-		}
-		else if (clipmapLevel == 1)
-		{
-			inputColor = tex3Dlod(SEGIVolumeLevel1, float4(fcoord.xyz, 0));
-		}
-		else if (clipmapLevel == 2)
-		{
-			inputColor = tex3Dlod(SEGIVolumeLevel2, float4(fcoord.xyz, 0));
-		}
-
-		if (inputColor.a <= 0) return;
-
-		float3 minCoord = (SEGIClipmapOverlap.xyz * 1.0 + 0.5) - SEGIClipmapOverlap.w * 0.5;
-		minCoord += 16.0 / Resolution;
-		float3 maxCoord = (SEGIClipmapOverlap.xyz * 1.0 + 0.5) + SEGIClipmapOverlap.w * 0.5;
-		maxCoord -= 16.0 / Resolution;
-
-		if (fcoord.x > minCoord.x && fcoord.x < maxCoord.x &&
-			fcoord.y > minCoord.y && fcoord.y < maxCoord.y &&
-			fcoord.z > minCoord.z && fcoord.z < maxCoord.z)
-		{
-			return;
-		}
-
-		float3 gi = (0.0).xxx;
-							
-		float3 worldNormal = DecodeVectorUint(RG0[uint3(coord2D, 3 + clipmapLevel)]);
-
-		float3 voxelOrigin = (fcoord + worldNormal.xyz * 0.006 * 1.0);
-					
-		float4 traceResult = float4(0,0,0,0);//TODO float3
-					
-		float2 dither = rand(fcoord);
-					
-		const float phi = 1.618033988;
-		const float gAngle = phi * PI * 2.0;
-					
-					
-		const int numSamples = SEGISecondaryCones;
-		for (int i = 0; i < numSamples; i++)
-		{
-			float fi = (float)i; 
-			float fiN = fi / numSamples;
-			float longitude = gAngle * fi;
-			float latitude = asin(fiN * 2.0 - 1.0);
-						
-			float3 kernel;
-			kernel.x = cos(latitude) * cos(longitude);
-			kernel.z = cos(latitude) * sin(longitude);
-			kernel.y = sin(latitude);
-						
-			kernel = normalize(kernel + worldNormal.xyz);
-
-			if (i == 0)
-			{
-				kernel = float3(0.0, 1.0, 0.0);
-			}
-
-				traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz);
-		}
-					
-		traceResult /= numSamples;
-					
-					
-		gi.rgb = traceResult.rgb;
-					
-		gi.rgb *= 4.3;
-					
-		gi.rgb += traceResult.a * 1.0 * SEGISkyColor.rgb;
-
-					
-		float4 result = float4(gi.rgb, 2.0);
-
-		interlockedAddFloat4(RG0, uint3(coord2D,0), result);
-	//}
-}
-
-
-struct matStruct {
-	float density;
-	float copy;
-	float4 color;//TODO float3
-	float4 colorCopy;//TODO float3
-	//uint3 normals;
-};
-StructuredBuffer<matStruct> materialBuffer;
-float4 minPosOctree;
-
-static const uint3 edgeDirs[8] = {
-	uint3(0, 0, 0),
-	uint3(1, 0, 0),
-	uint3(0, 1, 0),
-	uint3(0, 0, 1),
-	uint3(1, 1, 0),
-	uint3(0, 1, 1),
-	uint3(1, 0, 1),
-	uint3(1, 1, 1)
-};
-
-float4 GetLodColor(int lod, float alpha = 1)
-{
-	return (lod % 6 < 1 ? float4(1, 0, 0, 1) : lod % 6 < 2 ? float4(0, 1, 0, 1) : lod % 6 < 3 ? float4(0, 0, 1, 1) : lod % 6 < 4 ? float4(1, 1, 0, 1) : lod % 6 < 5 ? float4(0, 1, 1, 1) : float4(1, 0, 1, 1)) + float4(0.1, 0.1, 0.1, 0);
-}
-
-uint lodMax;
-
-Texture2DArray<float4> terrainTexArray;
-
-float _TriplanarTexScale;
-
-[numthreads(8, 8, 8)]
-void CSMainOctree(uint3 id : SV_DispatchThreadID)
-{
-	const float4 gridSize = SEGI_GRID_SIZE;
-
-	//for (int i = 0; i < Resolution; i++)
-	//{
-	uint3 coord = uint3(id.x, id.y, id.z);
-	uint2 coord2D = uint2(coord.x + gridSize.x*(coord.z%gridSize.w), coord.y + gridSize.y*(coord.z / gridSize.w));
-
-	float4 result = DecodeRGBAuint(RG0[uint3(coord2D, 0)]);
-	float4 colShaded = DecodeRGBAuint(RG0[uint3(coord2D, 1)]);
-	float3 worldNormal = DecodeVectorUint(RG0[uint3(coord2D, max(3 + currentClipmapIndex, 5))]);
-
-
-	float3 voxelPosWorld = SEGIMinPosVoxel.xyz + (coord / float(Resolution)) * SEGIMinPosVoxel.w;
-	const float clusterSize = 32;
-	uint lod = lodMax;
-	float voxelOffset = 1 << lod;//=> 1, 2, 4, 8, 16, 32 == voxelSize
-	float scale = voxelOffset * clusterSize;
-	float globalScale = minPosOctree.w;
-	uint3 voxelPos = (voxelPosWorld - minPosOctree.xyz + scale * 0.5f * globalScale) / (voxelOffset * globalScale);
-	const uint voxelSize = 196;
-
-	if (voxelPos.x >= voxelSize || voxelPos.y >= voxelSize || voxelPos.z >= voxelSize || voxelPos.x < 0 || voxelPos.y < 0 || voxelPos.z < 0)
-		return; //TODO needed ?
-
-	uint index = voxelPos.x + voxelPos.y * voxelSize + voxelPos.z * voxelSize * voxelSize;
-
-	float densityData[4];
-	
-	float4 color = materialBuffer[index].color;
-	densityData[0] = -materialBuffer[index].density;
-	
-	for (uint d = 1; d < 4; d++) {
-		uint3 gridPos = voxelPos + edgeDirs[d];
-		uint gridPosIndex = gridPos.x + gridPos.y * voxelSize + gridPos.z * voxelSize * voxelSize;
-		densityData[d] = -materialBuffer[gridPosIndex].density;
-	}
-
-	float3 baseNormal = -normalize(float3(densityData[1] - densityData[0] + 0.000001f,
-		densityData[2] - densityData[0] + 0.000001f,
-		densityData[3] - densityData[0] + 0.000001f));
-
-	worldNormal = max(worldNormal, baseNormal);// normalize(worldNormal + baseNormal); //TODO max working? (check worldNormal input-> result)
-
-
-	//const float _TriplanarTexScale = 0.12512;//TODO
-	float3 uvw = voxelPosWorld * _TriplanarTexScale;// +_TriplanarOffset;
-
-	float3 coords = uvw;// *texScale.xxx;
-	float2 tpuv0_x = coords.zy;
-	float2 tpuv0_y = coords.xz;
-	float2 tpuv0_z = coords.xy;
-
-	float3 tpw = (pow(abs(baseNormal), 2.5));//_TriplanarContrast
-
-	uint texSlot = uint(color.a * 255);
-
-	uint Width;
-	uint Height;
-	uint Elements;
-	terrainTexArray.GetDimensions(Width, Height, Elements);//TODO
-
-	float4 t0 = tpw.x * terrainTexArray[uint3(tpuv0_x * Width % Width, texSlot)]
-				+ tpw.y * terrainTexArray[uint3(tpuv0_y * Width % Width, texSlot)]
-				+ tpw.z * terrainTexArray[uint3(tpuv0_z * Width % Width, texSlot)];
-
-
-	float4 tempColor = t0;//saturate(GetLodColor(color.a * 255)) * 0.05f;
-	tempColor.a = 2;
-
-	tempColor = -densityData[0] < 0.0f ? tempColor : 0;
-	
-	tempColor /= 1 + VoxelAA * 3;
-	tempColor.rgb /= max(tempColor.a, 2.0);
-
-	result += tempColor;
-	result.a = min(result.a, 2.0) * 1.0;
-
-	float sunNdotL = saturate(dot(baseNormal, -SEGISunlightVector.xyz));
-	colShaded.rgb += sunNdotL * GISunColor.rgb * GISunColor.a;
-
-
-	const float sqrt2 = 1.4142135623730950488016887242097;
-	uint3 coordOcclusion = coord - int3(baseNormal);
-	uint2 coord2DOcclusion1 = uint2(coordOcclusion.x + gridSize.x*(coordOcclusion.z%gridSize.w), coordOcclusion.y + gridSize.y*(coordOcclusion.z / gridSize.w));
-	uint writeValue = -densityData[0] < 0.0f ? EncodeRGBAuint(float4(0.0, 0.0, 0.0, 14.0)) : 0;
-
-	//RG0[uint3(coord2DOcclusion1, 0)] += writeValue;
-	InterlockedAdd(RG0[uint3(coord2DOcclusion1, 0)], writeValue);
-
-	RG0[uint3(coord2D, 0)] = EncodeRGBAuint(result);
-	RG0[uint3(coord2D, 1)] = EncodeRGBAuint(colShaded);
-	//InterlockedMax(RG0[uint3(coord2D, 0)], EncodeRGBAuint(result));
-	//InterlockedMax(RG0[uint3(coord2D, 1)], EncodeRGBAuint(colShaded));
-	//InterlockedMax(RG0[uint3(coord, 2)], writeValue2);//TODO emission?
-
-	if(currentClipmapIndex < 3)
-		RG0[uint3(coord2D, 3 + currentClipmapIndex)] = EncodeVectorUint(worldNormal);//normalize needed?
-		//InterlockedMax(RG0[uint3(coord2D, 3 + currentClipmapIndex)], EncodeVectorUint(worldNormal));//normalize needed?
-
-	//}
+        Result[uint3(id.xy, i)] = result;
+    }
 }

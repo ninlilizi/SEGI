@@ -1,237 +1,122 @@
+#pragma warning disable 0618
+
+using UnityEngine;
+using System.Collections;
 using System;
 using System.IO;
-using UnityEngine;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.PostProcessing;
 
-
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+[ExecuteInEditMode]
 [RequireComponent(typeof(Camera))]
-[AddComponentMenu("Image Effects/Sonic Ether/SEGI (Cascaded)")]
+[AddComponentMenu("Image Effects/Sonic Ether/SEGICascaded")]
 public class SEGICascaded : MonoBehaviour
-{ 
+{
+	object initChecker;
+
+	Material material;
+	Camera attachedCamera;
+	Transform shadowCamTransform;
+
+	Camera shadowCam;
+	GameObject shadowCamGameObject;
+
+    public ReflectionProbe reflectionProbe;
+    GameObject reflectionProbeGameObject;
+
+    [Serializable]
     public enum VoxelResolution
     {
-        potato = 16,
-        low = 32,
-        medium = 64,
-        high = 128
+        low = 128,
+        high = 256
     }
 
     public VoxelResolution voxelResolution = VoxelResolution.high;
 
     public bool visualizeSunDepthTexture = false;
-    public bool visualizeGI = false;
+	public bool visualizeGI = false;
 
-    public Light sun;
-    public LayerMask giCullingMask = 2147483647;
-    public LayerMask shadowVolumeMask = 0;
-    public float shadowSpaceSize = 50.0f;
+	public Light sun;
+	public LayerMask giCullingMask = 2147483647;
 
-    [Range(0.01f, 1.0f)]
-    public float temporalBlendWeight = 1.0f;
+	public float shadowSpaceSize = 50.0f;
 
-    public bool visualizeVoxels = false;
-    public bool visualizeShadowmapCopy = false;
-    public int shadowmapCopySize = 512;
-    public bool updateGI = true;
-    public bool useVolumeRayCast = false;
-    bool useVolumeRayCastPrev = false;
+	[Range(0.01f, 1.0f)]
+	public float temporalBlendWeight = 0.1f;
 
+	public bool visualizeVoxels = false;
+
+	public bool updateGI = true;
+
+
+	public Color skyColor;
     public bool MatchAmbiantColor;
-    public Color skyColor;
 
-    public float voxelSpaceSize = 25.0f;
+    public float voxelSpaceSize = 50.0f;
 
-    public bool useBilateralFiltering = false;
+	public bool useBilateralFiltering = false;
 
-    [Range(0, 2)]
-    public int innerOcclusionLayers = 1;
+	[Range(0, 2)]
+	public int innerOcclusionLayers = 1;
+
 
     [Range(1, 4)]
     public int GIResolution = 1;
     public bool stochasticSampling = true;
-    public bool infiniteBounces = false;
-    public bool infiniteBouncesRerenderObjects = false;
-    public Transform followTransform;
-    [Range(1, 128)]
-    public int cones = 4;
-    [Range(1, 32)]
-    public int coneTraceSteps = 10;
-    [Range(0.1f, 2.0f)]
-    public float coneLength = 1.0f;
-    [Range(0.5f, 12.0f)]
-    public float coneWidth = 3.9f;
-    [Range(0.0f, 2.0f)]
-    public float occlusionStrength = 0.15f;
-    [Range(0.0f, 4.0f)]
-    public float nearOcclusionStrength = 0.5f;
-    [Range(0.001f, 4.0f)]
-    public float occlusionPower = 0.65f;
-    [Range(0.0f, 4.0f)]
-    public float coneTraceBias = 2.8f;
-    [Range(0.0f, 4.0f)]
-    public float nearLightGain = 0.36f;
-    [Range(0.0f, 4.0f)]
-    public float giGain = 1.0f;
-    [Range(0.0f, 4.0f)]
-    public float secondaryBounceGain = 0.9f;
-    [Range(0.0f, 16.0f)]
-    public float softSunlight = 0.0f;
+	public bool infiniteBounces = false;
+	public Transform followTransform;
+	[Range(1, 128)]
+	public int cones = 6;
+	[Range(1, 32)]
+	public int coneTraceSteps = 14;
+	[Range(0.1f, 2.0f)]
+	public float coneLength = 1.0f;
+	[Range(0.5f, 6.0f)]
+	public float coneWidth = 5.5f;
+	[Range(0.0f, 4.0f)]
+	public float occlusionStrength = 1.0f;
+	[Range(0.0f, 4.0f)]
+	public float nearOcclusionStrength = 0.5f;
+	[Range(0.001f, 4.0f)]
+	public float occlusionPower = 1.5f;
+	[Range(0.0f, 4.0f)]
+	public float coneTraceBias = 1.0f;
+	[Range(0.0f, 4.0f)]
+	public float nearLightGain = 1.0f;
+	[Range(0.0f, 4.0f)]
+	public float giGain = 1.0f;
+	[Range(0.0f, 4.0f)]
+	public float secondaryBounceGain = 1.0f;
+	[Range(0.0f, 16.0f)]
+	public float softSunlight = 0.0f;
 
-    [Range(0.0f, 8.0f)]
-    public float skyIntensity = 1.0f;
+	[Range(0.0f, 8.0f)]
+	public float skyIntensity = 1.0f;
 
-    [Range(6, 128)]
-    public int reflectionSteps = 12;
-    [Range(0.001f, 4.0f)]
-    public float reflectionOcclusionPower = 1.0f;
-    [Range(0.0f, 1.0f)]
-    public float skyReflectionIntensity = 1.0f;
-
-    [Range(0.1f, 4.0f)]
-    public float farOcclusionStrength = 1.0f;
-    [Range(0.1f, 4.0f)]
-    public float farthestOcclusionStrength = 1.0f;
-
-    [Range(3, 16)]
-    public int secondaryCones = 6;
-    [Range(0.1f, 2.0f)]
-    public float secondaryOcclusionStrength = 0.27f;
-
-    public bool sphericalSkylight = false;
-
-    public bool useUnityShadowMap = false;
-
-    #region InternalVariables
-    object initChecker;
-    Material material;
-    Material m_CopyShadowParamsMaterial;
-    Camera attachedCamera;
-    Transform shadowCamTransform;
-    public Camera shadowCam;
-    GameObject shadowCamGameObject;
-    public ReflectionProbe reflectionProbe;
-    GameObject reflectionProbeGameObject;
-    //public GameObject volumeGroup;
-    public bool showVolumeObjects = false;
-    public GameObject volumeCube;
-    public Camera volumeFrontCam;
-    public Camera volumeBackCam;
-    public float SEGIShadowBias = 0.2525f;
-    public float SEGIShadowScale = 1;
-    public RenderTexture FrontRT;
-    public RenderTexture BackRT;
-
-    [Range(0.001f, 0.5f)]
-    public float noiseDistribution = 0.35f;
-
-    Texture2D[] blueNoise;
-
-    public int sunShadowResolution = 128;
-    int prevSunShadowResolution;
-
-    Shader sunDepthShader;
-    Shader sunVolumeRayCastShader;
-    Shader frontRayCastShader;
-    Shader backRayCastShader;
-    float shadowSpaceDepthRatio = 10.0f;
-
-    int frameCounter = 0;
-
-    public RenderTexture m_ShadowmapCopy;
-
-    RenderTexture[] sunDepthTexture;
-    public int sunDepthTextureDepth = 32;
-    RenderTexture previousGIResult;
-    RenderTexture previousDepth;
-
-    ///<summary>This is a volume texture that is immediately written to in the voxelization shader. The RInt format enables atomic writes to avoid issues where multiple fragments are trying to write to the same voxel in the volume.</summary>
-   // RenderTexture integerVolume;
-    public RenderTexture integerVolumeArray;
-
-    ///<summary>A 2D texture with the size of [voxel resolution, voxel resolution] that must be used as the active render texture when rendering the scene for voxelization. This texture scales depending on whether Voxel AA is enabled to ensure correct voxelization.</summary>
-    RenderTexture dummyVoxelTextureAAScaled;
-
-    ///<summary>A 2D texture with the size of [voxel resolution, voxel resolution] that must be used as the active render texture when rendering the scene for voxelization. This texture is always the same size whether Voxel AA is enabled or not.</summary>
-    RenderTexture dummyVoxelTextureFixed;
-
-    ///<summary>The main GI data clipmaps that hold GI data referenced during GI tracing</summary>
-    public Clipmap[] clipmaps;
-
-    ///<summary>The secondary clipmaps that hold irradiance data for infinite bounces</summary>
-    Clipmap[] irradianceClipmaps;
-
-    bool notReadyToRender = false;
-
-    Shader voxelizationShader;
-    Shader voxelizationShaderNoShadows;
-    Shader voxelTracingShader;
-    Shader m_CopyShadowParamsShader;
-
-    //ComputeShader clearCompute;
-    public ComputeShader transferIntsCompute;
-    ComputeShader mipFilterCompute;
-
-    const int numClipmaps = 6;
-    int clipmapCounter = 0;
-    public int currentClipmapIndex = 0;
-
-    public Camera voxelCamera;
-    GameObject voxelCameraGO;
-    GameObject leftViewPoint;
-    GameObject topViewPoint;
-
-    float voxelScaleFactor
-    {
-        get
-        {
-            return (float)voxelResolution / 256.0f;
-        }
-    }
-
-    Quaternion rotationFront = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
-    Quaternion rotationLeft = new Quaternion(0.0f, 0.7f, 0.0f, 0.7f);
-    Quaternion rotationTop = new Quaternion(0.7f, 0.0f, 0.0f, 0.7f);
-
-    int giRenderRes
-    {
-        get
-        {
-            return GIResolution;
-        }
-    }
-
-    enum RenderState
-    {
-        Voxelize,
-        Bounce
-    }
-
-    RenderState renderState = RenderState.Voxelize;
-
-    ComputeBuffer m_ShadowParamsCB;
-    public Vector4 minPosVoxel;
-
-    Matrix4x4[] voxelToGIProjection;
-    Matrix4x4[] voxelProjectionInverse;
-    public Vector4 vecGridSize;
-
-    /// <summary>
-    /// Did we already calculate and only need to display the results?
-    /// </summary>
-    internal static SEGICascaded calculationSEGIObject = null;
-
-    int updateGIcounter = 0;
-    public int updateGIevery = 1;
-
-    #endregion // InternalVariables
+	public bool doReflections = true;
+	[Range(12, 128)]
+	public int reflectionSteps = 64;
+	[Range(0.001f, 4.0f)]
+	public float reflectionOcclusionPower = 1.0f;
+	[Range(0.0f, 1.0f)]
+	public float skyReflectionIntensity = 1.0f;
 
 
-    #region SupportingObjectsAndProperties
+
+	[Range(0.1f, 4.0f)]
+	public float farOcclusionStrength = 1.0f;
+	[Range(0.1f, 4.0f)]
+	public float farthestOcclusionStrength = 1.0f;
+
+	[Range(3, 16)]
+	public int secondaryCones = 6;
+	[Range(0.1f, 4.0f)]
+	public float secondaryOcclusionStrength = 1.0f;
+
+	public bool sphericalSkylight = false;
+
+
     struct Pass
     {
         public static int DiffuseTrace = 0;
@@ -274,180 +159,182 @@ public class SEGICascaded : MonoBehaviour
     public int SEGIRenderHeight;
 
 
-    public struct SystemSupported
-    {
-        public bool hdrTextures;
-        public bool rIntTextures;
-        public bool dx11;
-        public bool volumeTextures;
-        public bool postShader;
-        public bool sunDepthShader;
-        public bool voxelizationShader;
-        public bool tracingShader;
+	public struct SystemSupported
+	{
+		public bool hdrTextures;
+		public bool rIntTextures;
+		public bool dx11;
+		public bool volumeTextures;
+		public bool postShader;
+		public bool sunDepthShader;
+		public bool voxelizationShader;
+		public bool tracingShader;
 
-        public bool fullFunctionality
-        {
-            get
-            {
-                return hdrTextures && rIntTextures && dx11 && volumeTextures && postShader && sunDepthShader && voxelizationShader && tracingShader;
-            }
-        }
-    }
+		public bool fullFunctionality
+		{
+			get
+			{
+				return hdrTextures && rIntTextures && dx11 && volumeTextures && postShader && sunDepthShader && voxelizationShader && tracingShader;
+			}
+		}
+	}
 
-    /// <summary>
-    /// Contains info on system compatibility of required hardware functionality
-    /// </summary>
-    public SystemSupported systemSupported;
+	/// <summary>
+	/// Contains info on system compatibility of required hardware functionality
+	/// </summary>
+	public SystemSupported systemSupported;
 
-    /// <summary>
-    /// Estimates the VRAM usage of all the render textures used to render GI.
-    /// </summary>
-    public float vramUsage  //TODO: Update vram usage calculation
-    {
-        get
-        {
-            if (!enabled)
-            {
-                return 0.0f;
-            }
-            long v = 0;
+	/// <summary>
+	/// Estimates the VRAM usage of all the render textures used to render GI.
+	/// </summary>
+	public float vramUsage
+	{
+		get
+		{
+			long v = 0;
 
-            if (sunDepthTexture != null)
-                for (int i = 0; i < sunDepthTexture.Length; i++)
-                {
-                    if (sunDepthTexture[i] != null)
-                        v += sunDepthTexture[i].width * sunDepthTexture[i].height * sunDepthTextureDepth;
-                }
+			if (sunDepthTexture != null)
+				v += sunDepthTexture.width * sunDepthTexture.height * 16;
 
-            if (previousGIResult != null)
-                v += previousGIResult.width * previousGIResult.height * 16 * 4;
+			if (previousResult != null)
+				v += previousResult.width * previousResult.height * 16 * 4;
 
-            if (previousDepth != null)
-                v += previousDepth.width * previousDepth.height * 32;
+			if (previousDepth != null)
+				v += previousDepth.width * previousDepth.height * 32;
 
-            if (integerVolumeArray != null)
-                v += integerVolumeArray.width * integerVolumeArray.height * 32 * integerVolumeArray.volumeDepth;// integerVolume.volumeDepth * 32;
+			if (intTex1 != null)
+				v += intTex1.width * intTex1.height * intTex1.volumeDepth * 32;
 
-            if (dummyVoxelTextureAAScaled != null)
-                v += dummyVoxelTextureAAScaled.width * dummyVoxelTextureAAScaled.height * 8;
+			if (volumeTextures != null)
+			{
+				for (int i = 0; i < volumeTextures.Length; i++)
+				{
+					if (volumeTextures[i] != null)
+						v += volumeTextures[i].width * volumeTextures[i].height * volumeTextures[i].volumeDepth * 16 * 4;
+				}
+			}
 
-            if (dummyVoxelTextureFixed != null)
-                v += dummyVoxelTextureFixed.width * dummyVoxelTextureFixed.height * 8;
+			if (volumeTexture1 != null)
+				v += volumeTexture1.width * volumeTexture1.height * volumeTexture1.volumeDepth * 16 * 4;
 
-            if (clipmaps != null)
-            {
-                for (int i = 0; i < numClipmaps; i++)
-                {
-                    if (clipmaps[i] != null)
-                    {
-                        v += clipmaps[i].volumeTexture0.width * clipmaps[i].volumeTexture0.height * clipmaps[i].volumeTexture0.volumeDepth * 16 * 4;
-                    }
-                }
-            }
+			if (volumeTextureB != null)
+				v += volumeTextureB.width * volumeTextureB.height * volumeTextureB.volumeDepth * 16 * 4;
 
-            if (irradianceClipmaps != null)
-            {
-                for (int i = 0; i < numClipmaps; i++)
-                {
-                    if (irradianceClipmaps[i] != null)
-                    {
-                        v += irradianceClipmaps[i].volumeTexture0.width * irradianceClipmaps[i].volumeTexture0.height * irradianceClipmaps[i].volumeTexture0.volumeDepth * 16 * 4;
-                    }
-                }
-            }
+			if (dummyVoxelTexture != null)
+				v += dummyVoxelTexture.width * dummyVoxelTexture.height * 8;
 
-            float vram = (v / 8388608.0f);
+			if (dummyVoxelTexture2 != null)
+				v += dummyVoxelTexture2.width * dummyVoxelTexture2.height * 8;
 
-            return vram;
-        }
-    }
+			float vram = (v / 8388608.0f);
+
+			return vram;
+		}
+	}
 
     public FilterMode filterMode = FilterMode.Point;
     public RenderTextureFormat renderTextureFormat = RenderTextureFormat.ARGBHalf;
 
-    public class Clipmap
-    {
-        public Vector3 origin;
-        public Vector3 originDelta;
-        public Vector3 previousOrigin;
-        public float localScale;
 
-        public int resolution;
 
-        public RenderTexture volumeTexture0;
+	public bool gaussianMipFilter = false;
 
-        public FilterMode filterMode = FilterMode.Point;
-        public RenderTextureFormat renderTextureFormat = RenderTextureFormat.ARGBHalf;
+	int mipFilterKernel
+	{
+		get
+		{
+			return gaussianMipFilter ? 1 : 0;
+		}
+	}
 
-        public void UpdateTextures()
-        {
-            if (volumeTexture0)
-            {
-                //volumeTexture0.DiscardContents();
-                volumeTexture0.Release();
-                //DestroyImmediate(volumeTexture0);
-            }
-            volumeTexture0 = new RenderTexture(resolution, resolution, 0, renderTextureFormat, RenderTextureReadWrite.Linear);
-            if (UnityEngine.XR.XRSettings.enabled) volumeTexture0.vrUsage = VRTextureUsage.TwoEyes;
-            volumeTexture0.wrapMode = TextureWrapMode.Clamp;
-#if UNITY_5_4_OR_NEWER
-            volumeTexture0.dimension = TextureDimension.Tex3D;
-#else
-			volumeTexture0.isVolume = true;
-#endif
-            volumeTexture0.volumeDepth = resolution;
-            volumeTexture0.filterMode = filterMode;
-#if UNITY_5_4_OR_NEWER
-            volumeTexture0.autoGenerateMips = true;
-#else
-			volumeTexture0.generateMips = false;
-#endif
-            volumeTexture0.enableRandomWrite = true;
-            volumeTexture0.useMipMap = true;
-            volumeTexture0.Create();
-            volumeTexture0.hideFlags = HideFlags.HideAndDontSave;
-        }
-
-        public void CleanupTextures()
-        {
-            if (volumeTexture0)
-            {
-                //volumeTexture0.DiscardContents();
-                volumeTexture0.Release();
-                //DestroyImmediate(volumeTexture0);//TODO needed? unity should handle this
-            }
-        }
-    }
-
-    public bool gaussianMipFilter
-    {
-        get
-        {
-            return false;
-        }
-        set
-        {
-            value = false;
-        }
-    }
-
-    int mipFilterKernel
-    {
-        get
-        {
-            return gaussianMipFilter ? 1 : 0;
-        }
-    }
-
-    public bool voxelAA = false;
+	public bool voxelAA = false;
 
     int dummyVoxelResolution
     {
         get
         {
-            return (int)voxelResolution * (voxelAA ? 4 : 1);
+            return (int)voxelResolution * (voxelAA ? 2 : 1);
         }
     }
+
+    int sunShadowResolution = 256;
+	int prevSunShadowResolution;
+
+
+
+
+
+	Shader sunDepthShader;
+
+	float shadowSpaceDepthRatio = 10.0f;
+
+	int frameSwitch = 0;
+
+	RenderTexture sunDepthTexture;
+	RenderTexture previousResult;
+	RenderTexture previousDepth;
+	RenderTexture intTex1;
+	RenderTexture[] volumeTextures;
+	RenderTexture volumeTexture1;
+	RenderTexture volumeTextureB;
+
+	RenderTexture activeVolume;
+	RenderTexture previousActiveVolume;
+
+	RenderTexture dummyVoxelTexture;
+	RenderTexture dummyVoxelTexture2;
+
+	bool notReadyToRender = false;
+
+	Shader voxelizationShader;
+	Shader voxelTracingShader;
+
+	ComputeShader clearCompute;
+	ComputeShader transferInts;
+	ComputeShader mipFilter;
+
+	const int numMipLevels = 6;
+
+	Camera voxelCamera;
+	GameObject voxelCameraGO;
+	GameObject leftViewPoint;
+	GameObject topViewPoint;
+
+	float voxelScaleFactor
+	{
+		get
+		{
+			return (float)voxelResolution / 256.0f;
+		}
+	}
+
+	Vector3 voxelSpaceOrigin;
+	Vector3 previousVoxelSpaceOrigin;
+	Vector3 voxelSpaceOriginDelta;
+
+
+	Quaternion rotationFront = new Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+	Quaternion rotationLeft = new Quaternion(0.0f, 0.7f, 0.0f, 0.7f);
+	Quaternion rotationTop = new Quaternion(0.7f, 0.0f, 0.0f, 0.7f);
+
+	int voxelFlipFlop = 0;
+
+
+    int giRenderRes
+    {
+        get
+        {
+            return GIResolution;
+        }
+    }
+
+    enum RenderState
+	{
+		Voxelize,
+		Bounce
+	}
+
+	RenderState renderState = RenderState.Voxelize;
 
     //CommandBuffer refactor
     public CommandBuffer SEGIBuffer;
@@ -470,320 +357,162 @@ public class SEGICascaded : MonoBehaviour
     public LayerMask reflectionProbeLayerMask = 2147483647;
 
 
-    // SRP Investigation
 
-    #endregion // SupportingObjectsAndProperties
+    public void LoadAndApplyPreset(string path)
+	{
+		SEGICascadedPreset preset = Resources.Load<SEGICascadedPreset>(path);
 
+		ApplyPreset(preset);
+	}
 
-
-    public void ApplyPreset(SEGICascadedPreset preset)
-    {
+	public void ApplyPreset(SEGICascadedPreset preset)
+	{
         voxelResolution = preset.voxelResolution;
         voxelAA = preset.voxelAA;
-        innerOcclusionLayers = preset.innerOcclusionLayers;
-        infiniteBounces = preset.infiniteBounces;
+		innerOcclusionLayers = preset.innerOcclusionLayers;
+		infiniteBounces = preset.infiniteBounces;
 
-        temporalBlendWeight = preset.temporalBlendWeight;
-        useBilateralFiltering = preset.useBilateralFiltering;
+		temporalBlendWeight = preset.temporalBlendWeight;
+		useBilateralFiltering = preset.useBilateralFiltering;
         GIResolution = preset.GIResolution;
         stochasticSampling = preset.stochasticSampling;
+        doReflections = true;// preset.doReflections;
 
-        noiseDistribution = preset.noiseDistribution;
-        cones = preset.cones;
-        coneTraceSteps = preset.coneTraceSteps;
-        coneLength = preset.coneLength;
-        coneWidth = preset.coneWidth;
-        coneTraceBias = preset.coneTraceBias;
-        occlusionStrength = preset.occlusionStrength;
-        nearOcclusionStrength = preset.nearOcclusionStrength;
-        occlusionPower = preset.occlusionPower;
-        nearLightGain = preset.nearLightGain;
-        giGain = preset.giGain;
-        secondaryBounceGain = preset.secondaryBounceGain;
+		cones = preset.cones;
+		coneTraceSteps = preset.coneTraceSteps;
+		coneLength = preset.coneLength;
+		coneWidth = preset.coneWidth;
+		coneTraceBias = preset.coneTraceBias;
+		occlusionStrength = preset.occlusionStrength;
+		nearOcclusionStrength = preset.nearOcclusionStrength;
+		occlusionPower = preset.occlusionPower;
+		nearLightGain = preset.nearLightGain;
+		giGain = preset.giGain;
+		secondaryBounceGain = preset.secondaryBounceGain;
 
-        reflectionSteps = preset.reflectionSteps;
-        reflectionOcclusionPower = preset.reflectionOcclusionPower;
-        skyReflectionIntensity = preset.skyReflectionIntensity;
-        gaussianMipFilter = preset.gaussianMipFilter;
+		reflectionSteps = preset.reflectionSteps;
+		reflectionOcclusionPower = preset.reflectionOcclusionPower;
+		skyReflectionIntensity = preset.skyReflectionIntensity;
+		gaussianMipFilter = preset.gaussianMipFilter;
 
-        farOcclusionStrength = preset.farOcclusionStrength;
-        farthestOcclusionStrength = preset.farthestOcclusionStrength;
-        secondaryCones = preset.secondaryCones;
-        secondaryOcclusionStrength = preset.secondaryOcclusionStrength;
+		farOcclusionStrength = preset.farOcclusionStrength;
+		farthestOcclusionStrength = preset.farthestOcclusionStrength;
+		secondaryCones = preset.secondaryCones;
+		secondaryOcclusionStrength = preset.secondaryOcclusionStrength;
+	}
 
-        useReflectionProbes = preset.useReflectionProbes;
-        reflectionProbeIntensity = preset.reflectionProbeIntensity;
-        reflectionProbeAttribution = preset.reflectionProbeIntensity;
+	void Start()
+	{
+		InitCheck();
+	}
 
-        useFXAA = preset.useFXAA;
-    }
-
-    public virtual void Start()
-    {
-        InitCheck();
-        InitShadowmapCopy();
-
-    }
-
-    void InitCheck()
-    {
-        if (initChecker == null)
-        {
-            Init();
-        }
-    }
-
-    public virtual void InitShadowmapCopy()
-    {
-        CheckShadowKeyword("SEGI_UNITY_SHADOWMAP_", useUnityShadowMap ? "ON" : "OFF");
-        if (useUnityShadowMap)
-        {
-            //if (ngss.m_ShadowmapCopy != null)
-            //{
-            //    Debug.Log("SEGI using external m_ShadowmapCopy");
-            //    m_ShadowmapCopy = ngss.m_ShadowmapCopy;
-            //}
-            //Debug.Log("m_ShadowmapCopy " + m_ShadowmapCopy);
-            if (m_ShadowmapCopy == null)
-            {
-                RenderTargetIdentifier shadowmap = BuiltinRenderTextureType.CurrentActive;
-                m_ShadowmapCopy = new RenderTexture(shadowmapCopySize, shadowmapCopySize, 0);//TODO
-                if (UnityEngine.XR.XRSettings.enabled) m_ShadowmapCopy.vrUsage = VRTextureUsage.TwoEyes;
-                CommandBuffer cb = new CommandBuffer();
-
-                // Change shadow sampling mode for sun's shadowmap.
-                cb.SetShadowSamplingMode(shadowmap, ShadowSamplingMode.RawDepth);
-
-                // The shadowmap values can now be sampled normally - copy it to a different render texture.
-                cb.Blit(shadowmap, new RenderTargetIdentifier(m_ShadowmapCopy));
-
-                // Execute after the shadowmap has been filled.
-                sun.AddCommandBuffer(LightEvent.AfterShadowMap, cb);
-
-                // Sampling mode is restored automatically after this command buffer completes, so shadows will render normally.
-            }
-        }
-    }
+	void InitCheck()
+	{
+		if (initChecker == null)
+		{
+			Init();
+		}
+	}
 
     void CreateVolumeTextures()
     {
-        var size2D = FindTextureSize((int)voxelResolution);
-        int chucks2D = Mathf.CeilToInt(size2D[0] / (float)voxelResolution);
-        vecGridSize = new Vector4((int)voxelResolution, (int)voxelResolution, (int)voxelResolution, chucks2D);
+        volumeTextures = new RenderTexture[numMipLevels];
 
-        if (integerVolumeArray)
+        for (int i = 0; i < numMipLevels; i++)
         {
-            //integerVolume.DiscardContents();
-            integerVolumeArray.Release();
-            //DestroyImmediate(integerVolume);
+            if (volumeTextures[i])
+            {
+                volumeTextures[i].DiscardContents();
+                volumeTextures[i].Release();
+                DestroyImmediate(volumeTextures[i]);
+            }
+            int resolution = (int)voxelResolution / Mathf.RoundToInt(Mathf.Pow((float)2, (float)i));
+            volumeTextures[i] = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            volumeTextures[i].isVolume = true;
+            volumeTextures[i].volumeDepth = resolution;
+            volumeTextures[i].enableRandomWrite = true;
+            volumeTextures[i].filterMode = FilterMode.Bilinear;
+            volumeTextures[i].generateMips = false;
+            volumeTextures[i].useMipMap = false;
+            volumeTextures[i].Create();
+            volumeTextures[i].hideFlags = HideFlags.HideAndDontSave;
         }
 
-        integerVolumeArray = new RenderTexture((int)size2D[0], (int)size2D[1], 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
-        if (UnityEngine.XR.XRSettings.enabled) integerVolumeArray.vrUsage = VRTextureUsage.TwoEyes;
-        integerVolumeArray.dimension = TextureDimension.Tex2DArray;
-        integerVolumeArray.enableRandomWrite = true;
-        integerVolumeArray.volumeDepth = useVolumeRayCast ? 6 : 1;
-        integerVolumeArray.useMipMap = true;
-        integerVolumeArray.autoGenerateMips = true;
-        integerVolumeArray.filterMode = FilterMode.Point;
-        integerVolumeArray.hideFlags = HideFlags.HideAndDontSave;
-        integerVolumeArray.Create();
+        if (volumeTextureB)
+        {
+            volumeTextureB.DiscardContents();
+            volumeTextureB.Release();
+            DestroyImmediate(volumeTextureB);
+        }
+        volumeTextureB = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        volumeTextureB.isVolume = true;
+        volumeTextureB.volumeDepth = (int)voxelResolution;
+        volumeTextureB.enableRandomWrite = true;
+        volumeTextureB.filterMode = FilterMode.Bilinear;
+        volumeTextureB.generateMips = false;
+        volumeTextureB.useMipMap = false;
+        volumeTextureB.Create();
+        volumeTextureB.hideFlags = HideFlags.HideAndDontSave;
+
+        if (volumeTexture1)
+        {
+            volumeTexture1.DiscardContents();
+            volumeTexture1.Release();
+            DestroyImmediate(volumeTexture1);
+        }
+        volumeTexture1 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        volumeTexture1.isVolume = true;
+        volumeTexture1.volumeDepth = (int)voxelResolution;
+        volumeTexture1.enableRandomWrite = true;
+        volumeTexture1.filterMode = FilterMode.Point;
+        volumeTexture1.generateMips = false;
+        volumeTexture1.useMipMap = false;
+        volumeTexture1.antiAliasing = 1;
+        volumeTexture1.Create();
+        volumeTexture1.hideFlags = HideFlags.HideAndDontSave;
+
+
+
+        if (intTex1)
+        {
+            intTex1.DiscardContents();
+            intTex1.Release();
+            DestroyImmediate(intTex1);
+        }
+        intTex1 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        intTex1.isVolume = true;
+        intTex1.volumeDepth = (int)voxelResolution;
+        intTex1.enableRandomWrite = true;
+        intTex1.filterMode = FilterMode.Point;
+        intTex1.Create();
+        intTex1.hideFlags = HideFlags.HideAndDontSave;
 
         ResizeDummyTexture();
-    }
 
-    void BuildClipmaps()
-    {
-        if (clipmaps != null)
-        {
-            for (int i = 0; i < numClipmaps; i++)
-            {
-                if (clipmaps[i] != null)
-                {
-                    clipmaps[i].CleanupTextures();
-                }
-            }
-        }
-
-        clipmaps = new Clipmap[numClipmaps];
-
-        for (int i = 0; i < numClipmaps; i++)
-        {
-            clipmaps[i] = new Clipmap();
-            clipmaps[i].localScale = Mathf.Pow(2.0f, (float)i);
-            clipmaps[i].resolution = (int)voxelResolution;
-            clipmaps[i].filterMode = FilterMode.Point;
-            clipmaps[i].renderTextureFormat = RenderTextureFormat.ARGBHalf;
-            clipmaps[i].UpdateTextures();
-        }
-
-        if (irradianceClipmaps != null)
-        {
-            for (int i = 0; i < numClipmaps; i++)
-            {
-                if (irradianceClipmaps[i] != null)
-                {
-                    irradianceClipmaps[i].CleanupTextures();
-                }
-            }
-        }
-
-        irradianceClipmaps = new Clipmap[numClipmaps];
-
-        for (int i = 0; i < numClipmaps; i++)
-        {
-            irradianceClipmaps[i] = new Clipmap();
-            irradianceClipmaps[i].localScale = Mathf.Pow(2.0f, i);
-            irradianceClipmaps[i].resolution = (int)voxelResolution;
-            irradianceClipmaps[i].filterMode = FilterMode.Point;
-            irradianceClipmaps[i].renderTextureFormat = RenderTextureFormat.ARGBHalf;
-            irradianceClipmaps[i].UpdateTextures();
-        }
     }
 
     void ResizeDummyTexture()
-    {
-        if (dummyVoxelTextureAAScaled)
-        {
-            //dummyVoxelTextureAAScaled.DiscardContents();
-            dummyVoxelTextureAAScaled.Release();
-            //DestroyImmediate(dummyVoxelTextureAAScaled);
-        }
-        dummyVoxelTextureAAScaled = new RenderTexture(dummyVoxelResolution, dummyVoxelResolution, 0, RenderTextureFormat.ARGBHalf);
-        //if (UnityEngine.XR.XRSettings.enabled) dummyVoxelTextureAAScaled.vrUsage = VRTextureUsage.TwoEyes;
-        dummyVoxelTextureAAScaled.Create();
-        dummyVoxelTextureAAScaled.hideFlags = HideFlags.HideAndDontSave;
+	{
+		if (dummyVoxelTexture)
+		{
+			dummyVoxelTexture.DiscardContents();
+			dummyVoxelTexture.Release();
+			DestroyImmediate(dummyVoxelTexture);
+		}
+		dummyVoxelTexture = new RenderTexture(dummyVoxelResolution, dummyVoxelResolution, 0, RenderTextureFormat.R8);
+		dummyVoxelTexture.Create();
+		dummyVoxelTexture.hideFlags = HideFlags.HideAndDontSave;
 
-        if (dummyVoxelTextureFixed)
-        {
-            //dummyVoxelTextureFixed.DiscardContents();
-            dummyVoxelTextureFixed.Release();
-            //DestroyImmediate(dummyVoxelTextureFixed);
-        }
-        dummyVoxelTextureFixed = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf);
-        //if (UnityEngine.XR.XRSettings.enabled) dummyVoxelTextureFixed.vrUsage = VRTextureUsage.TwoEyes;
-        dummyVoxelTextureFixed.Create();
-        dummyVoxelTextureFixed.hideFlags = HideFlags.HideAndDontSave;
-    }
-
-    void GetBlueNoiseTextures()
-    {
-        blueNoise = null;
-        blueNoise = new Texture2D[64];
-        for (int i = 0; i < 64; i++)
-        {
-            string filename = "LDR_RGBA_" + i.ToString();
-            Texture2D blueNoiseTexture = Resources.Load("Noise Textures/" + filename) as Texture2D;
-
-            if (blueNoiseTexture == null)
-            {
-                Debug.LogWarning("Unable to find noise texture \"Assets/SEGI/Resources/Noise Textures/" + filename + "\" for SEGI!");
-            }
-
-            blueNoise[i] = blueNoiseTexture;
-        }
-    }
-
-    void SetupSunDepthTexture()
-    {
-        int length = useVolumeRayCast ? numClipmaps : 1;
-        //Debug.Log("sunDepthTexture " + sunDepthTexture);
-
-        if (sunDepthTexture == null)// || sunDepthTexture[0] == null || length != sunDepthTexture.Length)
-        {
-            sunDepthTexture = new RenderTexture[length];
-            ResizeSunShadowBuffer();
-            //Debug.Log("sunDepthTexture " + sunDepthTexture + " "+ sunDepthTexture.Length);
-        }
-    }
-
-    void SetupVolumeRayCasting()
-    {
-        useVolumeRayCastPrev = useVolumeRayCast;
-
-        SetupSunDepthTexture();
-        CreateVolumeTextures();
-
-        if (useVolumeRayCast)
-        {
-            voxelToGIProjection = new Matrix4x4[numClipmaps];
-            voxelProjectionInverse = new Matrix4x4[numClipmaps];
-            for (int i = 0; i < numClipmaps; i++)
-            {
-                voxelToGIProjection[i] = Matrix4x4.identity;
-                voxelProjectionInverse[i] = Matrix4x4.identity;
-            }
-
-            volumeCube = GameObject.Find("SEGICubeVolume");
-            if (!volumeCube)
-            {
-                volumeCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                volumeCube.name = "SEGICubeVolume";
-                DestroyImmediate(volumeCube.GetComponent<Collider>());
-            }
-            volumeCube.layer = 19;//TODO use front layer
-            volumeCube.GetComponent<Renderer>().sharedMaterial = (Material)Resources.Load("SEGIFrontRC", typeof(Material));
-            volumeCube.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
-            volumeCube.hideFlags = showVolumeObjects ? HideFlags.None : HideFlags.HideAndDontSave;
-
-            shadowVolumeMask = 1 << volumeCube.layer;
-
-            if (!FrontRT)
-            {
-                FrontRT = new RenderTexture(sunShadowResolution, sunShadowResolution, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-                if (UnityEngine.XR.XRSettings.enabled) FrontRT.vrUsage = VRTextureUsage.TwoEyes;
-                FrontRT.autoGenerateMips = false;
-                FrontRT.wrapMode = TextureWrapMode.Clamp;
-                FrontRT.filterMode = FilterMode.Point;
-                FrontRT.hideFlags = HideFlags.HideAndDontSave;
-            }
-            if (!BackRT)
-            {
-                BackRT = new RenderTexture(sunShadowResolution, sunShadowResolution, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-                if (UnityEngine.XR.XRSettings.enabled) BackRT.vrUsage = VRTextureUsage.TwoEyes;
-                BackRT.autoGenerateMips = false;
-                BackRT.wrapMode = TextureWrapMode.Clamp;
-                BackRT.filterMode = FilterMode.Point;
-                BackRT.hideFlags = HideFlags.HideAndDontSave;
-            }
-
-            FixRes(FrontRT);
-            FixRes(BackRT);
-
-            Shader.SetGlobalTexture("SEGIFrontS", FrontRT);
-            Shader.SetGlobalTexture("SEGIBackS", BackRT);
-
-            GameObject frontCam = GameObject.Find("VolumeFrontCam");
-            if (frontCam != null) volumeFrontCam = frontCam.GetComponent<Camera>();
-            if (UnityEngine.XR.XRSettings.enabled) volumeFrontCam.stereoTargetEye = StereoTargetEyeMask.Both;
-            if (!volumeFrontCam)
-            {
-                var goFrontCam = new GameObject("VolumeFrontCam");
-                goFrontCam.hideFlags = HideFlags.HideAndDontSave;
-                volumeFrontCam = goFrontCam.AddComponent<Camera>();
-            }
-            volumeFrontCam.CopyFrom(shadowCam);
-            volumeFrontCam.cullingMask = shadowVolumeMask;
-            volumeFrontCam.depth = -99;
-            volumeFrontCam.targetTexture = FrontRT;
-            volumeFrontCam.enabled = false;
-
-            GameObject backCam = GameObject.Find("VolumeBackCam");
-            if (backCam != null) volumeBackCam = backCam.GetComponent<Camera>();
-            if (UnityEngine.XR.XRSettings.enabled) volumeBackCam.stereoTargetEye = StereoTargetEyeMask.Both;
-            if (!volumeBackCam)
-            {
-                var goBackCam = new GameObject("VolumeBackCam");
-                goBackCam.hideFlags = HideFlags.HideAndDontSave;
-                volumeBackCam = goBackCam.AddComponent<Camera>();
-            }
-            volumeBackCam.CopyFrom(shadowCam);
-            volumeBackCam.cullingMask = shadowVolumeMask;
-            volumeBackCam.depth = -99;
-            volumeBackCam.targetTexture = BackRT;
-            volumeBackCam.enabled = false;
-        }
-    }
+		if (dummyVoxelTexture2)
+		{
+			dummyVoxelTexture2.DiscardContents();
+			dummyVoxelTexture2.Release();
+			DestroyImmediate(dummyVoxelTexture2);
+		}
+		dummyVoxelTexture2 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.R8);
+		dummyVoxelTexture2.Create();
+		dummyVoxelTexture2.hideFlags = HideFlags.HideAndDontSave;
+	}
 
     void Init()
     {
@@ -803,28 +532,17 @@ public class SEGICascaded : MonoBehaviour
 
         //Setup shaders and materials
         sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
-        sunVolumeRayCastShader = Shader.Find("Custom/VolumeRayCasting");//TODO
-        frontRayCastShader = Shader.Find("Custom/FrontPos");
-        backRayCastShader = Shader.Find("Custom/BackPos");
-        //clearCompute = Resources.Load("SEGIClear_C") as ComputeShader;
-        transferIntsCompute = Resources.Load("SEGITransferInts_C") as ComputeShader;
-        mipFilterCompute = Resources.Load("SEGIMipFilter_C") as ComputeShader;
+        clearCompute = Resources.Load("SEGIClear_C") as ComputeShader;
+        transferInts = Resources.Load("SEGITransferInts_C") as ComputeShader;
+        mipFilter = Resources.Load("SEGIMipFilter_C") as ComputeShader;
         voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
-        voxelizationShaderNoShadows = Shader.Find("Hidden/SEGIVoxelizeSceneNoShadows_C");
         voxelTracingShader = Shader.Find("Hidden/SEGITraceScene_C");
-        m_CopyShadowParamsShader = Shader.Find("Hidden/SEGICopyShadowParams");
 
         if (!material)
         {
             material = new Material(Shader.Find("Hidden/SEGI_C"));
             material.enableInstancing = true;
             material.hideFlags = HideFlags.HideAndDontSave;
-        }
-        if (!m_CopyShadowParamsMaterial)
-        {
-            m_CopyShadowParamsMaterial = new Material(m_CopyShadowParamsShader);
-            m_CopyShadowParamsMaterial.enableInstancing = true;
-            m_CopyShadowParamsMaterial.hideFlags = HideFlags.HideAndDontSave;
         }
 
         //Get the camera attached to this game object
@@ -835,7 +553,7 @@ public class SEGICascaded : MonoBehaviour
         attachedCamera.depthTextureMode |= DepthTextureMode.MotionVectors;
 #endif
 
-        //Find the proxy shadow rendering camera if it exists
+        //Find the proxy reflection render probe if it exists
         GameObject rfgo = GameObject.Find("SEGI_REFLECTIONPROBE");
 
         //If not, create it
@@ -860,61 +578,68 @@ public class SEGICascaded : MonoBehaviour
             reflectionProbe.importance = 0;
             reflectionProbe.enabled = true;
             reflectionProbe.hdr = false;
-
-            //reflectionProbe. = ReflectionProbeUsage.BlendProbes
-
-            reflectionProbe.transform.localPosition = new Vector3(0, 0, 0);
-        }
-        else
-        {
-            reflectionProbeGameObject = rfgo;
-            reflectionProbe = rfgo.GetComponent<ReflectionProbe>();
         }
 
-        //Find the proxy shadow rendering camera if it exists
-        GameObject scgo = GameObject.Find("SEGI_SHADOWCAM");
+            //Find the proxy shadow rendering camera if it exists
+            GameObject scgo = GameObject.Find("SEGI_SHADOWCAM");
 
-        //If not, create it
-        if (!scgo)
-        {
-            shadowCamGameObject = new GameObject("SEGI_SHADOWCAM");
-            shadowCam = shadowCamGameObject.AddComponent<Camera>();
-            if (UnityEngine.XR.XRSettings.enabled) shadowCam.stereoTargetEye = StereoTargetEyeMask.Both;
-            shadowCamGameObject.hideFlags = HideFlags.HideAndDontSave;
+            if (!scgo)
+            {
+                shadowCamGameObject = new GameObject("SEGI_SHADOWCAM");
+                shadowCam = shadowCamGameObject.AddComponent<Camera>();
+                shadowCamGameObject.hideFlags = HideFlags.HideAndDontSave;
 
 
-            shadowCam.enabled = false;
-            shadowCam.depth = attachedCamera.depth - 1;
-            shadowCam.orthographic = true;
-            shadowCam.orthographicSize = shadowSpaceSize;
-            shadowCam.clearFlags = CameraClearFlags.SolidColor;
-            shadowCam.backgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
-            shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
-            shadowCam.cullingMask = giCullingMask;
-            shadowCam.useOcclusionCulling = false;
-            shadowCam.allowMSAA = false;
-            shadowCam.renderingPath = RenderingPath.Forward;
-            shadowCamTransform = shadowCamGameObject.transform;
-        }
-        else    //Otherwise, it already exists, just get it
-        {
-            shadowCamGameObject = scgo;
-            shadowCam = scgo.GetComponent<Camera>();
-            shadowCamTransform = shadowCamGameObject.transform;
-        }
+                shadowCam.enabled = false;
+                shadowCam.depth = attachedCamera.depth - 1;
+                shadowCam.orthographic = true;
+                shadowCam.orthographicSize = shadowSpaceSize;
+                shadowCam.clearFlags = CameraClearFlags.SolidColor;
+                shadowCam.backgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
+                shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
+                shadowCam.cullingMask = giCullingMask;
+                shadowCam.useOcclusionCulling = false;
 
-        SetupVolumeRayCasting();
+                shadowCamTransform = shadowCamGameObject.transform;
+            }
+            else
+            {
+                shadowCamGameObject = scgo;
+                shadowCam = scgo.GetComponent<Camera>();
+                shadowCamTransform = shadowCamGameObject.transform;
+            }
 
-        //Create the proxy camera objects responsible for rendering the scene to voxelize the scene. If they already exist, destroy them
-        GameObject vcgo = GameObject.Find("SEGI_VOXEL_CAMERA");
+            if (sunDepthTexture)
+            {
+                sunDepthTexture.DiscardContents();
+                sunDepthTexture.Release();
+                DestroyImmediate(sunDepthTexture);
+            }
+            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+            sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
+            sunDepthTexture.filterMode = FilterMode.Point;
+            sunDepthTexture.Create();
+            sunDepthTexture.hideFlags = HideFlags.HideAndDontSave;
 
-        if (!vcgo)
-        {
+
+
+
+
+            voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
+            voxelTracingShader = Shader.Find("Hidden/SEGITraceScene_C");
+
+            CreateVolumeTextures();
+
+
+
+            GameObject vcgo = GameObject.Find("SEGI_VOXEL_CAMERA");
+            if (vcgo)
+                DestroyImmediate(vcgo);
+
             voxelCameraGO = new GameObject("SEGI_VOXEL_CAMERA");
             voxelCameraGO.hideFlags = HideFlags.HideAndDontSave;
-            //if (UnityEngine.XR.XRSettings.enabled) voxelCamera.stereoTargetEye = StereoTargetEyeMask.Both;
+
             voxelCamera = voxelCameraGO.AddComponent<Camera>();
-            
             voxelCamera.enabled = false;
             voxelCamera.orthographic = true;
             voxelCamera.orthographicSize = voxelSpaceSize * 0.5f;
@@ -925,190 +650,143 @@ public class SEGICascaded : MonoBehaviour
             voxelCamera.clearFlags = CameraClearFlags.Color;
             voxelCamera.backgroundColor = Color.black;
             voxelCamera.useOcclusionCulling = false;
-        }
-        else
-        {
-            voxelCameraGO = vcgo;
-            voxelCamera = vcgo.GetComponent<Camera>();
-        }
 
-        GameObject lvp = GameObject.Find("SEGI_LEFT_VOXEL_VIEW");
+            GameObject lvp = GameObject.Find("SEGI_LEFT_VOXEL_VIEW");
+            if (lvp)
+                DestroyImmediate(lvp);
 
-        if (!lvp)
-        {
             leftViewPoint = new GameObject("SEGI_LEFT_VOXEL_VIEW");
             leftViewPoint.hideFlags = HideFlags.HideAndDontSave;
-        }
-        else
-        {
-            leftViewPoint = lvp;
-        }
 
-        GameObject tvp = GameObject.Find("SEGI_TOP_VOXEL_VIEW");
+            GameObject tvp = GameObject.Find("SEGI_TOP_VOXEL_VIEW");
+            if (tvp)
+                DestroyImmediate(tvp);
 
-        if (!tvp)
-        {
             topViewPoint = new GameObject("SEGI_TOP_VOXEL_VIEW");
             topViewPoint.hideFlags = HideFlags.HideAndDontSave;
-        }
-        else
-        {
-            topViewPoint = tvp;
-        }
 
-        //Setup sun depth texture
-        SetupSunDepthTexture();
-        CreateVolumeTextures();
-        BuildClipmaps();
-        GetBlueNoiseTextures();
 
-        //CommandBuffer
-        if (SEGIBuffer == null)
-        {
-            SEGIBuffer = new CommandBuffer();
-            SEGIBuffer.name = "SEGI Render Loop";
-            
-        }
-        attachedCamera.AddCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
+            CreateVolumeTextures();
 
-        initChecker = new object();
-    }
-
-    void CheckSupport()
-    {
-        systemSupported.hdrTextures = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf);
-        systemSupported.rIntTextures = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RInt);
-        systemSupported.dx11 = SystemInfo.graphicsShaderLevel >= 50 && SystemInfo.supportsComputeShaders;
-        systemSupported.volumeTextures = SystemInfo.supports3DTextures;
-
-        systemSupported.postShader = material.shader.isSupported;
-        systemSupported.sunDepthShader = sunDepthShader.isSupported;
-        systemSupported.voxelizationShader = true;// voxelizationShader.isSupported;
-        systemSupported.tracingShader = voxelTracingShader.isSupported;
-
-        if (!systemSupported.fullFunctionality)
-        {
-            Debug.LogWarning("SEGI is not supported on the current platform. Check for shader compile errors in SEGI/Resources");
-            enabled = false;
-        }
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        if (!enabled)
-            return;
-        Color prevColor = Gizmos.color;
-        Gizmos.color = new Color(1.0f, 0.25f, 0.0f, 0.5f);
-        if (clipmaps != null && clipmaps[numClipmaps - 1] != null)
-        {
-            float scale = clipmaps[numClipmaps - 1].localScale;
-            Gizmos.DrawCube(clipmaps[0].origin, new Vector3(voxelSpaceSize * scale, voxelSpaceSize * scale, voxelSpaceSize * scale));
-        }
-        Gizmos.color = new Color(1.0f, 0.0f, 0.0f, 0.1f);
-
-        Gizmos.color = prevColor;
-    }
-
-    void CleanupTexture(ref RenderTexture texture)
-    {
-        if (texture)
-        {
-            //texture.DiscardContents();
-            texture.Release();
-            //DestroyImmediate(texture);//TODO needed?
-        }
-    }
-
-    void CleanupTextures()
-    {
-        for (int i = 0; i < sunDepthTexture.Length; i++)
-            CleanupTexture(ref sunDepthTexture[i]);
-        CleanupTexture(ref previousGIResult);
-        CleanupTexture(ref previousDepth);
-        //CleanupTexture(ref integerVolume);
-        CleanupTexture(ref integerVolumeArray);
-        CleanupTexture(ref dummyVoxelTextureAAScaled);
-        CleanupTexture(ref dummyVoxelTextureFixed);
-
-        if (clipmaps != null)
-        {
-            for (int i = 0; i < numClipmaps; i++)
+            //CommandBuffer
+            if (SEGIBuffer == null)
             {
-                if (clipmaps[i] != null)
-                {
-                    clipmaps[i].CleanupTextures();
-                }
-            }
-        }
+                SEGIBuffer = new CommandBuffer();
+                SEGIBuffer.name = "SEGI Render Loop";
 
-        if (irradianceClipmaps != null)
-        {
-            for (int i = 0; i < numClipmaps; i++)
-            {
-                if (irradianceClipmaps[i] != null)
-                {
-                    irradianceClipmaps[i].CleanupTextures();
-                }
             }
-        }
+            attachedCamera.AddCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
+
+            initChecker = new object();
+        
     }
+
+	void CheckSupport()
+	{
+		systemSupported.hdrTextures = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf);
+		systemSupported.rIntTextures = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RInt);
+		systemSupported.dx11 = SystemInfo.graphicsShaderLevel >= 50 && SystemInfo.supportsComputeShaders;
+		systemSupported.volumeTextures = SystemInfo.supports3DTextures;
+
+		systemSupported.postShader = material.shader.isSupported;
+		systemSupported.sunDepthShader = sunDepthShader.isSupported;
+		systemSupported.voxelizationShader = voxelizationShader.isSupported;
+		systemSupported.tracingShader = voxelTracingShader.isSupported;
+
+		if (!systemSupported.fullFunctionality)
+		{
+			Debug.LogWarning("SEGI is not supported on the current platform. Check for shader compile errors in SEGI/Resources");
+			enabled = false;
+		}
+	}
+
+	void OnDrawGizmosSelected()
+	{
+		Color prevColor = Gizmos.color;
+		Gizmos.color = new Color(1.0f, 0.25f, 0.0f, 0.5f);
+
+		Gizmos.DrawCube(voxelSpaceOrigin, new Vector3(voxelSpaceSize, voxelSpaceSize, voxelSpaceSize));
+
+		Gizmos.color = new Color(1.0f, 0.0f, 0.0f, 0.1f);
+
+		Gizmos.color = prevColor;
+	}
+
+	void CleanupTexture(ref RenderTexture texture)
+	{
+		DestroyImmediate(texture);
+	}
+
+	void CleanupTextures()
+	{
+		CleanupTexture(ref sunDepthTexture);
+		CleanupTexture(ref previousResult);
+		CleanupTexture(ref previousDepth);
+		CleanupTexture(ref intTex1);
+		for (int i = 0; i < volumeTextures.Length; i++)
+		{
+			CleanupTexture(ref volumeTextures[i]);
+		}
+		CleanupTexture(ref volumeTexture1);
+		CleanupTexture(ref volumeTextureB);
+		CleanupTexture(ref dummyVoxelTexture);
+		CleanupTexture(ref dummyVoxelTexture2);
+	}
 
     void Cleanup()
     {
-        if (m_ShadowParamsCB != null)
-            m_ShadowParamsCB.Release();
-        m_ShadowParamsCB = null;
-
         DestroyImmediate(material);
-        DestroyImmediate(m_CopyShadowParamsMaterial);
         DestroyImmediate(voxelCameraGO);
         DestroyImmediate(leftViewPoint);
         DestroyImmediate(topViewPoint);
         DestroyImmediate(shadowCamGameObject);
-        DestroyImmediate(volumeCube);
         DestroyImmediate(reflectionProbeGameObject);
         initChecker = null;
         CleanupTextures();
 
-        if (SEGIBuffer != null)
-        {
-            attachedCamera.RemoveCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
-        }
-    }
+  if (SEGIBuffer != null)
+  {
+      attachedCamera.RemoveCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
+  }
+}
 
-    void OnEnable()
-    {
-        InitCheck();
-        ResizeRenderTextures();
+	void OnEnable()
+	{
+		InitCheck();
+		ResizeRenderTextures();
 
-        CheckSupport();
-    }
+		CheckSupport();
+	}
 
-    void OnDisable()
-    {
-        Cleanup();
-    }
+	void OnDisable()
+	{
+		Cleanup();
+	}
 
     public void ResizeRenderTextures()
     {
-        if (previousGIResult) previousGIResult.Release();
+        if (previousResult) previousResult.Release();
 
-        int width = attachedCamera.pixelWidth == 0 ? 2 : attachedCamera.pixelWidth;
-        int height = attachedCamera.pixelHeight == 0 ? 2 : attachedCamera.pixelHeight;
+		int width = attachedCamera.pixelWidth == 0 ? 2 : attachedCamera.pixelWidth;
+		int height = attachedCamera.pixelHeight == 0 ? 2 : attachedCamera.pixelHeight;
 
-        previousGIResult = new RenderTexture(width, height, 0, RenderTextureFormat.ARGBHalf);
-        if (UnityEngine.XR.XRSettings.enabled) previousGIResult.vrUsage = VRTextureUsage.TwoEyes;
-        previousGIResult.wrapMode = TextureWrapMode.Clamp;
-        previousGIResult.filterMode = FilterMode.Point;
-        previousGIResult.Create();
-        previousGIResult.hideFlags = HideFlags.HideAndDontSave;
+		previousResult = new RenderTexture(width, height, 0, RenderTextureFormat.ARGBHalf);
+		previousResult.wrapMode = TextureWrapMode.Clamp;
+		previousResult.filterMode = FilterMode.Bilinear;
+		previousResult.useMipMap = true;
+		previousResult.generateMips = true;
+		previousResult.Create();
+		previousResult.hideFlags = HideFlags.HideAndDontSave;
 
-        if (previousDepth) previousDepth.Release();
-
+        if (previousDepth)
+        {
+            previousDepth.DiscardContents();
+            previousDepth.Release();
+            DestroyImmediate(previousDepth);
+        }
         previousDepth = new RenderTexture(width, height, 0, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
-        if (UnityEngine.XR.XRSettings.enabled) previousDepth.vrUsage = VRTextureUsage.TwoEyes;
         previousDepth.wrapMode = TextureWrapMode.Clamp;
-        previousDepth.filterMode = FilterMode.Point;
+        previousDepth.filterMode = FilterMode.Bilinear;
         previousDepth.Create();
         previousDepth.hideFlags = HideFlags.HideAndDontSave;
 
@@ -1131,39 +809,33 @@ public class SEGICascaded : MonoBehaviour
         SEGIBufferInit();
     }
 
-    void ResizeSunShadowBuffer()
-    {
+	void ResizeSunShadowBuffer()
+	{
 
-        //sunDepthTexture = new RenderTexture[numClipmaps];
-        for (int i = 0; i < sunDepthTexture.Length; i++)
-        {
-            if (sunDepthTexture[i])
-            {
-                //sunDepthTexture[i].DiscardContents();
-                sunDepthTexture[i].Release();
-                //DestroyImmediate(sunDepthTexture[i]);
-            }
-            sunDepthTexture[i] = new RenderTexture(sunShadowResolution, sunShadowResolution, sunDepthTextureDepth, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
-            if (UnityEngine.XR.XRSettings.enabled) sunDepthTexture[i].vrUsage = VRTextureUsage.TwoEyes;
-            sunDepthTexture[i].wrapMode = TextureWrapMode.Clamp;
-            sunDepthTexture[i].filterMode = FilterMode.Point;
-            sunDepthTexture[i].Create();
-            sunDepthTexture[i].hideFlags = HideFlags.HideAndDontSave;
-        }
-    }
+		if (sunDepthTexture)
+		{
+			sunDepthTexture.DiscardContents();
+			sunDepthTexture.Release();
+			DestroyImmediate(sunDepthTexture);
+		}
+		sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+		sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
+		sunDepthTexture.filterMode = FilterMode.Point;
+		sunDepthTexture.Create();
+		sunDepthTexture.hideFlags = HideFlags.HideAndDontSave;
+	}
 
     void Update()
     {
-        calculationSEGIObject = null;
         if (notReadyToRender)
             return;
 
-        if (previousGIResult == null)
+        if (previousResult == null)
         {
             ResizeRenderTextures();
         }
 
-        if (previousGIResult.width != attachedCamera.pixelWidth || previousGIResult.height != attachedCamera.pixelHeight)
+        if (previousResult.width != attachedCamera.pixelWidth || previousResult.height != attachedCamera.pixelHeight)
         {
             ResizeRenderTextures();
         }
@@ -1175,13 +847,12 @@ public class SEGICascaded : MonoBehaviour
 
         prevSunShadowResolution = (int)sunShadowResolution;
 
-        if (clipmaps[0].resolution != (int)voxelResolution)
+        if (volumeTextures[0].width != (int)voxelResolution)
         {
-            clipmaps[0].resolution = (int)voxelResolution;
-            clipmaps[0].UpdateTextures();
+            CreateVolumeTextures();
         }
 
-        if (dummyVoxelTextureAAScaled.width != dummyVoxelResolution)
+        if (dummyVoxelTexture.width != dummyVoxelResolution)
         {
             ResizeDummyTexture();
         }
@@ -1202,85 +873,6 @@ public class SEGICascaded : MonoBehaviour
         return mat;
     }
 
-    int SelectCascadeBinary(int c)
-    {
-        float counter = c + 0.01f;
-
-        int result = 0;
-        for (int i = 1; i < numClipmaps; i++)
-        {
-            float level = Mathf.Pow(2.0f, i);
-            result += Mathf.CeilToInt(((counter / level) % 1.0f) - ((level - 1.0f) / level));
-        }
-
-        return result;
-    }
-
-    bool useUnityShadowMapPrev = false;
-    void CheckShadowKeyword(string strKeyword, string strState)
-    {
-        useUnityShadowMapPrev = useUnityShadowMap;
-#if UNITY_EDITOR
-        int line_to_edit = 1; // Warning: 1-based indexing!
-
-        string path = "Assets/SEGI";
-
-        //SEGICascadedPreset ms = ScriptableObject.CreateInstance<SEGICascadedPreset>() ;
-        //path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(ms));
-
-        string filePath = path + "/Resources/" + "SEGIUnityShadowInput.cginc";
-
-        // Read the appropriate line from the file.
-        string lineToWrite = null;
-        using (StreamReader reader = new StreamReader(filePath))
-        {
-            for (int i = 1; i <= line_to_edit; ++i)
-                lineToWrite = reader.ReadLine();
-        }
-        if (lineToWrite != null)
-        {
-            if (!lineToWrite.Contains(strKeyword + strState))
-                useUnityShadowMapPrev = !useUnityShadowMap;
-        }
-#endif
-    }
-
-    void SetShadowKeyword(string strKeyword, string strState)
-    {
-#if UNITY_EDITOR
-        if (useUnityShadowMap != useUnityShadowMapPrev)
-        {
-            useUnityShadowMapPrev = useUnityShadowMap;
-            string path = "Assets//SEGI";
-
-            //MonoScript ms = MonoScript.FromScriptableObject(new SEGICascadedPreset());
-            //path = Path.GetDirectoryName(AssetDatabase.GetAssetPath(ms));
-
-            string filePath = path + "/Resources/" + "SEGIUnityShadowInput.cginc";
-
-            // Read the old file.
-            string[] lines = File.ReadAllLines(filePath);
-
-            // Write the new file over the old file.
-            using (StreamWriter writer = new StreamWriter(filePath))
-            {
-                for (int currentLine = 0; currentLine < lines.Length; ++currentLine)
-                {
-                    if (currentLine == 0)
-                    {
-                        writer.WriteLine("#define " + strKeyword + strState);
-                    }
-                    else
-                    {
-                        writer.WriteLine(lines[currentLine]);
-                    }
-                }
-            }
-            AssetDatabase.Refresh();
-        }
-#endif
-    }
-
     void FixRes(RenderTexture rt)
     {
         if (rt.width != sunShadowResolution || rt.height != sunShadowResolution)
@@ -1289,11 +881,6 @@ public class SEGICascaded : MonoBehaviour
             rt.width = rt.height = sunShadowResolution;
             rt.Create();
         }
-    }
-
-    public virtual void CustomVoxelScene(Clipmap activeClipmap)
-    {
-        //this gets overridden by external Voxel-Octree class
     }
 
     public virtual void CustomSunSetup()
@@ -1321,17 +908,6 @@ public class SEGICascaded : MonoBehaviour
             return;
         }
 
-        //MINE
-        updateGIcounter++;
-        if (!updateGI || (updateGIevery > 1 && updateGIcounter < updateGIevery))
-        {//MINE			
-            //return;
-        }
-        else
-        {
-            updateGIcounter = 0;//MINE
-        }
-
         if (attachedCamera.renderingPath == RenderingPath.Forward && reflectionProbe.enabled)
         {
             reflectionProbe.enabled = true;
@@ -1343,8 +919,6 @@ public class SEGICascaded : MonoBehaviour
         {
             reflectionProbe.enabled = false;
         }
-
-        if (useVolumeRayCast != useVolumeRayCastPrev) SetupVolumeRayCasting();
 
         // only use main camera for voxel simulations
         if (attachedCamera != Camera.main)
@@ -1376,25 +950,14 @@ public class SEGICascaded : MonoBehaviour
             sun.shadows = LightShadows.None;
         }
 
-        //Main voxelization work
         if (renderState == RenderState.Voxelize)
         {
-            currentClipmapIndex = SelectCascadeBinary(clipmapCounter);      //Determine which clipmap to update during this frame
+            activeVolume = voxelFlipFlop == 0 ? volumeTextures[0] : volumeTextureB;
+            previousActiveVolume = voxelFlipFlop == 0 ? volumeTextureB : volumeTextures[0];
 
-            Clipmap activeClipmap = clipmaps[currentClipmapIndex];          //Set the active clipmap based on which one is determined to render this frame
+            float voxelTexel = (1.0f * voxelSpaceSize) / (int)voxelResolution * 0.5f;
 
-            //If we're not updating the base level 0 clipmap, get the previous clipmap
-            Clipmap prevClipmap = null;
-            if (currentClipmapIndex != 0)
-            {
-                prevClipmap = clipmaps[currentClipmapIndex - 1];
-            }
-
-            float clipmapShadowSize = shadowSpaceSize * activeClipmap.localScale;
-            float clipmapSize = voxelSpaceSize * activeClipmap.localScale;  //Determine the current clipmap's size in world units based on its scale
-
-            //Setup the voxel volume origin position
-            float interval = (clipmapSize) / 8.0f;                          //The interval at which the voxel volume will be "locked" in world-space
+            float interval = voxelSpaceSize / 8.0f;
             Vector3 origin;
             if (followTransform)
             {
@@ -1402,388 +965,163 @@ public class SEGICascaded : MonoBehaviour
             }
             else
             {
-                //GI is still flickering a bit when the scene view and the game view are opened at the same time
-                origin = transform.position + transform.forward * clipmapSize / 4.0f;
+                origin = transform.position + transform.forward * voxelSpaceSize / 4.0f;
             }
-            //Lock the voxel volume origin based on the interval
-            activeClipmap.previousOrigin = activeClipmap.origin;
-            activeClipmap.origin = new Vector3(Mathf.Round(origin.x / interval) * interval, Mathf.Round(origin.y / interval) * interval, Mathf.Round(origin.z / interval) * interval);
+            voxelSpaceOrigin = new Vector3(Mathf.Round(origin.x / interval) * interval, Mathf.Round(origin.y / interval) * interval, Mathf.Round(origin.z / interval) * interval) + new Vector3(1.0f, 1.0f, 1.0f) * ((float)voxelFlipFlop * 2.0f - 1.0f) * voxelTexel * 0.0f;
+
+            voxelSpaceOriginDelta = voxelSpaceOrigin - previousVoxelSpaceOrigin;
+            Shader.SetGlobalVector("SEGIVoxelSpaceOriginDelta", voxelSpaceOriginDelta / voxelSpaceSize);
+
+            previousVoxelSpaceOrigin = voxelSpaceOrigin;
 
 
-            //Clipmap delta movement for scrolling secondary bounce irradiance volume when this clipmap has changed origin
-            activeClipmap.originDelta = activeClipmap.origin - activeClipmap.previousOrigin;
-            Shader.SetGlobalVector("SEGIVoxelSpaceOriginDelta", activeClipmap.originDelta / (voxelSpaceSize * activeClipmap.localScale));
 
-            //Calculate the relative origin and overlap/size of the previous cascade as compared to the active cascade. This is used to avoid voxelizing areas that have already been voxelized by previous (smaller) cascades
-            Vector3 prevClipmapRelativeOrigin = Vector3.zero;
-            float prevClipmapOccupance = 0.0f;
-            if (currentClipmapIndex != 0)
+            Shader.SetGlobalMatrix("WorldToGI", shadowCam.worldToCameraMatrix);
+            Shader.SetGlobalMatrix("GIToWorld", shadowCam.cameraToWorldMatrix);
+            Shader.SetGlobalMatrix("GIProjection", shadowCam.projectionMatrix);
+            Shader.SetGlobalMatrix("GIProjectionInverse", shadowCam.projectionMatrix.inverse);
+            Shader.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
+            Shader.SetGlobalFloat("GIDepthRatio", shadowSpaceDepthRatio);
+
+            Shader.SetGlobalColor("GISunColor", sun == null ? Color.black : new Color(Mathf.Pow(sun.color.r, 2.2f), Mathf.Pow(sun.color.g, 2.2f), Mathf.Pow(sun.color.b, 2.2f), Mathf.Pow(sun.intensity, 2.2f)));
+            Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(skyColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skyColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skyColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skyColor.a, 2.2f)));
+            Shader.SetGlobalFloat("GIGain", giGain);
+
+
+            if (sun != null)
             {
-                prevClipmapRelativeOrigin = (prevClipmap.origin - activeClipmap.origin) / clipmapSize;
-                prevClipmapOccupance = prevClipmap.localScale / activeClipmap.localScale;
+                shadowCam.cullingMask = giCullingMask;
+
+                Vector3 shadowCamPosition = voxelSpaceOrigin + Vector3.Normalize(-sun.transform.forward) * shadowSpaceSize * 0.5f * shadowSpaceDepthRatio;
+
+                shadowCamTransform.position = shadowCamPosition;
+                shadowCamTransform.LookAt(voxelSpaceOrigin, Vector3.up);
+
+                shadowCam.renderingPath = RenderingPath.Forward;
+                shadowCam.depthTextureMode |= DepthTextureMode.None;
+
+                shadowCam.orthographicSize = shadowSpaceSize;
+                shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
+
+
+                Graphics.SetRenderTarget(sunDepthTexture);
+                shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
+
+                shadowCam.RenderWithShader(sunDepthShader, "");
+
+                Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
             }
-            Shader.SetGlobalVector("SEGIClipmapOverlap", new Vector4(prevClipmapRelativeOrigin.x, prevClipmapRelativeOrigin.y, prevClipmapRelativeOrigin.z, prevClipmapOccupance));
-            transferIntsCompute.SetVector("SEGIClipmapOverlap", new Vector4(prevClipmapRelativeOrigin.x, prevClipmapRelativeOrigin.y, prevClipmapRelativeOrigin.z, prevClipmapOccupance));
 
-            //Calculate the relative origin and scale of this cascade as compared to the first (level 0) cascade. This is used during GI tracing/data lookup to ensure tracing is done in the correct space
-            for (int i = 1; i < numClipmaps; i++)
-            {
-                Vector3 clipPosFromMaster = Vector3.zero;
-                float clipScaleFromMaster = 1.0f;
 
-                clipPosFromMaster = (clipmaps[i].origin - clipmaps[0].origin) / (voxelSpaceSize * clipmaps[i].localScale);
-                clipScaleFromMaster = clipmaps[0].localScale / clipmaps[i].localScale;
-
-                Shader.SetGlobalVector("SEGIClipTransform" + i.ToString(), new Vector4(clipPosFromMaster.x, clipPosFromMaster.y, clipPosFromMaster.z, clipScaleFromMaster));
-                transferIntsCompute.SetVector("SEGIClipTransform" + i.ToString(), new Vector4(clipPosFromMaster.x, clipPosFromMaster.y, clipPosFromMaster.z, clipScaleFromMaster));
-            }
-
-            //Set the voxel camera (proxy camera used to render the scene for voxelization) parameters
             voxelCamera.enabled = false;
             voxelCamera.orthographic = true;
-            voxelCamera.orthographicSize = clipmapSize * 0.5f;
+            voxelCamera.orthographicSize = voxelSpaceSize * 0.5f;
             voxelCamera.nearClipPlane = 0.0f;
-            voxelCamera.farClipPlane = clipmapSize;
+            voxelCamera.farClipPlane = voxelSpaceSize;
             voxelCamera.depth = -2;
             voxelCamera.renderingPath = RenderingPath.Forward;
             voxelCamera.clearFlags = CameraClearFlags.Color;
             voxelCamera.backgroundColor = Color.black;
             voxelCamera.cullingMask = giCullingMask;
 
-            //Move the voxel camera game object and other related objects to the above calculated voxel space origin
-            voxelCameraGO.transform.position = activeClipmap.origin - Vector3.forward * clipmapSize * 0.5f;
+
+
+            voxelFlipFlop += 1;
+            voxelFlipFlop = voxelFlipFlop % 2;
+
+            voxelCameraGO.transform.position = voxelSpaceOrigin - Vector3.forward * voxelSpaceSize * 0.5f;
             voxelCameraGO.transform.rotation = rotationFront;
 
-            leftViewPoint.transform.position = activeClipmap.origin + Vector3.left * clipmapSize * 0.5f;
+            leftViewPoint.transform.position = voxelSpaceOrigin + Vector3.left * voxelSpaceSize * 0.5f;
             leftViewPoint.transform.rotation = rotationLeft;
-            topViewPoint.transform.position = activeClipmap.origin + Vector3.up * clipmapSize * 0.5f;
+            topViewPoint.transform.position = voxelSpaceOrigin + Vector3.up * voxelSpaceSize * 0.5f;
             topViewPoint.transform.rotation = rotationTop;
 
+            Shader.SetGlobalInt("SEGIVoxelResolution", (int)voxelResolution);
 
-
-
-            //Set matrices needed for voxelization
-            //Shader.SetGlobalMatrix("WorldToGI", shadowCam.worldToCameraMatrix);
-            //Shader.SetGlobalMatrix("GIToWorld", shadowCam.cameraToWorldMatrix);
-            //Shader.SetGlobalMatrix("GIProjection", shadowCam.projectionMatrix);
-            //Shader.SetGlobalMatrix("GIProjectionInverse", shadowCam.projectionMatrix.inverse);
-            Shader.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
-            Shader.SetGlobalFloat("GIDepthRatio", shadowSpaceDepthRatio);
-
-            Matrix4x4 frontViewMatrix = TransformViewMatrix(voxelCamera.transform.worldToLocalMatrix);
-            Matrix4x4 leftViewMatrix = TransformViewMatrix(leftViewPoint.transform.worldToLocalMatrix);
-            Matrix4x4 topViewMatrix = TransformViewMatrix(topViewPoint.transform.worldToLocalMatrix);
-
-            Shader.SetGlobalMatrix("SEGIVoxelViewFront", frontViewMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelViewLeft", leftViewMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelViewTop", topViewMatrix);
+            Shader.SetGlobalMatrix("SEGIVoxelViewFront", TransformViewMatrix(voxelCamera.transform.worldToLocalMatrix));
+            Shader.SetGlobalMatrix("SEGIVoxelViewLeft", TransformViewMatrix(leftViewPoint.transform.worldToLocalMatrix));
+            Shader.SetGlobalMatrix("SEGIVoxelViewTop", TransformViewMatrix(topViewPoint.transform.worldToLocalMatrix));
             Shader.SetGlobalMatrix("SEGIWorldToVoxel", voxelCamera.worldToCameraMatrix);
             Shader.SetGlobalMatrix("SEGIVoxelProjection", voxelCamera.projectionMatrix);
             Shader.SetGlobalMatrix("SEGIVoxelProjectionInverse", voxelCamera.projectionMatrix.inverse);
-            //Shader.SetGlobalMatrix("SEGIVoxelProjectionInverse" + currentClipmapIndex.ToString(), voxelCamera.projectionMatrix.inverse);
-            //if (useVolumeRayCast && voxelProjectionInverse != null && voxelProjectionInverse.Length > 0)
-            if (useVolumeRayCast)voxelProjectionInverse[currentClipmapIndex] = voxelCamera.projectionMatrix.inverse;
-
-            Shader.SetGlobalMatrix("SEGIVoxelVPFront", GL.GetGPUProjectionMatrix(voxelCamera.projectionMatrix, true) * frontViewMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelVPLeft", GL.GetGPUProjectionMatrix(voxelCamera.projectionMatrix, true) * leftViewMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelVPTop", GL.GetGPUProjectionMatrix(voxelCamera.projectionMatrix, true) * topViewMatrix);
-
-            Shader.SetGlobalMatrix("SEGIWorldToVoxel" + currentClipmapIndex, voxelCamera.worldToCameraMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelProjection" + currentClipmapIndex, voxelCamera.projectionMatrix);
-            Shader.SetGlobalVector("SEGISunlightVector", sun ? Vector3.Normalize(sun.transform.forward) : Vector3.up);
-            transferIntsCompute.SetVector("SEGISunlightVector", sun ? Vector3.Normalize(sun.transform.forward) : Vector3.up);
-
-            //Set paramteters
-            Shader.SetGlobalInt("SEGIVoxelResolution", (int)voxelResolution);
-
-            Shader.SetGlobalColor("GISunColor", sun == null ? Color.black : new Color(Mathf.Pow(sun.color.r, 2.2f), Mathf.Pow(sun.color.g, 2.2f), Mathf.Pow(sun.color.b, 2.2f), Mathf.Pow(sun.intensity, 2.2f)));
-            transferIntsCompute.SetVector("GISunColor", sun == null ? Color.black : new Color(Mathf.Pow(sun.color.r, 2.2f), Mathf.Pow(sun.color.g, 2.2f), Mathf.Pow(sun.color.b, 2.2f), Mathf.Pow(sun.intensity, 2.2f)));
-
-            Color skySunColor;
-            try
-            {
-                skySunColor = sun.color * skyColor;
-                Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(skySunColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.a, 2.2f)));
-                transferIntsCompute.SetVector("SEGISkyColor", new Color(Mathf.Pow(skySunColor.r * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.g * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.b * skyIntensity * 0.5f, 2.2f), Mathf.Pow(skySunColor.a, 2.2f)));
-            }
-            catch
-            {
-                Debug.Log("<SEGI> (" + name + ") " + "Main Directional light must be set in Environment Properties");
-            }
-            finally { }
 
 
 
-            Shader.SetGlobalFloat("GIGain", giGain);
             Shader.SetGlobalFloat("SEGISecondaryBounceGain", infiniteBounces ? secondaryBounceGain : 0.0f);
             Shader.SetGlobalFloat("SEGISoftSunlight", softSunlight);
-            transferIntsCompute.SetFloat("SEGISoftSunlight", softSunlight);
-
             Shader.SetGlobalInt("SEGISphericalSkylight", sphericalSkylight ? 1 : 0);
-            transferIntsCompute.SetInt("SEGISphericalSkylight", sphericalSkylight ? 1 : 0);
-            transferIntsCompute.SetInt("VoxelAA", voxelAA ? 3 : 0);
-
             Shader.SetGlobalInt("SEGIInnerOcclusionLayers", innerOcclusionLayers);
 
-            //Set irradiance "secondary bounce" texture
-            Shader.SetGlobalTexture("SEGICurrentIrradianceVolume", irradianceClipmaps[currentClipmapIndex].volumeTexture0);
-            Shader.SetGlobalVector("SEGI_GRID_SIZE", vecGridSize);
+            clearCompute.SetTexture(0, "RG0", intTex1);
+            //clearCompute.SetTexture(0, "BA0", ba0);
+            clearCompute.SetInt("Res", (int)voxelResolution);
+            clearCompute.Dispatch(0, (int)voxelResolution / 16, (int)voxelResolution / 16, 1);
 
-            minPosVoxel = activeClipmap.origin - Vector3.one * clipmapSize * 0.5f;
-            minPosVoxel.w = clipmapSize;
-            Shader.SetGlobalVector("SEGIMinPosVoxel", minPosVoxel);
+            Matrix4x4 voxelToGIProjection = (shadowCam.projectionMatrix) * (shadowCam.worldToCameraMatrix) * (voxelCamera.cameraToWorldMatrix);
+            Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProjection);
+            Shader.SetGlobalVector("SEGISunlightVector", sun ? Vector3.Normalize(sun.transform.forward) : Vector3.up);
 
-            int kernel = 0;
-            if (useVolumeRayCast)//Calculate voxels without Shadows and use result RG0 in VolumeRayCasting
+
+            Graphics.SetRandomWriteTarget(1, intTex1);
+            voxelCamera.targetTexture = dummyVoxelTexture;
+            voxelCamera.RenderWithShader(voxelizationShader, "");
+            Graphics.ClearRandomWriteTargets();
+
+            transferInts.SetTexture(0, "Result", activeVolume);
+            transferInts.SetTexture(0, "PrevResult", previousActiveVolume);
+            transferInts.SetTexture(0, "RG0", intTex1);
+            transferInts.SetInt("VoxelAA", voxelAA ? 1 : 0);
+            transferInts.SetInt("Resolution", (int)voxelResolution);
+            transferInts.SetVector("VoxelOriginDelta", (voxelSpaceOriginDelta / voxelSpaceSize) * (int)voxelResolution);
+            transferInts.Dispatch(0, (int)voxelResolution / 16, (int)voxelResolution / 16, 1);
+
+            Shader.SetGlobalTexture("SEGIVolumeLevel0", activeVolume);
+
+            for (int i = 0; i < numMipLevels - 1; i++)
             {
-                //Clear the volume texture that is immediately written to in the voxelization scene shader
-                Graphics.SetRenderTarget(integerVolumeArray, 0, CubemapFace.Unknown, -1);// -1 = clear all array textures
-                GL.Clear(false, true, Color.clear);
+                RenderTexture source = volumeTextures[i];
 
-                Shader.SetGlobalInt("SEGICurrentClipmapIndex", currentClipmapIndex);
-
-
-                Graphics.SetRandomWriteTarget(1, integerVolumeArray);
-                voxelCamera.targetTexture = dummyVoxelTextureAAScaled;
-                voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
-                voxelCamera.RenderWithShader(voxelizationShaderNoShadows, "");
-                Graphics.ClearRandomWriteTargets();
-
-                CustomVoxelScene(activeClipmap);
-            }
-
-            //Render the depth texture from the sun's perspective in order to inject sunlight with shadows during voxelization
-            if (sun != null)
-            {
-                //if (currentClipmapIndex <= 2)
-                shadowCam.cullingMask = useVolumeRayCast ? shadowVolumeMask : giCullingMask;
-
-                Vector3 shadowCamPosition = activeClipmap.origin + Vector3.Normalize(-sun.transform.forward) * clipmapShadowSize * 0.5f * shadowSpaceDepthRatio;
-
-                shadowCamTransform.position = shadowCamPosition;
-                shadowCamTransform.LookAt(activeClipmap.origin, Vector3.up);
-                shadowCam.renderingPath = RenderingPath.Forward;
-                shadowCam.depthTextureMode |= DepthTextureMode.None;
-                shadowCam.orthographicSize = clipmapShadowSize;
-                shadowCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
-
-                if (useVolumeRayCast && voxelToGIProjection != null && voxelToGIProjection.Length > 0)
+                if (i == 0)
                 {
-                    voxelToGIProjection[currentClipmapIndex] = shadowCam.projectionMatrix * shadowCam.worldToCameraMatrix * voxelCamera.cameraToWorldMatrix;
-
-                    volumeCube.transform.position = activeClipmap.origin;
-                    volumeCube.transform.localScale = Vector3.one * clipmapSize;
-
-                    volumeFrontCam.transform.position = shadowCamPosition;
-                    volumeFrontCam.transform.LookAt(activeClipmap.origin, Vector3.up);
-                    volumeFrontCam.orthographicSize = clipmapShadowSize;
-                    volumeFrontCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
-                    volumeFrontCam.RenderWithShader(frontRayCastShader, "RenderType");
-
-                    volumeBackCam.transform.position = shadowCamPosition;
-                    volumeBackCam.transform.LookAt(activeClipmap.origin, Vector3.up);
-                    volumeBackCam.orthographicSize = clipmapShadowSize;
-                    volumeBackCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
-                    volumeBackCam.RenderWithShader(backRayCastShader, "RenderType");
-
-                    Shader.SetGlobalTexture("SEGIRG0", integerVolumeArray);
-                    //Shader.SetGlobalTexture("SEGIActiveClipmapVolume", activeClipmap.volumeTexture0);
-                }
-                else
-                {
-                    var voxelToGIProj = shadowCam.projectionMatrix * shadowCam.worldToCameraMatrix * voxelCamera.cameraToWorldMatrix;
-                    Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProj);
+                    source = activeVolume;
                 }
 
-                int currentIndex = useVolumeRayCast ? currentClipmapIndex : 0;
-
-                shadowCam.targetTexture = sunDepthTexture[currentIndex];//TODO use array tex and geo shader with -> uint sliceIndex : SV_RenderTargetArrayIndex
-                //shadowCam.SetTargetBuffers(sunDepthTexture[currentIndex].colorBuffer, sunDepthTexture[currentIndex].depthBuffer);
-                shadowCam.RenderWithShader(useVolumeRayCast ? sunVolumeRayCastShader : sunDepthShader, useVolumeRayCast ? "RenderType" : "");
-                Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture[currentIndex]);
-
-                if (useUnityShadowMap == false)
-                {
-                    SetShadowKeyword("SEGI_UNITY_SHADOWMAP_", "OFF");
-                }
-                else
-                {
-                    if (m_ShadowmapCopy == null) InitShadowmapCopy();//TODO use NGSS shadowCopy
-                    SetShadowKeyword("SEGI_UNITY_SHADOWMAP_", "ON");
-                    Shader.SetGlobalTexture("SEGIShadowmapCopy", m_ShadowmapCopy);
-                }
-
-                Shader.SetGlobalFloat("SEGIShadowBias", useVolumeRayCast ? -(1 - SEGIShadowBias) : SEGIShadowBias);
+                int destinationRes = (int)voxelResolution / Mathf.RoundToInt(Mathf.Pow((float)2, (float)i + 1.0f));
+                mipFilter.SetInt("destinationRes", destinationRes);
+                mipFilter.SetTexture(mipFilterKernel, "Source", source);
+                mipFilter.SetTexture(mipFilterKernel, "Destination", volumeTextures[i + 1]);
+                mipFilter.Dispatch(mipFilterKernel, SEGIRenderWidth / 8, SEGIRenderHeight / 8, 1);
+                Shader.SetGlobalTexture("SEGIVolumeLevel" + (i + 1).ToString(), volumeTextures[i + 1]);
             }
-
-            if (useVolumeRayCast == false)
-            {
-                //Clear the volume texture that is immediately written to in the voxelization scene shader
-                Graphics.SetRenderTarget(integerVolumeArray, 0, CubemapFace.Unknown, 0);
-                GL.Clear(false, true, Color.clear);
-
-                Graphics.SetRandomWriteTarget(1, integerVolumeArray);
-                voxelCamera.targetTexture = dummyVoxelTextureAAScaled;
-                voxelCamera.RenderWithShader(voxelizationShader, "");
-                Graphics.ClearRandomWriteTargets();
-
-                //Transfer the data from the volume integer texture to the main volume texture used for GI tracing. 
-                kernel = 0;
-                transferIntsCompute.SetVector("SEGI_GRID_SIZE", vecGridSize);
-                transferIntsCompute.SetInt("Resolution", activeClipmap.resolution);
-                transferIntsCompute.SetTexture(kernel, "Result", activeClipmap.volumeTexture0);
-                transferIntsCompute.SetTexture(kernel, "RG0", integerVolumeArray);
-                transferIntsCompute.Dispatch(kernel, activeClipmap.resolution / 8, activeClipmap.resolution / 8, activeClipmap.resolution / 8);
-            }
-            else // if (voxelProjectionInverse != null && voxelProjectionInverse.Length > 0)//useVolumeRayCast //TODO add unity shadowmap and emission texture
-            {
-                kernel = 2;
-
-                if (useUnityShadowMap)
-                {
-                    // Copy directional shadowmap params - they're only set for regular shaders, but we need them in compute
-                    if (m_ShadowParamsCB == null)
-                        m_ShadowParamsCB = new ComputeBuffer(4, 336);//sizeof(float) * 16 * 4 + sizeof(float) * 4 * 4 + sizeof(float) * 4
-                    Graphics.SetRandomWriteTarget(2, m_ShadowParamsCB);
-                    m_CopyShadowParamsMaterial.SetPass(0);
-                    Graphics.DrawProcedural(MeshTopology.Points, 1);
-                    Graphics.ClearRandomWriteTargets();
-
-                    transferIntsCompute.SetVector("SEGIMinPosVoxel", minPosVoxel);
-                    transferIntsCompute.SetBuffer(kernel, "_ShadowParams", m_ShadowParamsCB);
-                    transferIntsCompute.SetTexture(kernel, "SEGIShadowmapCopy", m_ShadowmapCopy);
-                }
-                //Transfer the data from the volume integer texture to the main volume texture used for GI tracing and apply shadows here
-                transferIntsCompute.SetInt("SEGICurrentClipmapIndex", currentClipmapIndex);
-                for (int i = 1; i < numClipmaps; i++)
-                {
-                    Vector3 clipPosFromMaster = Vector3.zero;
-                    float clipScaleFromMaster = 1.0f;
-                    clipPosFromMaster = (clipmaps[i].origin - clipmaps[currentClipmapIndex].origin) / (voxelSpaceSize * clipmaps[i].localScale);
-                    clipScaleFromMaster = clipmaps[currentClipmapIndex].localScale / clipmaps[i].localScale;
-
-                    transferIntsCompute.SetVector("SEGIShadowClipTransform" + i, new Vector4(clipPosFromMaster.x, clipPosFromMaster.y, clipPosFromMaster.z, clipScaleFromMaster));
-                    transferIntsCompute.SetFloats("SEGIVoxelProjectionInverse" + i, MatrixToFloats(voxelProjectionInverse[i]));
-                    transferIntsCompute.SetFloats("SEGIVoxelToGIProjection" + i, MatrixToFloats(voxelToGIProjection[i]));
-                    transferIntsCompute.SetTexture(kernel, "SEGISunDepth" + i, sunDepthTexture[i]);
-                }
-
-                transferIntsCompute.SetFloat("SEGIShadowBias", -(1 - SEGIShadowBias));
-                transferIntsCompute.SetFloats("SEGIVoxelProjectionInverse", MatrixToFloats(voxelCamera.projectionMatrix.inverse));
-                transferIntsCompute.SetFloats("SEGIVoxelToGIProjection", MatrixToFloats(voxelToGIProjection[currentClipmapIndex]));
-                transferIntsCompute.SetTexture(kernel, "SEGISunDepth", sunDepthTexture[currentClipmapIndex]);
-
-                transferIntsCompute.SetFloat("SEGISecondaryBounceGain", infiniteBounces ? secondaryBounceGain : 0.0f);
-                transferIntsCompute.SetVector("SEGIVoxelSpaceOriginDelta", activeClipmap.originDelta / (voxelSpaceSize * activeClipmap.localScale));
-                transferIntsCompute.SetTexture(kernel, "SEGICurrentIrradianceVolume", irradianceClipmaps[currentClipmapIndex].volumeTexture0);
-
-                transferIntsCompute.SetVector("SEGI_GRID_SIZE", vecGridSize);
-                transferIntsCompute.SetInt("Resolution", activeClipmap.resolution);
-                transferIntsCompute.SetTexture(kernel, "Result", activeClipmap.volumeTexture0);
-                transferIntsCompute.SetTexture(kernel, "RG0", integerVolumeArray);
-                transferIntsCompute.Dispatch(kernel, activeClipmap.resolution / 8, activeClipmap.resolution / 8, activeClipmap.resolution / 8);
-            }
-
-            //Push current voxelization result to higher levels
-            for (int i = 1; i < numClipmaps; i++)
-            {
-                Clipmap sourceClipmap = clipmaps[i - 1];
-                Clipmap targetClipmap = clipmaps[i];
-
-                Vector3 sourceRelativeOrigin = Vector3.zero;
-                float sourceOccupance = 0.0f;
-
-                sourceRelativeOrigin = (sourceClipmap.origin - targetClipmap.origin) / (targetClipmap.localScale * voxelSpaceSize);
-                sourceOccupance = sourceClipmap.localScale / targetClipmap.localScale;
-
-                mipFilterCompute.SetTexture(0, "Source", sourceClipmap.volumeTexture0);
-                mipFilterCompute.SetTexture(0, "Destination", targetClipmap.volumeTexture0);
-                mipFilterCompute.SetVector("ClipmapOverlap", new Vector4(sourceRelativeOrigin.x, sourceRelativeOrigin.y, sourceRelativeOrigin.z, sourceOccupance));
-                mipFilterCompute.SetInt("destinationRes", targetClipmap.resolution);
-                mipFilterCompute.Dispatch(0, targetClipmap.resolution / 16, targetClipmap.resolution / 16, 1);
-            }
-
-            for (int i = 0; i < numClipmaps; i++)
-            {
-                Shader.SetGlobalTexture("SEGIVolumeLevel" + i.ToString(), clipmaps[i].volumeTexture0);
-            }
-
 
             if (infiniteBounces)
             {
                 renderState = RenderState.Bounce;
             }
-            else
-            {
-                //Increment clipmap counter
-                clipmapCounter++;
-                if (clipmapCounter >= (int)Mathf.Pow(2.0f, numClipmaps))
-                {
-                    clipmapCounter = 0;
-                }
-            }
         }
         else if (renderState == RenderState.Bounce)
         {
-            //Calculate the relative position and scale of the current clipmap as compared to the first (level 0) clipmap. Used to ensure tracing is performed in the correct space
-            Vector3 translateToZero = Vector3.zero;
-            translateToZero = (clipmaps[currentClipmapIndex].origin - clipmaps[0].origin) / (voxelSpaceSize * clipmaps[currentClipmapIndex].localScale);
-            float scaleToZero = 1.0f / clipmaps[currentClipmapIndex].localScale;
-            Shader.SetGlobalVector("SEGICurrentClipTransform", new Vector4(translateToZero.x, translateToZero.y, translateToZero.z, scaleToZero));
-            transferIntsCompute.SetVector("SEGICurrentClipTransform", new Vector4(translateToZero.x, translateToZero.y, translateToZero.z, scaleToZero));
 
-            //Only render infinite bounces for clipmaps 0, 1, and 2
-            if (currentClipmapIndex <= 2)
-            {
-                int kernel = 3;
+            clearCompute.SetTexture(0, "RG0", intTex1);
+            clearCompute.Dispatch(0, (int)voxelResolution / 16, (int)voxelResolution / 16, 1);
 
-                //Clear the volume texture that is immediately written to in the voxelization scene shader
-                Graphics.SetRenderTarget(integerVolumeArray, 0, CubemapFace.Unknown, 0);
-                GL.Clear(false, true, Color.clear);
+            Shader.SetGlobalInt("SEGISecondaryCones", secondaryCones);
+            Shader.SetGlobalFloat("SEGISecondaryOcclusionStrength", secondaryOcclusionStrength);
 
-                if (infiniteBouncesRerenderObjects || !useVolumeRayCast)
-                {
-                    Shader.SetGlobalInt("SEGISecondaryCones", secondaryCones);
-                    Shader.SetGlobalFloat("SEGISecondaryOcclusionStrength", secondaryOcclusionStrength);
+            Graphics.SetRandomWriteTarget(1, intTex1);
+            voxelCamera.targetTexture = dummyVoxelTexture2;
+            voxelCamera.RenderWithShader(voxelTracingShader, "");
+            Graphics.ClearRandomWriteTargets();
 
-                    Graphics.SetRandomWriteTarget(1, integerVolumeArray);
-                    voxelCamera.targetTexture = dummyVoxelTextureFixed;
-                    voxelCamera.RenderWithShader(voxelTracingShader, "");
-                    Graphics.ClearRandomWriteTargets();
-                }
-                else
-                {
-                    for (int i = 0; i < numClipmaps; i++)
-                    {
-                        transferIntsCompute.SetTexture(kernel, "SEGIVolumeLevel" + i, clipmaps[i].volumeTexture0);
-                    }
+            transferInts.SetTexture(1, "Result", volumeTexture1);
+            transferInts.SetTexture(1, "RG0", intTex1);
+            transferInts.SetInt("Resolution", (int)voxelResolution);
+            transferInts.Dispatch(1, (int)voxelResolution / 16, (int)voxelResolution / 16, 1);
 
-                    transferIntsCompute.SetInt("SEGISecondaryCones", secondaryCones);
-                    transferIntsCompute.SetFloat("SEGISecondaryOcclusionStrength", secondaryOcclusionStrength);
-
-                    transferIntsCompute.SetVector("SEGI_GRID_SIZE", vecGridSize);
-                    transferIntsCompute.SetInt("Resolution", (int)voxelResolution);
-                    transferIntsCompute.SetInt("currentClipmapIndex", currentClipmapIndex);
-                    transferIntsCompute.SetTexture(kernel, "RG0", integerVolumeArray);
-                    transferIntsCompute.Dispatch(kernel, (int)voxelResolution / 8, (int)voxelResolution / 8, (int)voxelResolution / 8);
-                }
-                kernel = 1;
-                transferIntsCompute.SetVector("SEGI_GRID_SIZE", vecGridSize);
-                transferIntsCompute.SetInt("Resolution", (int)voxelResolution);
-                transferIntsCompute.SetTexture(kernel, "Result", irradianceClipmaps[currentClipmapIndex].volumeTexture0);
-                transferIntsCompute.SetTexture(kernel, "RG0", integerVolumeArray);
-                transferIntsCompute.Dispatch(kernel, (int)voxelResolution / 8, (int)voxelResolution / 8, (int)voxelResolution / 8);
-            }
-
-            //Increment clipmap counter
-            clipmapCounter++;
-            if (clipmapCounter >= (int)Mathf.Pow(2.0f, numClipmaps))
-            {
-                clipmapCounter = 0;
-            }
+            Shader.SetGlobalTexture("SEGIVolumeTexture1", volumeTexture1);
 
             renderState = RenderState.Voxelize;
-
         }
         Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
         Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
@@ -1831,25 +1169,56 @@ public class SEGICascaded : MonoBehaviour
             return;
         }
 
-        if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture[0] != null)//[currentClipmapIndex]?
+        if (visualizeSunDepthTexture && sunDepthTexture != null && sunDepthTexture != null)
         {
-            Graphics.Blit(sunDepthTexture[0], destination);
+            Graphics.Blit(sunDepthTexture, destination);
             return;
         }
-        //If Visualize Shadowmap Copy is enabled, just render the Shadowmap visualization and return
-        if (visualizeShadowmapCopy && m_ShadowmapCopy != null)
-        {
-            //Camera.main.rect = new Rect(0, 0, 0.5f, 0.5f);
-            Graphics.Blit(m_ShadowmapCopy, destination);
-            //Camera.main.rect = new Rect(0, 0, 1, 1);
-            return;
-        }
+
+        Shader.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);
+
+        material.SetMatrix("CameraToWorld", attachedCamera.cameraToWorldMatrix);
+        material.SetMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
+        material.SetMatrix("ProjectionMatrixInverse", attachedCamera.projectionMatrix.inverse);
+        material.SetMatrix("ProjectionMatrix", attachedCamera.projectionMatrix);
+        material.SetInt("FrameSwitch", frameSwitch);
+        Shader.SetGlobalInt("SEGIFrameSwitch", frameSwitch);
+        material.SetVector("CameraPosition", transform.position);
+        material.SetFloat("DeltaTime", Time.deltaTime);
+
+        material.SetInt("StochasticSampling", stochasticSampling ? 1 : 0);
+        material.SetInt("TraceDirections", cones);
+        material.SetInt("TraceSteps", coneTraceSteps);
+        material.SetFloat("TraceLength", coneLength);
+        material.SetFloat("ConeSize", coneWidth);
+        material.SetFloat("OcclusionStrength", occlusionStrength);
+        material.SetFloat("OcclusionPower", occlusionPower);
+        material.SetFloat("ConeTraceBias", coneTraceBias);
+        material.SetFloat("GIGain", giGain);
+        material.SetFloat("NearLightGain", nearLightGain);
+        material.SetFloat("NearOcclusionStrength", nearOcclusionStrength);
+        material.SetInt("DoReflections", doReflections ? 1 : 0);
+        material.SetInt("GIResolution", GIResolution);
+        material.SetInt("ReflectionSteps", reflectionSteps);
+        material.SetFloat("ReflectionOcclusionPower", reflectionOcclusionPower);
+        material.SetFloat("SkyReflectionIntensity", skyReflectionIntensity);
+        material.SetFloat("FarOcclusionStrength", farOcclusionStrength);
+        material.SetFloat("FarthestOcclusionStrength", farthestOcclusionStrength);
+        material.SetInt("StereoEnabled", UnityEngine.XR.XRSettings.enabled ? 1 : 0);
 
         SEGIRenderWidth = source.width;
         SEGIRenderHeight = source.height;
 
         Graphics.Blit(source, SEGIRenderSource);
         Graphics.Blit(SEGIRenderDestination, destination);
+
+        material.SetMatrix("ProjectionPrev", attachedCamera.projectionMatrix);
+        material.SetMatrix("ProjectionPrevInverse", attachedCamera.projectionMatrix.inverse);
+        material.SetMatrix("WorldToCameraPrev", attachedCamera.worldToCameraMatrix);
+        material.SetMatrix("CameraToWorldPrev", attachedCamera.cameraToWorldMatrix);
+        material.SetVector("CameraPositionPrev", transform.position);
+
+        frameSwitch = (frameSwitch + 1) % (128);
 
     }
 
@@ -1880,13 +1249,13 @@ public class SEGICascaded : MonoBehaviour
         SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.FXAARTluminance, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Linear, 1, false, RenderTextureMemoryless.None, false);
 
         //Set parameters
-        SEGIBuffer.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);//TODO needed?
-        SEGIBuffer.SetGlobalInt("SEGIFrameSwitch", frameCounter);//TODO needed?
+        /*SEGIBuffer.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);//TODO needed?
+        SEGIBuffer.SetGlobalInt("SEGIFrameSwitch", frameSwitch);//TODO needed?
         SEGIBuffer.SetGlobalMatrix("CameraToWorld", attachedCamera.cameraToWorldMatrix);
         SEGIBuffer.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
         SEGIBuffer.SetGlobalMatrix("ProjectionMatrixInverse", attachedCamera.projectionMatrix.inverse);
         SEGIBuffer.SetGlobalMatrix("ProjectionMatrix", attachedCamera.projectionMatrix);
-        SEGIBuffer.SetGlobalInt("FrameSwitch", frameCounter);
+        SEGIBuffer.SetGlobalInt("FrameSwitch", frameSwitch);
         SEGIBuffer.SetGlobalVector("CameraPosition", attachedCamera.transform.position);
         SEGIBuffer.SetGlobalFloat("DeltaTime", Time.deltaTime);
         SEGIBuffer.SetGlobalInt("StochasticSampling", stochasticSampling ? 1 : 0);
@@ -1906,14 +1275,12 @@ public class SEGICascaded : MonoBehaviour
         SEGIBuffer.SetGlobalFloat("SkyReflectionIntensity", skyReflectionIntensity);
         SEGIBuffer.SetGlobalFloat("FarOcclusionStrength", farOcclusionStrength);
         SEGIBuffer.SetGlobalFloat("FarthestOcclusionStrength", farthestOcclusionStrength);
-        SEGIBuffer.SetGlobalTexture("NoiseTexture", blueNoise[frameCounter]);
+        //SEGIBuffer.SetGlobalTexture("NoiseTexture", blueNoise[frameCounter]);
         SEGIBuffer.SetGlobalFloat("BlendWeight", temporalBlendWeight);
-        SEGIBuffer.SetGlobalFloat("noiseDistribution", noiseDistribution);
-        SEGIBuffer.SetGlobalFloat("currentClipmapIndex", currentClipmapIndex);
         SEGIBuffer.SetGlobalInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
         SEGIBuffer.SetGlobalInt("useBilateralFiltering", useBilateralFiltering ? 1 : 0);
         SEGIBuffer.SetGlobalFloat("reflectionProbeIntensity", reflectionProbeIntensity);
-        SEGIBuffer.SetGlobalFloat("reflectionProbeAttribution", reflectionProbeAttribution);
+        SEGIBuffer.SetGlobalFloat("reflectionProbeAttribution", reflectionProbeAttribution);*/
         if (GetComponent<Camera>().renderingPath == RenderingPath.Forward)
         {
             SEGIBuffer.SetGlobalInt("ForwardPath", 1);
@@ -1929,18 +1296,15 @@ public class SEGICascaded : MonoBehaviour
         }
 
         //Set the previous GI result and camera depth textures to access them in the shader
-        SEGIBuffer.SetGlobalTexture("PreviousGITexture", previousGIResult);
+        SEGIBuffer.SetGlobalTexture("PreviousGITexture", previousResult);
         SEGIBuffer.SetGlobalTexture("PreviousDepth", previousDepth);
 
         //Render diffuse GI tracing result
         SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.gi2, material, Pass.DiffuseTrace);
 
-        //Render GI reflections result    
-        if (currentClipmapIndex <= 2)
-        {
-            SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.reflections, material, Pass.SpecularTrace);
-            SEGIBuffer.SetGlobalTexture("Reflections", SEGICMDBufferRT.reflections);
-        }
+        //Render GI reflections result
+        SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.reflections, material, Pass.SpecularTrace);
+        SEGIBuffer.SetGlobalTexture("Reflections", SEGICMDBufferRT.reflections);
 
         //If Half Resolution tracing is enabled
         if (giRenderRes >= 2)
@@ -1963,7 +1327,7 @@ public class SEGICascaded : MonoBehaviour
             {
                 SEGIBuffer.Blit(SEGICMDBufferRT.gi3, SEGICMDBufferRT.gi4);
                 SEGIBuffer.Blit(SEGICMDBufferRT.gi4, SEGICMDBufferRT.gi3, material, Pass.TemporalBlend);
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi3, previousGIResult);
+                SEGIBuffer.Blit(SEGICMDBufferRT.gi3, previousResult);
                 SEGIBuffer.Blit(SEGIRenderSource, previousDepth, material, Pass.GetCameraDepthTexture);
             }
 
@@ -1991,7 +1355,7 @@ public class SEGICascaded : MonoBehaviour
 
                 //Perform temporal reprojection and blending
                 SEGIBuffer.Blit(SEGICMDBufferRT.gi2, SEGICMDBufferRT.gi1, material, Pass.TemporalBlend);
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi1, previousGIResult);
+                SEGIBuffer.Blit(SEGICMDBufferRT.gi1, previousResult);
                 SEGIBuffer.Blit(SEGIRenderSource, previousDepth, material, Pass.GetCameraDepthTexture);
             }
 
@@ -2028,7 +1392,7 @@ public class SEGICascaded : MonoBehaviour
 
 
         //Advance the frame counter
-        frameCounter = (frameCounter + 1) % (64);
+        frameSwitch = (frameSwitch + 1) % (64);
     }
 
     float[] Vector4ArrayToFloats(Vector4[] vecArray)
@@ -2130,12 +1494,3 @@ public class SEGICascaded : MonoBehaviour
     }
 }
 
-//SRP Stuff
-[UnityEngine.Rendering.PostProcessing.PostProcess(typeof(SEGICascadedPreset), PostProcessEvent.AfterStack, "NKLI/SEGI")]
-public sealed class SEGICascadedRenderer : PostProcessEffectRenderer<SEGICascadedPreset>
-{
-    public override void Render(PostProcessRenderContext context)
-    {
-
-    }
-}

@@ -23,7 +23,7 @@ RenderSettings:
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
-  m_AmbientIntensity: 1
+  m_AmbientIntensity: 0
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
@@ -405,7 +405,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 123
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &55126352
 Transform:
   m_ObjectHideFlags: 0
@@ -730,37 +730,6 @@ Prefab:
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: daac9b4c3995a03419096a650c2a9e7d, type: 3}
   m_IsPrefabAsset: 0
---- !u!84 &350925463
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
-  m_Width: 512
-  m_Height: 512
-  m_AntiAliasing: 1
-  m_DepthFormat: 0
-  m_ColorFormat: 7
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_BindMS: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 2
-  m_VolumeDepth: 1
 --- !u!1001 &475620881
 Prefab:
   m_ObjectHideFlags: 0
@@ -1401,7 +1370,7 @@ Light:
   m_SpotAngle: 30
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 2
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
@@ -1633,32 +1602,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f6545096e58f2445a95f9ff831d18fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  voxelResolution: 128
+  reflectionProbe: {fileID: 0}
+  voxelResolution: 256
   visualizeSunDepthTexture: 0
   visualizeGI: 0
   sun: {fileID: 1226213135}
   giCullingMask:
     serializedVersion: 2
     m_Bits: 2147483647
-  shadowVolumeMask:
-    serializedVersion: 2
-    m_Bits: 524288
   shadowSpaceSize: 25
   temporalBlendWeight: 0.75
   visualizeVoxels: 0
-  visualizeShadowmapCopy: 0
-  shadowmapCopySize: 512
   updateGI: 1
-  useVolumeRayCast: 0
-  MatchAmbiantColor: 0
   skyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
+  MatchAmbiantColor: 1
   voxelSpaceSize: 25
   useBilateralFiltering: 0
   innerOcclusionLayers: 1
   GIResolution: 1
   stochasticSampling: 1
   infiniteBounces: 0
-  infiniteBouncesRerenderObjects: 0
   followTransform: {fileID: 1529067319}
   cones: 8
   coneTraceSteps: 10
@@ -1672,7 +1635,8 @@ MonoBehaviour:
   giGain: 2
   secondaryBounceGain: 0.9
   softSunlight: 1
-  skyIntensity: 3.32
+  skyIntensity: 0
+  doReflections: 1
   reflectionSteps: 6
   reflectionOcclusionPower: 1
   skyReflectionIntensity: 1
@@ -1681,36 +1645,15 @@ MonoBehaviour:
   secondaryCones: 6
   secondaryOcclusionStrength: 0.27
   sphericalSkylight: 0
-  useUnityShadowMap: 1
-  shadowCam: {fileID: 0}
-  reflectionProbe: {fileID: 0}
-  showVolumeObjects: 0
-  volumeCube: {fileID: 0}
-  volumeFrontCam: {fileID: 0}
-  volumeBackCam: {fileID: 0}
-  SEGIShadowBias: 0.2525
-  SEGIShadowScale: 1
-  FrontRT: {fileID: 0}
-  BackRT: {fileID: 0}
-  noiseDistribution: 0.1
-  sunShadowResolution: 128
-  m_ShadowmapCopy: {fileID: 350925463}
-  sunDepthTextureDepth: 32
-  integerVolumeArray: {fileID: 0}
-  transferIntsCompute: {fileID: 7200000, guid: 2070a5530c303444ab76ad8146f96703, type: 3}
-  currentClipmapIndex: 0
-  voxelCamera: {fileID: 0}
-  minPosVoxel: {x: -6.25, y: -9.375, z: -12.5, w: 25}
-  vecGridSize: {x: 128, y: 128, z: 128, w: 16}
-  updateGIevery: 1
   SEGIRenderSource: {fileID: 0}
   SEGIRenderDestination: {fileID: 0}
-  SEGIRenderWidth: 0
-  SEGIRenderHeight: 0
+  SEGIRenderWidth: 1056
+  SEGIRenderHeight: 664
   filterMode: 0
   renderTextureFormat: 2
+  gaussianMipFilter: 0
   voxelAA: 1
-  useFXAA: 0
+  useFXAA: 1
   useReflectionProbes: 1
   reflectionProbeIntensity: 0.25
   reflectionProbeAttribution: 2
