@@ -248,7 +248,7 @@
 								float3 viewVector = normalize(viewSpacePosition.xyz);
 								float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-								float4 spec = tex2D(_CameraGBufferTexture1, coord);
+								float4 spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, coord);
 								float smoothness = spec.a;
 								float3 specularColor = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, coord).rgb;
 

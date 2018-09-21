@@ -8,6 +8,9 @@ using UnityEditor.Rendering.PostProcessing;
 [CustomEditor(typeof(SEGICascaded))]
 public class SEGICascadedEditor : Editor
 {
+    //Allow callbacks to main script
+    SEGICascaded _target;
+
     SerializedObject serObj;
 
     SerializedProperty voxelResolution;
@@ -98,6 +101,9 @@ public class SEGICascadedEditor : Editor
 
     public void OnEnable()
     {
+        //Allow callbacks to main script
+        _target = (SEGICascaded)target;
+
         //Object[] selection = Selection.GetFiltered(typeof(SEGICascadedPreset), SelectionMode.Assets);
 
         serObj = new SerializedObject(target);
@@ -167,6 +173,19 @@ public class SEGICascadedEditor : Editor
         serObj.Update();
 
         EditorGUILayout.HelpBox("This is a preview of the work-in-progress version of SEGI with cascaded GI volumes. Behavior is not final and is subject to change.", MessageType.Info);
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.Space();
+        if (GUILayout.Button("Click to apply Changes made at runtime!"))
+        {
+            if (!_target.enabled) _target.enabled = true;
+            else
+            {
+                _target.SEGIBufferInit();
+            }
+        }
+        EditorGUILayout.Space();
+        EditorGUILayout.EndHorizontal();
 
         //Presets
         showPresets = EditorGUILayout.Foldout(showPresets, new GUIContent("Presets"));
