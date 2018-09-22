@@ -1621,7 +1621,7 @@ MonoBehaviour:
   innerOcclusionLayers: 1
   GIResolution: 1
   stochasticSampling: 1
-  infiniteBounces: 0
+  infiniteBounces: 1
   followTransform: {fileID: 1529067319}
   cones: 8
   coneTraceSteps: 10
@@ -1634,11 +1634,11 @@ MonoBehaviour:
   nearLightGain: 0.72
   giGain: 2
   secondaryBounceGain: 0.9
-  softSunlight: 1
+  softSunlight: 0.25
   skyIntensity: 0
   doReflections: 1
-  reflectionSteps: 6
-  reflectionOcclusionPower: 1
+  reflectionSteps: 12
+  reflectionOcclusionPower: 4
   skyReflectionIntensity: 1
   farOcclusionStrength: 1
   farthestOcclusionStrength: 1
@@ -1647,15 +1647,15 @@ MonoBehaviour:
   sphericalSkylight: 0
   SEGIRenderSource: {fileID: 0}
   SEGIRenderDestination: {fileID: 0}
-  SEGIRenderWidth: 1056
+  SEGIRenderWidth: 904
   SEGIRenderHeight: 664
   filterMode: 0
   renderTextureFormat: 2
-  gaussianMipFilter: 0
+  gaussianMipFilter: 1
   voxelAA: 1
   useFXAA: 1
   useReflectionProbes: 1
-  reflectionProbeIntensity: 0.25
+  reflectionProbeIntensity: 2
   reflectionProbeAttribution: 2
   reflectionProbeLayerMask:
     serializedVersion: 2
@@ -1689,7 +1689,7 @@ Camera:
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_RenderingPath: 1
+  m_RenderingPath: 3
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3

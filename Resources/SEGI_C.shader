@@ -55,13 +55,10 @@
 				#pragma fragment frag
 
 				int FrameSwitch;
-				int HalfResolution;
 
-
-				sampler3D SEGIVolumeTexture1;
+				UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
 				UNITY_DECLARE_SCREENSPACE_TEXTURE(NoiseTexture);
-
 
 				float4 frag(v2f input) : SV_Target
 				{
@@ -82,8 +79,7 @@
 						voxelSpacePosition = mul(SEGIWorldToVoxel, voxelSpacePosition);
 						voxelSpacePosition = mul(SEGIVoxelProjection, voxelSpacePosition);
 						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
-
-
+						
 						//Prepare for cone trace
 						float2 dither = rand(coord + (float)FrameSwitch * 0.011734);
 
@@ -101,8 +97,8 @@
 
 						//Get blue noise
 						float2 noiseCoord = (UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw) / (64.0).xx;
-						float blueNoise = UNITY_SAMPLE_SCREENSPACE_TEXTURE(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).x;
-
+						float3 blueNoise = UNITY_SAMPLE_SCREENSPACE_TEXTURE(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
+	
 						//Trace GI cones
 						int numSamples = TraceDirections;
 						for (int i = 0; i < numSamples; i++)
@@ -132,7 +128,7 @@
 
 						gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
 
-						gi *= 0.75 + (float)HalfResolution * 0.25;
+						gi *= 0.75 + (float)GIResolution * 0.25;
 
 
 						return float4(gi, 1.0);
@@ -211,8 +207,6 @@
 
 					int DoReflections = 1;
 
-					int HalfResolution;
-
 					float4 frag(v2f input) : COLOR0
 					{
 						#if UNITY_UV_STARTS_AT_TOP
@@ -223,7 +217,9 @@
 							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 						#endif
 
-						float4 albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+						float4 albedoTex;
+						if (ForwardPath) albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+						else albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 						float3 albedo = albedoTex.rgb;
 						float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
 						float3 scene = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
@@ -231,15 +227,32 @@
 
 						float3 result = scene + gi * albedoTex.a * albedoTex.rgb;
 
+						float4 spec;
+						float smoothness;
+						float3 specularColor;
 						if (DoReflections > 0)
 						{
 							float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 							float3 viewVector = normalize(viewSpacePosition.xyz);
 							float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-							float4 spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, coord);
-							float smoothness = spec.a;
-							float3 specularColor = spec.rgb;
+							if (ForwardPath)
+							{
+								float3 worldNormal = GetWorldNormal(coord).rgb;
+								//float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
+								//float3 viewVector = normalize(viewSpacePosition.xyz);
+								float3 reflectedDir = reflect(viewVector, worldNormal);
+								half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
+								half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
+								smoothness = probeData.a * 0.5;
+								specularColor = probeColor.rgb * 0.5;
+							}
+							else
+							{
+								spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, coord);
+								smoothness = spec.a;
+								specularColor = spec.rgb;
+							}
 
 							float3 worldNormal;
 							if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
@@ -360,7 +373,7 @@
 					#pragma vertex vert
 					#pragma fragment frag
 
-					sampler3D SEGIVolumeTexture1;
+					UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
 					int FrameSwitch;
 
@@ -374,8 +387,6 @@
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
 							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
 						#endif
-
-						float4 spec = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, coord);
 
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 						float3 viewVector = normalize(viewSpacePosition.xyz);
@@ -396,8 +407,21 @@
 
 						float2 dither = rand(coord + (float)FrameSwitch * 0.11734);
 
-						float smoothness = spec.a * 0.5;
-						float3 specularColor = spec.rgb;
+						float smoothness;
+						float3 specularColor;
+						if (ForwardPath)
+						{
+							float3 reflectedDir = reflect(viewVector, worldNormal);
+							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
+							half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
+							smoothness = probeData.a * 0.5;
+							specularColor = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, coord).rgb;
+						}
+						else
+						{
+							smoothness = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1, coord).a * 0.5;
+							specularColor = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, coord).rgb;
+						}
 
 						float4 reflection = (0.0).xxxx;
 
@@ -496,11 +520,11 @@
 					float LayerToVisualize;
 					int MipLevelToVisualize;
 
-					sampler3D SEGIVolumeTexture1;
+					UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
 					float4 frag(v2f input) : COLOR0
 					{
-						return float4(tex3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
+						return float4(UNITY_SAMPLE_TEX3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
 					}
 
 				ENDCG

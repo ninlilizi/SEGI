@@ -8381,7 +8381,7 @@ Light:
   serializedVersion: 8
   m_Type: 1
   m_Color: {r: 1, g: 0.95068145, b: 0.8161765, a: 1}
-  m_Intensity: 0.88
+  m_Intensity: 0.5
   m_Range: 10
   m_SpotAngle: 30
   m_CookieSize: 10
@@ -8709,7 +8709,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1320592614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9832,9 +9832,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 1448437542}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6e0b00f945a6ec441b262a1479fdd3dd, type: 3}
+  m_Script: {fileID: 11500000, guid: b75fa451d6767f141b035bead3958da5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  speed: 1
+  cameraTransform: {fileID: 1448437544}
+  checkSphere: {fileID: 0}
+  dontRequireClick: 0
+  limitPosition: 0
+  minPosition: {x: 0, y: 0, z: 0}
+  maxPosition: {x: 0, y: 0, z: 0}
 --- !u!4 &1448437544
 Transform:
   m_ObjectHideFlags: 0
@@ -10930,14 +10937,14 @@ MonoBehaviour:
   temporalBlendWeight: 0.1
   visualizeVoxels: 0
   updateGI: 1
-  skyColor: {r: 0, g: 0, b: 0, a: 0}
-  MatchAmbiantColor: 1
+  skyColor: {r: 0.58431375, g: 0.4862745, b: 0.42352942, a: 0}
+  MatchAmbiantColor: 0
   voxelSpaceSize: 50
   useBilateralFiltering: 0
-  innerOcclusionLayers: 1
+  innerOcclusionLayers: 0
   GIResolution: 1
   stochasticSampling: 1
-  infiniteBounces: 0
+  infiniteBounces: 1
   followTransform: {fileID: 1448437544}
   cones: 14
   coneTraceSteps: 14
@@ -10950,8 +10957,8 @@ MonoBehaviour:
   nearLightGain: 1
   giGain: 1
   secondaryBounceGain: 1
-  softSunlight: 0.95
-  skyIntensity: 0
+  softSunlight: 1
+  skyIntensity: 1
   doReflections: 1
   reflectionSteps: 64
   reflectionOcclusionPower: 1
@@ -10963,7 +10970,7 @@ MonoBehaviour:
   sphericalSkylight: 0
   SEGIRenderSource: {fileID: 0}
   SEGIRenderDestination: {fileID: 0}
-  SEGIRenderWidth: 1056
+  SEGIRenderWidth: 904
   SEGIRenderHeight: 664
   filterMode: 0
   renderTextureFormat: 2

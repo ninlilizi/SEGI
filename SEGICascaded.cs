@@ -21,6 +21,7 @@ public class SEGICascaded : MonoBehaviour
 
 	Camera shadowCam;
 	GameObject shadowCamGameObject;
+    Texture2D[] blueNoise;
 
     public ReflectionProbe reflectionProbe;
     GameObject reflectionProbeGameObject;
@@ -170,7 +171,7 @@ public class SEGICascaded : MonoBehaviour
 		public bool voxelizationShader;
 		public bool tracingShader;
 
-		public bool fullFunctionality
+        public bool fullFunctionality
 		{
 			get
 			{
@@ -376,7 +377,7 @@ public class SEGICascaded : MonoBehaviour
 		useBilateralFiltering = preset.useBilateralFiltering;
         GIResolution = preset.GIResolution;
         stochasticSampling = preset.stochasticSampling;
-        doReflections = true;// preset.doReflections;
+        doReflections = preset.doReflections;
 
 		cones = preset.cones;
 		coneTraceSteps = preset.coneTraceSteps;
@@ -561,7 +562,7 @@ public class SEGICascaded : MonoBehaviour
         {
             reflectionProbeGameObject = new GameObject("SEGI_REFLECTIONPROBE");
             reflectionProbe = reflectionProbeGameObject.AddComponent<ReflectionProbe>();
-            reflectionProbeGameObject.hideFlags = HideFlags.HideAndDontSave;
+            reflectionProbeGameObject.hideFlags = HideFlags.DontSave;
 
             reflectionProbeGameObject.transform.parent = attachedCamera.transform;
             reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
@@ -623,9 +624,25 @@ public class SEGICascaded : MonoBehaviour
 
 
 
+        //Get blue noise textures
+        blueNoise = null;
+        blueNoise = new Texture2D[64];
+        for (int i = 0; i < 64; i++)
+        {
+            string fileName = "LDR_RGBA_" + i.ToString();
+            Texture2D blueNoiseTexture = Resources.Load("Noise Textures/" + fileName) as Texture2D;
+
+            if (blueNoiseTexture == null)
+            {
+                Debug.LogWarning("Unable to find noise texture \"Assets/SEGI/Resources/Noise Textures/" + fileName + "\" for SEGI!");
+            }
+
+            blueNoise[i] = blueNoiseTexture;
+
+        }
 
 
-            voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
+        voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
             voxelTracingShader = Shader.Find("Hidden/SEGITraceScene_C");
 
             CreateVolumeTextures();
@@ -1204,6 +1221,11 @@ public class SEGICascaded : MonoBehaviour
         material.SetFloat("SkyReflectionIntensity", skyReflectionIntensity);
         material.SetFloat("FarOcclusionStrength", farOcclusionStrength);
         material.SetFloat("FarthestOcclusionStrength", farthestOcclusionStrength);
+        material.SetTexture("NoiseTexture", blueNoise[frameSwitch % 64]);
+        material.SetFloat("BlendWeight", temporalBlendWeight);
+        material.SetInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
+        material.SetFloat("reflectionProbeIntensity", reflectionProbeIntensity);
+        material.SetFloat("reflectionProbeAttribution", reflectionProbeAttribution); 
         material.SetInt("StereoEnabled", UnityEngine.XR.XRSettings.enabled ? 1 : 0);
 
         SEGIRenderWidth = source.width;
@@ -1248,39 +1270,6 @@ public class SEGICascaded : MonoBehaviour
         SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.blur1, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Linear, 1, false, RenderTextureMemoryless.None, false);
         SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.FXAARTluminance, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Linear, 1, false, RenderTextureMemoryless.None, false);
 
-        //Set parameters
-        /*SEGIBuffer.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);//TODO needed?
-        SEGIBuffer.SetGlobalInt("SEGIFrameSwitch", frameSwitch);//TODO needed?
-        SEGIBuffer.SetGlobalMatrix("CameraToWorld", attachedCamera.cameraToWorldMatrix);
-        SEGIBuffer.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
-        SEGIBuffer.SetGlobalMatrix("ProjectionMatrixInverse", attachedCamera.projectionMatrix.inverse);
-        SEGIBuffer.SetGlobalMatrix("ProjectionMatrix", attachedCamera.projectionMatrix);
-        SEGIBuffer.SetGlobalInt("FrameSwitch", frameSwitch);
-        SEGIBuffer.SetGlobalVector("CameraPosition", attachedCamera.transform.position);
-        SEGIBuffer.SetGlobalFloat("DeltaTime", Time.deltaTime);
-        SEGIBuffer.SetGlobalInt("StochasticSampling", stochasticSampling ? 1 : 0);
-        SEGIBuffer.SetGlobalInt("TraceDirections", cones);
-        SEGIBuffer.SetGlobalInt("TraceSteps", coneTraceSteps);
-        SEGIBuffer.SetGlobalFloat("TraceLength", coneLength);
-        SEGIBuffer.SetGlobalFloat("ConeSize", coneWidth);
-        SEGIBuffer.SetGlobalFloat("OcclusionStrength", occlusionStrength);
-        SEGIBuffer.SetGlobalFloat("OcclusionPower", occlusionPower);
-        SEGIBuffer.SetGlobalFloat("ConeTraceBias", coneTraceBias);
-        SEGIBuffer.SetGlobalFloat("GIGain", giGain);
-        SEGIBuffer.SetGlobalFloat("NearLightGain", nearLightGain);
-        SEGIBuffer.SetGlobalFloat("NearOcclusionStrength", nearOcclusionStrength);
-        SEGIBuffer.SetGlobalInt("GIResolution", GIResolution);
-        SEGIBuffer.SetGlobalInt("ReflectionSteps", reflectionSteps);
-        SEGIBuffer.SetGlobalFloat("ReflectionOcclusionPower", reflectionOcclusionPower);
-        SEGIBuffer.SetGlobalFloat("SkyReflectionIntensity", skyReflectionIntensity);
-        SEGIBuffer.SetGlobalFloat("FarOcclusionStrength", farOcclusionStrength);
-        SEGIBuffer.SetGlobalFloat("FarthestOcclusionStrength", farthestOcclusionStrength);
-        //SEGIBuffer.SetGlobalTexture("NoiseTexture", blueNoise[frameCounter]);
-        SEGIBuffer.SetGlobalFloat("BlendWeight", temporalBlendWeight);
-        SEGIBuffer.SetGlobalInt("useReflectionProbes", useReflectionProbes ? 1 : 0);
-        SEGIBuffer.SetGlobalInt("useBilateralFiltering", useBilateralFiltering ? 1 : 0);
-        SEGIBuffer.SetGlobalFloat("reflectionProbeIntensity", reflectionProbeIntensity);
-        SEGIBuffer.SetGlobalFloat("reflectionProbeAttribution", reflectionProbeAttribution);*/
         if (GetComponent<Camera>().renderingPath == RenderingPath.Forward)
         {
             SEGIBuffer.SetGlobalInt("ForwardPath", 1);
@@ -1303,8 +1292,11 @@ public class SEGICascaded : MonoBehaviour
         SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.gi2, material, Pass.DiffuseTrace);
 
         //Render GI reflections result
-        SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.reflections, material, Pass.SpecularTrace);
-        SEGIBuffer.SetGlobalTexture("Reflections", SEGICMDBufferRT.reflections);
+        if (doReflections)
+        {
+            SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.reflections, material, Pass.SpecularTrace);
+            SEGIBuffer.SetGlobalTexture("Reflections", SEGICMDBufferRT.reflections);
+        }
 
         //If Half Resolution tracing is enabled
         if (giRenderRes >= 2)

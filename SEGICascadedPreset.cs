@@ -18,6 +18,7 @@ public sealed class SEGICascadedPreset : ScriptableObject
     public float reflectionProbeIntensity = 0.5f;
     [Range(0, 2)]
     public float reflectionProbeAttribution = 1f;
+    public bool doReflections = true;
 
     [Range(0.01f, 1.0f)]
 	public float temporalBlendWeight = 1.0f;

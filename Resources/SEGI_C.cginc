@@ -48,9 +48,8 @@ float reflectionProbeIntensity;
 int useReflectionProbes;
 int ReflectionSteps;
 int StereoEnabled;
+int GIResolution;
 int ForwardPath;
-
-
 
 uniform half4 _MainTex_TexelSize;
 
@@ -172,19 +171,33 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		float4 sample = float4(0.0, 0.0, 0.0, 0.0);
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
+		{
 			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize), 0);
+		}
 		else if (mipLevel == 1)
+		{
 			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0);
+		}
 		else if (mipLevel == 2)
+		{
 			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0);
+		}
 		else if (mipLevel == 3)
+		{
 			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0);
+		}
 		else if (mipLevel == 4)
+		{
 			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0);
+		}
 		else if (mipLevel == 5)
+		{
 			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0);
+		}
 		else
+		{
 			sample = float4(1, 1, 1, 0);
+		}
 
 
 		float occlusion = skyVisibility * skyVisibility;
@@ -212,8 +225,8 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 skyColor = float3(0.0, 0.0, 0.0);
 
-	float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
-	float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
+	float upGradient = saturate(dot(1, float3(0.0, 1.0, 0.0)));
+	float sunGradient = saturate(dot(1, -SEGISunlightVector.xyz));
 	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
@@ -228,15 +241,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
 
 		probeColor = lerp(skyColor.rgb, (0.5).xxx, probeColor.rgb * reflectionProbeAttribution);
-
-		gi.rgb *= GIGain * 0.25;
-		gi += skyColor * skyVisibility * skyMult;
 	}
-	else
-	{
-		gi.rgb *= GIGain * 0.25;
-		gi += skyColor * skyVisibility * skyMult;
-	}
+	gi.rgb *= GIGain * 0.25;
+	gi += skyColor * skyVisibility * skyMult;
 
 	return float4(gi.rgb * 0.8, 0.0f);
 }

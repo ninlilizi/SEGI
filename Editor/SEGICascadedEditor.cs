@@ -44,6 +44,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty giGain;
     SerializedProperty secondaryBounceGain;
     SerializedProperty softSunlight;
+    SerializedProperty doReflections;
 
     SerializedProperty voxelAA;
     SerializedProperty reflectionSteps;
@@ -134,6 +135,7 @@ public class SEGICascadedEditor : Editor
         giGain = serObj.FindProperty("giGain");
         secondaryBounceGain = serObj.FindProperty("secondaryBounceGain");
         softSunlight = serObj.FindProperty("softSunlight");
+        doReflections = serObj.FindProperty("doReflections");
         voxelAA = serObj.FindProperty("voxelAA");
         reflectionSteps = serObj.FindProperty("reflectionSteps");
         skyReflectionIntensity = serObj.FindProperty("skyReflectionIntensity");
@@ -325,7 +327,8 @@ public class SEGICascadedEditor : Editor
 		if (showReflectionProperties)
 		{
 			EditorGUI.indentLevel++;
-			EditorGUILayout.PropertyField(reflectionSteps, new GUIContent("Reflection Steps", "Number of reflection trace steps."));
+            EditorGUILayout.PropertyField(doReflections, new GUIContent("Do Reflections", "Enable this for cone-traced reflections."));
+            EditorGUILayout.PropertyField(reflectionSteps, new GUIContent("Reflection Steps", "Number of reflection trace steps."));
 			EditorGUILayout.PropertyField(reflectionOcclusionPower, new GUIContent("Reflection Occlusion Power", "Strength of light blocking during reflection tracing."));
 			EditorGUILayout.PropertyField(skyReflectionIntensity, new GUIContent("Sky Reflection Intensity", "Intensity of sky reflections."));
 			EditorGUI.indentLevel--;
@@ -395,6 +398,7 @@ public class SEGICascadedEditor : Editor
         preset.giGain = instance.giGain;
         preset.secondaryBounceGain = instance.secondaryBounceGain;
 
+        preset.doReflections = instance.doReflections;
         preset.reflectionSteps = instance.reflectionSteps;
         preset.reflectionOcclusionPower = instance.reflectionOcclusionPower;
         preset.skyReflectionIntensity = instance.skyReflectionIntensity;
