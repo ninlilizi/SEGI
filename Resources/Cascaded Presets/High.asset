@@ -11,22 +11,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 195d4ee8e5f057f4590c043b132f9c86, type: 3}
   m_Name: High
   m_EditorClassIdentifier: 
-  active: 1
-  enabled:
-    overrideState: 1
-    value: 0
-  voxelResolution: 128
+  voxelResolution: 256
   voxelAA: 1
   innerOcclusionLayers: 1
   infiniteBounces: 0
   useReflectionProbes: 1
-  reflectionProbeIntensity: 0.33
+  reflectionProbeIntensity: 0.5
+  reflectionProbeAttribution: 1
+  doReflections: 1
   temporalBlendWeight: 0.75
   useBilateralFiltering: 1
   GIResolution: 1
   stochasticSampling: 0
-  noiseDistribution: 0.025
-  cones: 8
+  noiseDistribution: 0.32
+  cones: 4
   coneTraceSteps: 10
   coneLength: 1
   coneWidth: 3.9
@@ -43,5 +41,6 @@ MonoBehaviour:
   gaussianMipFilter: 0
   farOcclusionStrength: 1
   farthestOcclusionStrength: 1
-  secondaryCones: 6
+  secondaryCones: 3
   secondaryOcclusionStrength: 0.27
+  useFXAA: 1

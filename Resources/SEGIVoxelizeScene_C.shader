@@ -1,6 +1,4 @@
-﻿// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
-
-Shader "Hidden/SEGIVoxelizeScene_C" {
+﻿Shader "Hidden/SEGIVoxelizeScene_C" {
 	Properties
 	{
 		_Color ("Main Color", Color) = (1,1,1,1)
@@ -65,6 +63,7 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 				v2g vert(appdata_full v)
 				{
 					v2g o;
+					UNITY_INITIALIZE_OUTPUT(v2g, o);
 					
 					float4 vertex = v.vertex;
 					
@@ -85,7 +84,8 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 				void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 				{
 					v2g p[3];
-					for (int i = 0; i < 3; i++)
+					int i = 0;
+					for (i = 0; i < 3; i++)
 					{
 						p[i] = input[i];
 						p[i].pos = mul(unity_ObjectToWorld, p[i].pos);						
@@ -123,7 +123,7 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 						angle = 0;
 					}
 					
-					for (int i = 0; i < 3; i ++)
+					for (i = 0; i < 3; i ++)
 					{
 						///*
 						if (angle == 0)
@@ -220,7 +220,8 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 					uint compareValue = 0;
 					uint originalValue;
 
-					[allow_uav_condition] for (int i = 0; i < 12; i++)
+					[allow_uav_condition]
+					while (true)
 					{
 						InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
 						if (compareValue == originalValue)
@@ -237,7 +238,8 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 					uint compareValue = 0;
 					uint originalValue;
 
-					[allow_uav_condition] for (int i = 0; i < 1; i++)
+					[allow_uav_condition]
+					while (true)
 					{
 						InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
 						if (compareValue == originalValue)
@@ -312,9 +314,6 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 
 					
 					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
-					//float3 col = color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
-					//float3 col = saturate(float3(shadowPos.xy, 0.0));
-
 
 					float4 prevBounce = tex3D(SEGIVolumeTexture1, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
 					col.rgb += prevBounce.rgb * 1.6 * SEGISecondaryBounceGain * tex.rgb * color.rgb;
@@ -323,9 +322,8 @@ Shader "Hidden/SEGIVoxelizeScene_C" {
 
 					
 					const float sqrt2 = sqrt(2.0) * 1.0;
-
-					coord /= SEGIVoxelAA + 1;
-
+					
+					coord /= (uint)SEGIVoxelAA + 1u;
 
 
 					if (_BlockerValue > 0.01)

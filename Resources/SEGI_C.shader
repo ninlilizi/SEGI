@@ -128,7 +128,7 @@
 
 						gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
 
-						gi *= 0.75 + (float)GIResolution * 0.25;
+						gi *= 0.75;// +(float)GIResolution * 0.25;
 
 
 						return float4(gi, 1.0);
@@ -236,7 +236,7 @@
 							float3 viewVector = normalize(viewSpacePosition.xyz);
 							float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-							if (ForwardPath)
+							if (useReflectionProbes  && ForwardPath)
 							{
 								float3 worldNormal = GetWorldNormal(coord).rgb;
 								//float4 viewSpacePosition = GetViewSpacePosition(coord, uv);

@@ -319,7 +319,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		skyVisibility *= pow(saturate(1.0 - sample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
 	}
 
-	if (ForwardPath)
+	if (useReflectionProbes  && ForwardPath)
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
 		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
