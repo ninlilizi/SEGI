@@ -19,26 +19,27 @@
 					#pragma vertex vert
 					#pragma fragment frag
 					#pragma geometry geom
+					#pragma multi_compile_instancing
 					#include "UnityCG.cginc"
 
 					#define PI 3.14159265
 
 					RWTexture3D<uint> RG0;
 
-					sampler3D SEGIVolumeLevel0;
-					sampler3D SEGIVolumeLevel1;
-					sampler3D SEGIVolumeLevel2;
-					sampler3D SEGIVolumeLevel3;
-					sampler3D SEGIVolumeLevel4;
-					sampler3D SEGIVolumeLevel5;
-					sampler3D SEGIVolumeLevel6;
-					sampler3D SEGIVolumeLevel7;
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel0);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel1);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel2);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel3);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel4);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel5);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel6);
+					UNITY_DECLARE_TEX3D(SEGIVolumeLevel7);
 
 					float4x4 SEGIVoxelViewFront;
 					float4x4 SEGIVoxelViewLeft;
 					float4x4 SEGIVoxelViewTop;
 
-					sampler2D _MainTex;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
 					float4 _MainTex_ST;
 					half4 _EmissionColor;
 					float _Cutoff;
@@ -65,7 +66,9 @@
 					v2g vert(appdata_full v)
 					{
 						v2g o;
-						UNITY_INITIALIZE_OUTPUT(v2g, o);
+						UNITY_SETUP_INSTANCE_ID(v); //Insert
+						UNITY_INITIALIZE_OUTPUT(v2g, o); //Insert
+						UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
 
 						float4 vertex = v.vertex;
 
@@ -84,6 +87,9 @@
 					[maxvertexcount(3)]
 					void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						v2g p[3];
 						int i = 0;
 						for (i = 0; i < 3; i++)
@@ -157,7 +163,7 @@
 
 					float4x4 SEGIVoxelToGIProjection;
 					float4x4 SEGIVoxelProjectionInverse;
-					sampler2D SEGIGIDepthNormalsTexture;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(SEGIGIDepthNormalsTexture);
 					float4 SEGISunlightVector;
 					float4 GISunColor;
 					int SEGIFrameSwitch;
@@ -165,7 +171,7 @@
 					float SEGISoftSunlight;
 					int SEGISecondaryCones;
 
-					sampler3D SEGIVolumeTexture0;
+					UNITY_DECLARE_TEX3D(SEGIVolumeTexture0);
 					float SEGIVoxelScaleFactor;
 					int SEGIVoxelAA;
 					int SEGISphericalSkylight;
@@ -195,17 +201,17 @@
 							float4 sample = float4(0.0, 0.0, 0.0, 0.0);
 							int mipLevel = floor(coneSize);
 							if (mipLevel == 0)
-								sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
+								sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0);
 							else if (mipLevel == 1)
-								sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
+								sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0);
 							else if (mipLevel == 2)
-								sample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
+								sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0);
 							else if (mipLevel == 3)
-								sample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
+								sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0);
 							else if (mipLevel == 4)
-								sample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
+								sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0);
 							else if (mipLevel == 5)
-								sample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
+								sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0);
 							else
 								sample = float4(1,1,1,0);
 
@@ -326,6 +332,9 @@
 
 					float4 frag(g2f input) : SV_TARGET
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 
 						int angle = 0;

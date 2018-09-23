@@ -12,6 +12,22 @@
 	UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
     float4 _MainTex_TexelSize;
 
+	struct v2f
+	{
+		UNITY_VERTEX_OUTPUT_STEREO
+	};
+
+	v2f vert(appdata_img v)
+	{
+		v2f o;
+
+		UNITY_SETUP_INSTANCE_ID(v);
+		UNITY_TRANSFER_INSTANCE_ID(v2f, o);
+		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+		return o;
+	}
+
     // 9-tap Gaussian filter with linear sampling
     // http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
     half4 gaussian_filter(float2 uv, float2 stride)
@@ -64,7 +80,7 @@
         {
             ZTest Always Cull Off ZWrite Off
             CGPROGRAM
-            #pragma vertex vert_img
+            #pragma vertex vert
             #pragma fragment frag_quarter
 			#pragma multi_compile_instancing
 
@@ -74,10 +90,10 @@
         {
             ZTest Always Cull Off ZWrite Off
             CGPROGRAM
-            #pragma vertex vert_img
+            #pragma vertex vert
             #pragma fragment frag_blur_h
 			#pragma multi_compile_instancing
-            #pragma target 3.0
+            #pragma target 5.0
 
             ENDCG
         }
@@ -85,10 +101,10 @@
         {
             ZTest Always Cull Off ZWrite Off
             CGPROGRAM
-            #pragma vertex vert_img
+            #pragma vertex vert
             #pragma fragment frag_blur_v
 			#pragma multi_compile_instancing
-            #pragma target 3.0
+            #pragma target 5.0
 
             ENDCG
         }

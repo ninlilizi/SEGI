@@ -25,7 +25,7 @@ public sealed class SEGICascadedPreset : ScriptableObject
     [Range(0.01f, 1.0f)]
 	public float temporalBlendWeight = 1.0f;
 	public bool useBilateralFiltering = true;
-    [Range(1, 4)]
+    [Range(1, 16)]
     public int GIResolution = 1;
     public bool stochasticSampling = true;
 

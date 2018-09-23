@@ -8,6 +8,8 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine.Rendering;
 using System.Collections.Generic;
+using Unity.Jobs;
+using Unity.Collections;
 
 [ExecuteInEditMode]
 [RequireComponent(typeof(Camera))]
@@ -30,7 +32,8 @@ public class SEGICascaded : MonoBehaviour
     [Serializable]
     public enum VoxelResolution
     {
-        low = 128,
+        low = 64,
+        medium = 128,
         high = 256
     }
 
@@ -63,7 +66,7 @@ public class SEGICascaded : MonoBehaviour
 	public int innerOcclusionLayers = 1;
 
 
-    [Range(1, 4)]
+    [Range(1, 16)]
     public int GIResolution = 1;
     public bool stochasticSampling = true;
 	public bool infiniteBounces = false;
@@ -155,6 +158,16 @@ public class SEGICascaded : MonoBehaviour
         public static int blur1 = 7;
         public static int FXAARTluminance = 8;
     }
+    private RenderTexture RT_FXAART;
+    private RenderTexture RT_gi1;
+    private RenderTexture RT_gi2;
+    private RenderTexture RT_reflections;
+    private RenderTexture RT_gi3;
+    private RenderTexture RT_gi4;
+    private RenderTexture RT_blur0;
+    private RenderTexture RT_blur1;
+    private RenderTexture RT_FXAARTluminance;
+
     public RenderTexture SEGIRenderSource;
     public RenderTexture SEGIRenderDestination;
     public int SEGIRenderWidth;
@@ -429,12 +442,12 @@ public class SEGICascaded : MonoBehaviour
         {
             if (volumeTextures[i])
             {
-                volumeTextures[i].DiscardContents();
+                //volumeTextures[i].DiscardContents();
                 volumeTextures[i].Release();
-                DestroyImmediate(volumeTextures[i]);
+                //DestroyImmediate(volumeTextures[i]);
             }
             int resolution = (int)voxelResolution / Mathf.RoundToInt(Mathf.Pow((float)2, (float)i));
-            volumeTextures[i] = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            volumeTextures[i] = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default);
             volumeTextures[i].isVolume = true;
             volumeTextures[i].volumeDepth = resolution;
             volumeTextures[i].enableRandomWrite = true;
@@ -447,11 +460,11 @@ public class SEGICascaded : MonoBehaviour
 
         if (volumeTextureB)
         {
-            volumeTextureB.DiscardContents();
+            //volumeTextureB.DiscardContents();
             volumeTextureB.Release();
-            DestroyImmediate(volumeTextureB);
+            //DestroyImmediate(volumeTextureB);
         }
-        volumeTextureB = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        volumeTextureB = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default);
         volumeTextureB.isVolume = true;
         volumeTextureB.volumeDepth = (int)voxelResolution;
         volumeTextureB.enableRandomWrite = true;
@@ -463,11 +476,11 @@ public class SEGICascaded : MonoBehaviour
 
         if (volumeTexture1)
         {
-            volumeTexture1.DiscardContents();
+            //volumeTexture1.DiscardContents();
             volumeTexture1.Release();
-            DestroyImmediate(volumeTexture1);
+            //DestroyImmediate(volumeTexture1);
         }
-        volumeTexture1 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+        volumeTexture1 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Default);
         volumeTexture1.isVolume = true;
         volumeTexture1.volumeDepth = (int)voxelResolution;
         volumeTexture1.enableRandomWrite = true;
@@ -482,11 +495,11 @@ public class SEGICascaded : MonoBehaviour
 
         if (intTex1)
         {
-            intTex1.DiscardContents();
+            //intTex1.DiscardContents();
             intTex1.Release();
-            DestroyImmediate(intTex1);
+            //DestroyImmediate(intTex1);
         }
-        intTex1 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        intTex1 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Default);
         intTex1.isVolume = true;
         intTex1.volumeDepth = (int)voxelResolution;
         intTex1.enableRandomWrite = true;
@@ -502,9 +515,9 @@ public class SEGICascaded : MonoBehaviour
 	{
 		if (dummyVoxelTexture)
 		{
-			dummyVoxelTexture.DiscardContents();
+			//dummyVoxelTexture.DiscardContents();
 			dummyVoxelTexture.Release();
-			DestroyImmediate(dummyVoxelTexture);
+			//DestroyImmediate(dummyVoxelTexture);
 		}
 		dummyVoxelTexture = new RenderTexture(dummyVoxelResolution, dummyVoxelResolution, 0, RenderTextureFormat.R8);
 		dummyVoxelTexture.Create();
@@ -512,9 +525,9 @@ public class SEGICascaded : MonoBehaviour
 
 		if (dummyVoxelTexture2)
 		{
-			dummyVoxelTexture2.DiscardContents();
+			//dummyVoxelTexture2.DiscardContents();
 			dummyVoxelTexture2.Release();
-			DestroyImmediate(dummyVoxelTexture2);
+			//DestroyImmediate(dummyVoxelTexture2);
 		}
 		dummyVoxelTexture2 = new RenderTexture((int)voxelResolution, (int)voxelResolution, 0, RenderTextureFormat.R8);
 		dummyVoxelTexture2.Create();
@@ -575,12 +588,13 @@ public class SEGICascaded : MonoBehaviour
             reflectionProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
             reflectionProbe.clearFlags = ReflectionProbeClearFlags.SolidColor;
             reflectionProbe.cullingMask = reflectionProbeLayerMask;
-            reflectionProbe.size = new Vector3(5f, 5f, 5f);
+            reflectionProbe.size = new Vector3(updateVoxelsAfterXInterval * 2.5f, updateVoxelsAfterXInterval * 2.5f, updateVoxelsAfterXInterval * 2.5f);
             reflectionProbe.mode = ReflectionProbeMode.Realtime;
+            reflectionProbe.shadowDistance = voxelSpaceSize;
             reflectionProbe.farClipPlane = voxelSpaceSize;
             reflectionProbe.backgroundColor = Color.black;
             reflectionProbe.boxProjection = true;
-            reflectionProbe.shadowDistance = 0;
+            
             reflectionProbe.resolution = 128;
             reflectionProbe.importance = 0;
             reflectionProbe.enabled = true;
@@ -604,6 +618,7 @@ public class SEGICascaded : MonoBehaviour
                 shadowCam.clearFlags = CameraClearFlags.SolidColor;
                 shadowCam.backgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
                 shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
+                shadowCam.stereoTargetEye = StereoTargetEyeMask.None;
                 shadowCam.cullingMask = giCullingMask;
                 shadowCam.useOcclusionCulling = false;
 
@@ -618,11 +633,11 @@ public class SEGICascaded : MonoBehaviour
 
             if (sunDepthTexture)
             {
-                sunDepthTexture.DiscardContents();
+                //sunDepthTexture.DiscardContents();
                 sunDepthTexture.Release();
-                DestroyImmediate(sunDepthTexture);
+                //DestroyImmediate(sunDepthTexture);
             }
-            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 24, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
             sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture.filterMode = FilterMode.Point;
             sunDepthTexture.Create();
@@ -646,10 +661,6 @@ public class SEGICascaded : MonoBehaviour
             blueNoise[i] = blueNoiseTexture;
 
         }
-
-
-        voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
-            voxelTracingShader = Shader.Find("Hidden/SEGITraceScene_C");
 
             CreateVolumeTextures();
 
@@ -698,7 +709,7 @@ public class SEGICascaded : MonoBehaviour
                 SEGIBuffer.name = "SEGI Render Loop";
 
             }
-            attachedCamera.AddCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
+            //attachedCamera.AddCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
 
             initChecker = new object();
         
@@ -735,26 +746,39 @@ public class SEGICascaded : MonoBehaviour
 		Gizmos.color = prevColor;
 	}
 
-	void CleanupTexture(ref RenderTexture texture)
+	/*void CleanupTexture(ref RenderTexture texture)
 	{
 		DestroyImmediate(texture);
-	}
+
+	}*/
 
 	void CleanupTextures()
 	{
-		CleanupTexture(ref sunDepthTexture);
-		CleanupTexture(ref previousResult);
-		CleanupTexture(ref previousDepth);
-		CleanupTexture(ref intTex1);
+		if (sunDepthTexture) sunDepthTexture.Release();
+		if (previousResult) previousResult.Release();
+		if (previousDepth) previousDepth.Release();
+		if (intTex1) intTex1.Release();
 		for (int i = 0; i < volumeTextures.Length; i++)
 		{
-			CleanupTexture(ref volumeTextures[i]);
+			if (volumeTextures[i]) volumeTextures[i].Release();
 		}
-		CleanupTexture(ref volumeTexture1);
-		CleanupTexture(ref volumeTextureB);
-		CleanupTexture(ref dummyVoxelTexture);
-		CleanupTexture(ref dummyVoxelTexture2);
-	}
+		volumeTexture1.Release();
+		volumeTextureB.Release();
+		dummyVoxelTexture.Release();
+		dummyVoxelTexture2.Release();
+        SEGIRenderSource.Release();
+        SEGIRenderDestination.Release();
+
+        RT_FXAART.Release();
+        RT_gi1.Release();
+        RT_gi2.Release();
+        RT_reflections.Release();
+        RT_gi3.Release();
+        RT_gi4.Release();
+        RT_blur0.Release();
+        RT_blur1.Release();
+        RT_FXAARTluminance.Release();
+    }
 
     void Cleanup()
     {
@@ -767,10 +791,10 @@ public class SEGICascaded : MonoBehaviour
         initChecker = null;
         CleanupTextures();
 
-  if (SEGIBuffer != null)
-  {
-      attachedCamera.RemoveCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
-  }
+    /*if (SEGIBuffer != null)
+    {
+          attachedCamera.RemoveCommandBuffer(CameraEvent.BeforeImageEffectsOpaque, SEGIBuffer);
+    }*/
 }
 
 	void OnEnable()
@@ -789,12 +813,18 @@ public class SEGICascaded : MonoBehaviour
     public void ResizeRenderTextures()
     {
         if (previousResult) previousResult.Release();
-        StopCoroutine(updateVoxels());
+        //StopCoroutine(updateVoxels());
 
+        if (SEGIRenderWidth == 0) SEGIRenderWidth = attachedCamera.scaledPixelWidth;
+        if (SEGIRenderHeight == 0) SEGIRenderHeight = attachedCamera.scaledPixelHeight;
+
+        RenderTextureDescriptor RT_Disc0 = new RenderTextureDescriptor(SEGIRenderWidth, SEGIRenderHeight, renderTextureFormat, 24);
+        RenderTextureDescriptor RT_Disc1 = new RenderTextureDescriptor(SEGIRenderWidth / (int)giRenderRes, SEGIRenderHeight, renderTextureFormat, 24);
+         
         SEGIRenderWidth = attachedCamera.pixelWidth == 0 ? 2 : attachedCamera.pixelWidth;
 		SEGIRenderHeight = attachedCamera.pixelHeight == 0 ? 2 : attachedCamera.pixelHeight;
 
-		previousResult = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf);
+		previousResult = new RenderTexture(RT_Disc0);
 		previousResult.wrapMode = TextureWrapMode.Clamp;
 		previousResult.filterMode = FilterMode.Bilinear;
 		previousResult.useMipMap = true;
@@ -804,31 +834,76 @@ public class SEGICascaded : MonoBehaviour
 
         if (previousDepth)
         {
-            previousDepth.DiscardContents();
+            //previousDepth.DiscardContents();
             previousDepth.Release();
-            DestroyImmediate(previousDepth);
+            //DestroyImmediate(previousDepth);
         }
-        previousDepth = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.RFloat, RenderTextureReadWrite.Default);
+        previousDepth = new RenderTexture(RT_Disc0);
         previousDepth.wrapMode = TextureWrapMode.Clamp;
         previousDepth.filterMode = FilterMode.Bilinear;
         previousDepth.Create();
         previousDepth.hideFlags = HideFlags.HideAndDontSave;
 
         if (SEGIRenderSource) SEGIRenderSource.Release();
-        SEGIRenderSource = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 32, renderTextureFormat, RenderTextureReadWrite.Default);
-        if (UnityEngine.XR.XRSettings.enabled) SEGIRenderSource.vrUsage = VRTextureUsage.TwoEyes;
+        SEGIRenderSource = new RenderTexture(RT_Disc0);
+        if (attachedCamera.stereoEnabled) SEGIRenderSource.vrUsage = VRTextureUsage.TwoEyes;
         SEGIRenderSource.wrapMode = TextureWrapMode.Clamp;
         SEGIRenderSource.filterMode = FilterMode.Point;
         SEGIRenderSource.Create();
         SEGIRenderSource.hideFlags = HideFlags.HideAndDontSave;
 
         if (SEGIRenderDestination) SEGIRenderDestination.Release();
-        SEGIRenderDestination = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 32, renderTextureFormat, RenderTextureReadWrite.Default);
+        SEGIRenderDestination = new RenderTexture(RT_Disc0);
         if (UnityEngine.XR.XRSettings.enabled) SEGIRenderDestination.vrUsage = VRTextureUsage.TwoEyes;
         SEGIRenderDestination.wrapMode = TextureWrapMode.Clamp;
         SEGIRenderDestination.filterMode = FilterMode.Point;
         SEGIRenderDestination.Create();
         SEGIRenderDestination.hideFlags = HideFlags.HideAndDontSave;
+
+        if (RT_FXAART) RT_FXAART.Release();
+        RT_FXAART = new RenderTexture(RT_Disc0);
+        if (UnityEngine.XR.XRSettings.enabled) RT_FXAART.vrUsage = VRTextureUsage.TwoEyes;
+        RT_FXAART.Create();
+
+        if (RT_gi1) RT_gi1.Release();
+        RT_gi1 = new RenderTexture(RT_Disc1);
+        if (UnityEngine.XR.XRSettings.enabled) RT_gi1.vrUsage = VRTextureUsage.TwoEyes;
+        RT_gi1.Create();
+
+        if (RT_gi2) RT_gi2.Release();
+        RT_gi2 = new RenderTexture(RT_Disc1);
+        if (UnityEngine.XR.XRSettings.enabled) RT_gi2.vrUsage = VRTextureUsage.TwoEyes;
+        RT_gi2.Create();
+
+        if (RT_reflections) RT_reflections.Release();
+        RT_reflections = new RenderTexture(RT_Disc1);
+        if (UnityEngine.XR.XRSettings.enabled) RT_reflections.vrUsage = VRTextureUsage.TwoEyes;
+        RT_reflections.Create();
+
+        if (RT_gi3) RT_gi3.Release();
+        RT_gi3 = new RenderTexture(RT_Disc0);
+        if (UnityEngine.XR.XRSettings.enabled) RT_gi3.vrUsage = VRTextureUsage.TwoEyes;
+        RT_gi3.Create();
+
+        if (RT_gi4) RT_gi4.Release();
+        RT_gi4 = new RenderTexture(RT_Disc0);
+        if (UnityEngine.XR.XRSettings.enabled) RT_gi4.vrUsage = VRTextureUsage.TwoEyes;
+        RT_gi4.Create();
+
+        if (RT_blur0) RT_blur0.Release();
+        RT_blur0 = new RenderTexture(RT_Disc0);
+        if (UnityEngine.XR.XRSettings.enabled) RT_blur0.vrUsage = VRTextureUsage.TwoEyes;
+        RT_blur0.Create();
+
+        if (RT_blur1) RT_blur1.Release();
+        RT_blur1 = new RenderTexture(RT_Disc0);
+        if (UnityEngine.XR.XRSettings.enabled) RT_blur1.vrUsage = VRTextureUsage.TwoEyes;
+        RT_blur1.Create();
+
+        if (RT_FXAARTluminance) RT_FXAARTluminance.Release();
+        RT_FXAARTluminance = new RenderTexture(RT_Disc0);
+        if (UnityEngine.XR.XRSettings.enabled) RT_FXAARTluminance.vrUsage = VRTextureUsage.TwoEyes;
+        RT_FXAARTluminance.Create();
 
         SEGIBufferInit();
         //StartCoroutine(updateVoxels());
@@ -839,11 +914,11 @@ public class SEGICascaded : MonoBehaviour
 
 		if (sunDepthTexture)
 		{
-			sunDepthTexture.DiscardContents();
+			//sunDepthTexture.DiscardContents();
 			sunDepthTexture.Release();
-			DestroyImmediate(sunDepthTexture);
+			//DestroyImmediate(sunDepthTexture);
 		}
-		sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
+		sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 24, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
         if (UnityEngine.XR.XRSettings.enabled) sunDepthTexture.vrUsage = VRTextureUsage.TwoEyes;
         sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
 		sunDepthTexture.filterMode = FilterMode.Point;
@@ -853,6 +928,7 @@ public class SEGICascaded : MonoBehaviour
 
     void Update()
     {
+        return;
         if (notReadyToRender)
             return;
 
@@ -940,7 +1016,6 @@ public class SEGICascaded : MonoBehaviour
             reflectionProbe.enabled = true;
             reflectionProbe.intensity = reflectionProbeIntensity;
             reflectionProbe.cullingMask = reflectionProbeLayerMask;
-            reflectionProbe.RenderProbe();
         }
         else
         {
@@ -1020,7 +1095,7 @@ public class SEGICascaded : MonoBehaviour
 
         if (renderState == RenderState.Voxelize && updateVoxelsAfterXDoUpdate == true)
         {
-            //voxelCamera.rect = new Rect(0f, 0.5f, 0.5f, 0.5f);
+            //voxelCamera.rect = new Rect(0f, 0f, 0.5f, 0.5f);
 
             activeVolume = voxelFlipFlop == 0 ? volumeTextures[0] : volumeTextureB;
             previousActiveVolume = voxelFlipFlop == 0 ? volumeTextureB : volumeTextures[0];
@@ -1074,10 +1149,12 @@ public class SEGICascaded : MonoBehaviour
             voxelCamera.nearClipPlane = 0.0f;
             voxelCamera.farClipPlane = voxelSpaceSize;
             voxelCamera.depth = -2;
+            voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
             voxelCamera.renderingPath = RenderingPath.Forward;
             voxelCamera.clearFlags = CameraClearFlags.Color;
             voxelCamera.backgroundColor = Color.black;
             voxelCamera.cullingMask = giCullingMask;
+            
 
 
 
@@ -1163,13 +1240,8 @@ public class SEGICascaded : MonoBehaviour
             Shader.SetGlobalTexture("SEGIVolumeTexture1", volumeTexture1);
 
             renderState = RenderState.Voxelize;
-
-            updateVoxelsAfterXDoUpdate = false;
-            updateVoxelsAfterXPrevX = attachedCamera.transform.position.x;
-            updateVoxelsAfterXPrevY = attachedCamera.transform.position.y;
-            updateVoxelsAfterXPrevZ = attachedCamera.transform.position.z;
         }
-        voxelCamera.rect = new Rect(0.0f, 0.0f, 1.0f, 1.0f);
+        //voxelCamera.rect = new Rect(0.0f, 0f, 1.0f, 1.0f);
 
         Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
         Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
@@ -1195,11 +1267,6 @@ public class SEGICascaded : MonoBehaviour
 
             material.SetMatrix("_LeftEyeProjection", leftEye);
             material.SetMatrix("_RightEyeProjection", rightEye);
-
-            updateVoxelsAfterXDoUpdate = false;
-            updateVoxelsAfterXPrevX = attachedCamera.transform.position.x;
-            updateVoxelsAfterXPrevY = attachedCamera.transform.position.y;
-            updateVoxelsAfterXPrevZ = attachedCamera.transform.position.z;
         }
         //Fix stereo rendering matrix/
 
@@ -1298,7 +1365,8 @@ public class SEGICascaded : MonoBehaviour
         }
 
         Graphics.Blit(source, SEGIRenderSource);
-        Graphics.Blit(SEGIRenderDestination, destination);
+        Graphics.ExecuteCommandBuffer(SEGIBuffer);
+        Graphics.Blit(SEGIRenderDestination, destination, material);
 
         material.SetMatrix("ProjectionPrev", attachedCamera.projectionMatrix);
         material.SetMatrix("ProjectionPrevInverse", attachedCamera.projectionMatrix.inverse);
@@ -1307,20 +1375,18 @@ public class SEGICascaded : MonoBehaviour
         material.SetVector("CameraPositionPrev", transform.position);
 
         frameSwitch = (frameSwitch + 1) % (128);
-
+       //material.ref
     }
 
-    // Render camera to texture directly and then release it... This avoids a GPU wait sync
-    private void OnPreCull()
+    struct ExecuteSEGIBufer : IJob
     {
-        
-    }
+        //public NativeArray<Material.> result;
 
-    private void OnPostRender()
-    {
-        attachedCamera.targetTexture = null;
+        public void Execute()
+        {
+
+        }
     }
-    // ---
 
     public void SEGIBufferInit()
     {
@@ -1332,31 +1398,10 @@ public class SEGICascaded : MonoBehaviour
         updateVoxelsAfterXPrevY = 9223372036854775807;
         updateVoxelsAfterXPrevZ = 9223372036854775807;
 
-        //Create RenerTextures
-        //TEXIDS
-        // 0    - FXAART
-        // 1    - gi1
-        // 2    - gi2
-        // 3    - reflections
-        // 4    - gi3
-        // 5    - gi4
-        // 6    - blur0
-        // 7    - blur1
-        // 8    - FXAARTluminance
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.FXAART, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.gi1, SEGIRenderWidth / (int)giRenderRes, SEGIRenderHeight / (int)giRenderRes, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.gi2, SEGIRenderWidth / (int)giRenderRes, SEGIRenderHeight / (int)giRenderRes, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.reflections, SEGIRenderWidth / (int)giRenderRes, SEGIRenderHeight / (int)giRenderRes, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.gi3, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.gi4, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.blur0, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.blur1, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-        SEGIBuffer.GetTemporaryRT(SEGICMDBufferRT.FXAARTluminance, SEGIRenderWidth, SEGIRenderHeight, 0, filterMode, renderTextureFormat, RenderTextureReadWrite.Default, 1, false, RenderTextureMemoryless.None, true);
-
         //Blit once to downsample if required
-        SEGIBuffer.Blit(SEGIRenderSource, SEGICMDBufferRT.gi1);
+        SEGIBuffer.Blit(SEGIRenderSource, RT_gi1);
 
-        if (GetComponent<Camera>().renderingPath == RenderingPath.Forward)
+        if (attachedCamera.renderingPath == RenderingPath.Forward)
         {
             SEGIBuffer.SetGlobalInt("ForwardPath", 1);
             SEGIBuffer.SetGlobalTexture("_Albedo", SEGIRenderSource);
@@ -1375,13 +1420,13 @@ public class SEGICascaded : MonoBehaviour
         SEGIBuffer.SetGlobalTexture("PreviousDepth", previousDepth);
 
         //Render diffuse GI tracing result
-        SEGIBuffer.Blit(SEGICMDBufferRT.gi1, SEGICMDBufferRT.gi2, material, Pass.DiffuseTrace);
+        SEGIBuffer.Blit(RT_gi1, RT_gi2, material, Pass.DiffuseTrace);
 
         //Render GI reflections result
         if (doReflections)
         {
-            SEGIBuffer.Blit(SEGICMDBufferRT.gi1, SEGICMDBufferRT.reflections, material, Pass.SpecularTrace);
-            SEGIBuffer.SetGlobalTexture("Reflections", SEGICMDBufferRT.reflections);
+            SEGIBuffer.Blit(RT_gi1, RT_reflections, material, Pass.SpecularTrace);
+            SEGIBuffer.SetGlobalTexture("Reflections", RT_reflections);
         }
 
         //If Half Resolution tracing is enabled
@@ -1392,34 +1437,45 @@ public class SEGICascaded : MonoBehaviour
 
             //Perform bilateral upsampling on half-resolution diffuse GI result
             SEGIBuffer.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
-            SEGIBuffer.Blit(SEGICMDBufferRT.gi2, SEGICMDBufferRT.gi3, material, Pass.BilateralUpsample);
+            SEGIBuffer.Blit(RT_gi2, RT_gi3, material, Pass.BilateralUpsample);
             SEGIBuffer.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
 
             //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
+
+            //material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+            //SEGIBuffer.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
+            //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+            //SEGIBuffer.Blit(RT_blur0, RT_gi3, material, Pass.BilateralBlur);
+
             SEGIBuffer.Blit(SEGICMDBufferRT.gi3, SEGICMDBufferRT.blur0, Gaussian_Material);
             SEGIBuffer.Blit(SEGICMDBufferRT.blur0, SEGICMDBufferRT.gi3, Gaussian_Material);
-            SEGIBuffer.SetGlobalTexture("BlurredGI", SEGICMDBufferRT.blur0);
+            SEGIBuffer.SetGlobalTexture("BlurredGI", RT_blur0);
 
             //Perform temporal reprojection and blending
             if (temporalBlendWeight < 1.0f)
             {
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi3, SEGICMDBufferRT.gi4, material, Pass.TemporalBlend);
+                SEGIBuffer.Blit(RT_gi3, RT_gi4, material, Pass.TemporalBlend);
                 //SEGIBuffer.Blit(SEGICMDBufferRT.gi4, SEGICMDBufferRT.gi3, material, Pass.TemporalBlend);
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi4, previousResult);
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi1, previousDepth, material, Pass.GetCameraDepthTexture);
+                SEGIBuffer.Blit(RT_gi4, previousResult);
+                SEGIBuffer.Blit(RT_gi1, previousDepth, material, Pass.GetCameraDepthTexture);
             }
 
             if (GIResolution >= 3)
             {
+                //material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                //SEGIBuffer.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
+                //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                //SEGIBuffer.Blit(RT_gi4, RT_gi3, material, Pass.BilateralBlur);
+
                 SEGIBuffer.Blit(SEGICMDBufferRT.gi3, SEGICMDBufferRT.gi4, Gaussian_Material);
                 SEGIBuffer.Blit(SEGICMDBufferRT.gi4, SEGICMDBufferRT.gi3, Gaussian_Material);
             }
 
             //Set the result to be accessed in the shader
-            SEGIBuffer.SetGlobalTexture("GITexture", SEGICMDBufferRT.gi3);
+            SEGIBuffer.SetGlobalTexture("GITexture", RT_gi3);
 
             //Actually apply the GI to the scene using gbuffer data
-            SEGIBuffer.Blit(SEGICMDBufferRT.gi1, SEGICMDBufferRT.FXAART, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
+            SEGIBuffer.Blit(SEGIRenderSource, RT_FXAART, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
         }
         else    //If Half Resolution tracing is disabled
         {
@@ -1427,44 +1483,31 @@ public class SEGICascaded : MonoBehaviour
             if (temporalBlendWeight < 1.0f)
             {
                 //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
+                //material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                //SEGIBuffer.Blit(RT_gi2, RT_blur1, material, Pass.BilateralBlur);
+                //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                //SEGIBuffer.Blit(RT_blur1, RT_blur0, material, Pass.BilateralBlur);
+
                 SEGIBuffer.Blit(SEGICMDBufferRT.gi2, SEGICMDBufferRT.blur1, Gaussian_Material);
                 SEGIBuffer.Blit(SEGICMDBufferRT.blur1, SEGICMDBufferRT.blur0, Gaussian_Material);
-                SEGIBuffer.SetGlobalTexture("BlurredGI", SEGICMDBufferRT.blur0);
+                SEGIBuffer.SetGlobalTexture("BlurredGI", RT_blur0);
 
                 //Perform temporal reprojection and blending
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi2, SEGICMDBufferRT.gi1, material, Pass.TemporalBlend);
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi1, previousResult);
-                SEGIBuffer.Blit(SEGICMDBufferRT.gi1, previousDepth, material, Pass.GetCameraDepthTexture);
+                SEGIBuffer.Blit(RT_gi2, RT_gi1, material, Pass.TemporalBlend);
+                SEGIBuffer.Blit(RT_gi1, previousResult);
+                SEGIBuffer.Blit(RT_gi1, previousDepth, material, Pass.GetCameraDepthTexture);
             }
 
             //Actually apply the GI to the scene using gbuffer data
-            SEGIBuffer.SetGlobalTexture("GITexture", SEGICMDBufferRT.gi2);
-            SEGIBuffer.Blit(SEGICMDBufferRT.gi1, SEGICMDBufferRT.FXAART, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
+            SEGIBuffer.SetGlobalTexture("GITexture", RT_gi2);
+            SEGIBuffer.Blit(SEGIRenderSource, RT_FXAART, material, visualizeGI ? Pass.VisualizeGI : Pass.BlendWithScene);
         }
         if (useFXAA)
         {
-            SEGIBuffer.Blit(SEGICMDBufferRT.FXAART, SEGICMDBufferRT.FXAARTluminance, FXAA_Material, 0);
-            SEGIBuffer.Blit(SEGICMDBufferRT.FXAARTluminance, SEGIRenderDestination, FXAA_Material, 1);
+            SEGIBuffer.Blit(RT_FXAART, RT_FXAARTluminance, FXAA_Material, 0);
+            SEGIBuffer.Blit(RT_FXAARTluminance, SEGIRenderDestination, FXAA_Material, 1);
         }
-        else SEGIBuffer.Blit(SEGICMDBufferRT.FXAART, SEGIRenderDestination);
-
-        //Set matrices/vectors for use during temporal reprojection
-        SEGIBuffer.SetGlobalMatrix("ProjectionPrev", attachedCamera.projectionMatrix);
-        SEGIBuffer.SetGlobalMatrix("ProjectionPrevInverse", attachedCamera.projectionMatrix.inverse);
-        SEGIBuffer.SetGlobalMatrix("WorldToCameraPrev", attachedCamera.worldToCameraMatrix);
-        SEGIBuffer.SetGlobalMatrix("CameraToWorldPrev", attachedCamera.cameraToWorldMatrix);
-        SEGIBuffer.SetGlobalVector("CameraPositionPrev", transform.position);
-
-        SEGIBuffer.ReleaseTemporaryRT(0);
-        SEGIBuffer.ReleaseTemporaryRT(1);
-        SEGIBuffer.ReleaseTemporaryRT(2);
-        SEGIBuffer.ReleaseTemporaryRT(3);
-        SEGIBuffer.ReleaseTemporaryRT(4);
-        SEGIBuffer.ReleaseTemporaryRT(5);
-        SEGIBuffer.ReleaseTemporaryRT(6);
-        SEGIBuffer.ReleaseTemporaryRT(7);
-        SEGIBuffer.ReleaseTemporaryRT(8);
-
+        else SEGIBuffer.Blit(RT_FXAART, SEGIRenderDestination);
 
         //ENDCommandBuffer
 

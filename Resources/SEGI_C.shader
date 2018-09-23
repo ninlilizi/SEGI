@@ -9,19 +9,26 @@
 #pragma target 5.0
 
 
-		struct v2f
+	struct v2f
 	{
 		float4 pos : SV_POSITION;
 		float4 uv : TEXCOORD0;
 
-#if UNITY_UV_STARTS_AT_TOP
-		half4 uv2 : TEXCOORD1;
-#endif
+		#if UNITY_UV_STARTS_AT_TOP
+			half4 uv2 : TEXCOORD1;
+		#endif
+
+		UNITY_VERTEX_INPUT_INSTANCE_ID
+		UNITY_VERTEX_OUTPUT_STEREO
 	};
 
 	v2f vert(appdata_img v)
 	{
 		v2f o;
+
+		UNITY_SETUP_INSTANCE_ID(v); //Insert
+		UNITY_INITIALIZE_OUTPUT(v2f, o); //Insert
+		UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); //Insert
 
 		o.pos = UnityObjectToClipPos(v.vertex);
 		o.uv = float4(v.texcoord.xy, 1, 1);
@@ -53,6 +60,7 @@
 			CGPROGRAM
 				#pragma vertex vert
 				#pragma fragment frag
+				#pragma multi_compile_instancing
 
 				int FrameSwitch;
 
@@ -62,6 +70,9 @@
 
 				float4 frag(v2f input) : SV_Target
 				{
+					UNITY_SETUP_INSTANCE_ID(input);
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 					#if UNITY_UV_STARTS_AT_TOP
 						float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 						float2 uv = UnityStereoTransformScreenSpaceTex(input.uv2);
@@ -79,7 +90,7 @@
 						voxelSpacePosition = mul(SEGIWorldToVoxel, voxelSpacePosition);
 						voxelSpacePosition = mul(SEGIVoxelProjection, voxelSpacePosition);
 						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
-						
+
 						//Prepare for cone trace
 						float2 dither = rand(coord + (float)FrameSwitch * 0.011734);
 
@@ -96,9 +107,9 @@
 						const float gAngle = phi * PI * 1.0;
 
 						//Get blue noise
-						float2 noiseCoord = (UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw) / (64.0).xx;
+						float2 noiseCoord = (input.uv.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 						float3 blueNoise = UNITY_SAMPLE_SCREENSPACE_TEXTURE(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
-	
+
 						//Trace GI cones
 						int numSamples = TraceDirections;
 						for (int i = 0; i < numSamples; i++)
@@ -142,33 +153,37 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					float2 Kernel;
 
 					float DepthTolerance;
 
-					sampler2D DepthNormalsLow;
-					sampler2D DepthLow;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(DepthNormalsLow);
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(DepthLow);
 					int SourceScale;
 
 
 					float4 frag(v2f input) : COLOR0
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						#if UNITY_UV_STARTS_AT_TOP
-							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
-							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv2);
+							float2 coord = input.uv2.xy;
+							float2 uv = input.uv2;
 						#else
-							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
-							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv);
+							float2 coord = input.uv.xy;
+							float2 uv = input.uv;
 						#endif
 
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
-						float depth = LinearEyeDepth(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).x);
-						half3 normal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb * 2.0 - 1.0);
+						float depth = LinearEyeDepth(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, input.uv.xy).x);
+						half3 normal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, input.uv.xy).rgb * 2.0 - 1.0);
 						float thresh = 0.26;
 
-						float3 viewPosition = GetViewSpacePosition(UnityStereoTransformScreenSpaceTex(input.uv).xy, uv).xyz;
+						float3 viewPosition = GetViewSpacePosition(input.uv.xy, uv).xyz;
 						float3 viewVector = normalize(viewPosition);
 
 						float NdotV = 1.0 / (saturate(dot(-viewVector, normal.xyz)) + 0.1);
@@ -177,13 +192,13 @@
 						for (int i = -4; i <= 4; i++)
 						{
 							float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy * 1.0;
-							float sampleDepth = LinearEyeDepth(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).x);
-							half3 sampleNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy * 1, 0, 0)).rgb * 2.0 - 1.0);
+							float sampleDepth = LinearEyeDepth(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, float4(input.uv.xy + offs.xy * 1, 0, 0)).x);
+							half3 sampleNormal = normalize(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2, float4(input.uv.xy + offs.xy * 1, 0, 0)).rgb * 2.0 - 1.0);
 
 							float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
 							weight *= pow(saturate(dot(sampleNormal, normal)), 24.0);
 
-							float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + offs.xy, 0, 0)).rgba;
+							float4 blurSample = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(input.uv.xy + offs.xy, 0, 0)).rgba;
 							blurred += blurSample * weight;
 							validWeights += weight;
 						}
@@ -201,14 +216,18 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
-					sampler2D GITexture;
-					sampler2D Reflections;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(Reflections);
 
 					int DoReflections = 1;
 
 					float4 frag(v2f input) : COLOR0
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv2);
@@ -279,11 +298,12 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
-					sampler2D GITexture;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 					UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousDepth);
 					UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentDepth);
-					sampler2D PreviousLocalWorldPos;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousLocalWorldPos);
 
 
 					float4 CameraPosition;
@@ -297,25 +317,22 @@
 
 					float4 frag(v2f input) : COLOR0
 					{
-						float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
+						float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv.xy).rgb;
 
-						float depth = GetDepthTexture(UnityStereoTransformScreenSpaceTex(input.uv).xy);
+						float depth = GetDepthTexture(input.uv.xy);
 
-						float4 currentPos = float4(UnityStereoTransformScreenSpaceTex(input.uv).x * 2.0 - 1.0, UnityStereoTransformScreenSpaceTex(input.uv).y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+						float4 currentPos = float4(input.uv.x * 2.0 - 1.0, input.uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
 
 						float4 fragpos = mul(ProjectionMatrixInverse, currentPos);
 						fragpos = mul(CameraToWorld, fragpos);
 						fragpos /= fragpos.w;
 						float4 thisWorldPosition = fragpos;
 
-
-
-
-						float2 motionVectors = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy, 0.0, 0.0)).xy;
-						float2 reprojCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy - motionVectors.xy;
-
-
+						float2 motionVectors = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture, float4(input.uv.xy, 0.0, 0.0)).xy;
+						float2 reprojCoord = input.uv.xy - motionVectors.xy;
 
 						float prevDepth = (UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousDepth, float4(reprojCoord + _MainTex_TexelSize.xy * 0.0, 0.0, 0.0)).x);
 						#if defined(UNITY_REVERSED_Z)
@@ -326,32 +343,26 @@
 						previousWorldPosition = mul(CameraToWorldPrev, previousWorldPosition);
 						previousWorldPosition /= previousWorldPosition.w;
 
-
 						float blendWeight = BlendWeight;
 
 						float posSimilarity = saturate(1.0 - distance(previousWorldPosition.xyz, thisWorldPosition.xyz) * 1.0);
 						blendWeight = lerp(1.0, blendWeight, posSimilarity);
 
-
-
-
 						float3 minPrev = float3(10000, 10000, 10000);
 						float3 maxPrev = float3(0, 0, 0);
 
-						float3 s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.5, 0.5), 0, 0)).rgb;
+						float3 s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.5, 0.5), 0, 0)).rgb;
 						minPrev = s0;
 						maxPrev = s0;
-						s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(0.5, -0.5), 0, 0)).rgb;
+						s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(0.5, -0.5), 0, 0)).rgb;
 						minPrev = min(minPrev, s0);
 						maxPrev = max(maxPrev, s0);
-						s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(-0.5, 0.5), 0, 0)).rgb;
+						s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(-0.5, 0.5), 0, 0)).rgb;
 						minPrev = min(minPrev, s0);
 						maxPrev = max(maxPrev, s0);
-						s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(UnityStereoTransformScreenSpaceTex(input.uv).xy + _MainTex_TexelSize.xy * float2(-0.5, -0.5), 0, 0)).rgb;
+						s0 = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, float4(input.uv.xy + _MainTex_TexelSize.xy * float2(-0.5, -0.5), 0, 0)).rgb;
 						minPrev = min(minPrev, s0);
 						maxPrev = max(maxPrev, s0);
-
-
 
 						float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, float4(reprojCoord, 0.0, 0.0)).rgb;
 						prevGI = lerp(prevGI, clamp(prevGI, minPrev, maxPrev), 0.25);
@@ -372,6 +383,7 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
@@ -380,6 +392,9 @@
 
 					float4 frag(v2f input) : SV_Target
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv2);
@@ -448,10 +463,14 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					float4 frag(v2f input) : COLOR0
 					{
-						float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+						float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, input.uv.xy);
 						return tex;
 					}
 
@@ -463,11 +482,14 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
-
+					#pragma multi_compile_instancing
 
 					float4 frag(v2f input) : COLOR0
 					{
-						float2 coord = UnityStereoTransformScreenSpaceTex(input.uv).xy;
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+						float2 coord = input.uv.xy;
 						float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, coord);
 						return tex;
 					}
@@ -481,11 +503,15 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
-					sampler2D GITexture;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 
 					float4 frag(v2f input) : COLOR0
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						float4 albedoTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 						float3 albedo = albedoTex.rgb;
 						float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(GITexture, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
@@ -502,9 +528,13 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					float4 frag(v2f input) : COLOR0
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						return float4(0.0, 0.0, 0.0, 1.0);
 					}
 
@@ -516,6 +546,7 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					float LayerToVisualize;
 					int MipLevelToVisualize;
@@ -524,7 +555,10 @@
 
 					float4 frag(v2f input) : COLOR0
 					{
-						return float4(UNITY_SAMPLE_TEX3D(SEGIVolumeTexture1, float3(UnityStereoTransformScreenSpaceTex(input.uv).xy, LayerToVisualize)).rgb, 1.0);
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+						return float4(UNITY_SAMPLE_TEX3D(SEGIVolumeTexture1, float3(input.uv.xy, LayerToVisualize)).rgb, 1.0);
 					}
 
 				ENDCG
@@ -538,11 +572,15 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					float4 CameraPosition;
 
 					float4 frag(v2f input) : SV_Target
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv2);
@@ -572,20 +610,24 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
 					float2 Kernel;
 
 					float DepthTolerance;
 
-					sampler2D DepthNormalsLow;
-					sampler2D DepthLow;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(DepthNormalsLow);
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(DepthLow);
 					int SourceScale;
 					UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentDepth);
-					sampler2D CurrentNormal;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentNormal);
 
 
 					float4 frag(v2f input) : COLOR0
 					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 						#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = UnityStereoTransformScreenSpaceTex(input.uv2).xy;
 							float2 uv = UnityStereoTransformScreenSpaceTex(input.uv2);
@@ -664,11 +706,12 @@
 				CGPROGRAM
 					#pragma vertex vert
 					#pragma fragment frag
+					#pragma multi_compile_instancing
 
-					sampler2D GITexture;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(GITexture);
 					UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousDepth);
 					UNITY_DECLARE_SCREENSPACE_TEXTURE(CurrentDepth);
-					sampler2D PreviousLocalWorldPos;
+					UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousLocalWorldPos);
 
 
 					float4 CameraPosition;
@@ -682,13 +725,16 @@
 
 					float4 frag(v2f input) : COLOR0
 					{
-						float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy).rgb;
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						float2 depthLookupCoord = round(UnityStereoTransformScreenSpaceTex(input.uv).xy * _MainTex_TexelSize.zw) * _MainTex_TexelSize.xy;
-						depthLookupCoord = UnityStereoTransformScreenSpaceTex(UnityStereoTransformScreenSpaceTex(input.uv)).xy;
+						float3 gi = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv.xy).rgb;
+
+						float2 depthLookupCoord = round(input.uv.xy * _MainTex_TexelSize.zw) * _MainTex_TexelSize.xy;
+						depthLookupCoord = input.uv.xy;
 						float depth = GetDepthTexture(depthLookupCoord);
 
-						float4 currentPos = float4(UnityStereoTransformScreenSpaceTex(input.uv).x * 2.0 - 1.0, UnityStereoTransformScreenSpaceTex(input.uv).y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+						float4 currentPos = float4(input.uv.x * 2.0 - 1.0, input.uv.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
 
 						float4 fragpos = mul(ProjectionMatrixInverse, currentPos);
 						float4 thisViewPos = fragpos;
@@ -705,8 +751,8 @@
 
 						float2 diff = currentPos.xy - prevPos.xy;
 
-						float2 reprojCoord = UnityStereoTransformScreenSpaceTex(input.uv).xy - diff.xy * 0.5;
-						float2 previousTexcoord = UnityStereoTransformScreenSpaceTex(input.uv).xy + diff.xy * 0.5;
+						float2 reprojCoord = input.uv.xy - diff.xy * 0.5;
+						float2 previousTexcoord = input.uv.xy + diff.xy * 0.5;
 
 
 						float blendWeight = BlendWeight;
@@ -722,7 +768,7 @@
 							blendWeight = 1.0;
 						}
 
-						float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, float3(reprojCoord, UnityStereoTransformScreenSpaceTex(input.uv).z)).rgb;
+						float3 prevGI = UNITY_SAMPLE_SCREENSPACE_TEXTURE(PreviousGITexture, float3(reprojCoord, input.uv.z)).rgb;
 
 						gi = lerp(prevGI, gi, float3(blendWeight, blendWeight, blendWeight));
 
@@ -733,6 +779,48 @@
 				ENDCG
 			}
 
+				Pass // 13 Blit
+				{
+					CGPROGRAM
+
+					#pragma vertex VertBlit
+					#pragma fragment FragBlit
+					#pragma multi_compile_instancing
+					
+					half4 _MainTex_ST;
+
+					struct Varyings
+					{
+						float2 uv : TEXCOORD0;
+						float4 vertex : SV_POSITION;
+
+						UNITY_VERTEX_INPUT_INSTANCE_ID
+						UNITY_VERTEX_OUTPUT_STEREO
+					};
+
+					Varyings VertBlit(appdata_img v)
+					{
+						Varyings o;
+
+						UNITY_SETUP_INSTANCE_ID(v);
+						UNITY_INITIALIZE_OUTPUT(Varyings, o);
+						UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+						o.vertex = UnityObjectToClipPos(v.vertex);
+						o.uv = UnityStereoScreenSpaceUVAdjust(v.texcoord, _MainTex_ST);
+						return o;
+					}
+
+					half4 FragBlit(Varyings input) : SV_Target
+					{
+						UNITY_SETUP_INSTANCE_ID(input);
+						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+						return UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, input.uv);
+					}
+
+				ENDCG
+				}
 
 	}
 

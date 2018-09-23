@@ -21,6 +21,7 @@
 				#pragma vertex vert
 				#pragma fragment frag
 				#pragma geometry geom
+				#pragma multi_compile_instancing
 				#include "UnityCG.cginc"
 				
 				RWTexture3D<uint> RG0;
@@ -31,8 +32,8 @@
 				float4x4 SEGIVoxelViewLeft;
 				float4x4 SEGIVoxelViewTop;
 				
-				sampler2D _MainTex;
-				sampler2D _EmissionMap;
+				UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
+				UNITY_DECLARE_SCREENSPACE_TEXTURE(_EmissionMap);
 				float _Cutoff;
 				float4 _MainTex_ST;
 				half4 _EmissionColor;
@@ -48,6 +49,9 @@
 					half4 uv : TEXCOORD0;
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
+
+					UNITY_VERTEX_INPUT_INSTANCE_ID
+					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				struct g2f
@@ -56,6 +60,9 @@
 					half4 uv : TEXCOORD0;
 					float3 normal : TEXCOORD1;
 					float angle : TEXCOORD2;
+
+					UNITY_VERTEX_INPUT_INSTANCE_ID
+					UNITY_VERTEX_OUTPUT_STEREO
 				};
 				
 				half4 _Color;
@@ -64,17 +71,17 @@
 				{
 					v2g o;
 					UNITY_INITIALIZE_OUTPUT(v2g, o);
-					
+
 					float4 vertex = v.vertex;
-					
+
 					o.normal = UnityObjectToWorldNormal(v.normal);
 					float3 absNormal = abs(o.normal);
-					
+
 					o.pos = vertex;
-					
+
 					o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
-					
-					
+
+
 					return o;
 				}
 				
@@ -83,6 +90,7 @@
 				[maxvertexcount(3)]
 				void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 				{
+
 					v2g p[3];
 					int i = 0;
 					for (i = 0; i < 3; i++)
@@ -252,12 +260,12 @@
 
 				float4x4 SEGIVoxelToGIProjection;
 				float4x4 SEGIVoxelProjectionInverse;
-				sampler2D SEGISunDepth;
+				UNITY_DECLARE_SCREENSPACE_TEXTURE(SEGISunDepth);
 				float4 SEGISunlightVector;
 				float4 GISunColor;
 				float4 SEGIVoxelSpaceOriginDelta;
 				
-				sampler3D SEGIVolumeTexture1;
+				UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
 				int SEGIInnerOcclusionLayers;
 				
@@ -267,6 +275,9 @@
 				
 				float4 frag (g2f input) : SV_TARGET
 				{
+					UNITY_SETUP_INSTANCE_ID(input);
+					UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
 					int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 					
 					float3 absNormal = abs(input.normal);
@@ -292,7 +303,7 @@
 					shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
 					shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 					
-					float sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
+					float sunDepth = UNITY_SAMPLE_SCREENSPACE_TEXTURE(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
 					#if defined(UNITY_REVERSED_Z)
 					sunDepth = 1.0 - sunDepth;
 					#endif
@@ -302,8 +313,8 @@
 
 					float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 					
-					float4 tex = tex2D(_MainTex, input.uv.xy);
-					float4 emissionTex = tex2D(_EmissionMap, input.uv.xy);
+					float4 tex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_MainTex, UnityStereoTransformScreenSpaceTex(input.uv).xy);
+					float4 emissionTex = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_EmissionMap, UnityStereoTransformScreenSpaceTex(input.uv).xy);
 					
 					float4 color = _Color;
 
@@ -315,7 +326,7 @@
 					
 					float3 col = sunVisibility.xxx * sunNdotL * color.rgb * tex.rgb * GISunColor.rgb * GISunColor.a + _EmissionColor.rgb * 0.9 * emissionTex.rgb;
 
-					float4 prevBounce = tex3D(SEGIVolumeTexture1, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
+					float4 prevBounce = UNITY_SAMPLE_TEX3D(SEGIVolumeTexture1, fcoord + SEGIVoxelSpaceOriginDelta.xyz);
 					col.rgb += prevBounce.rgb * 1.6 * SEGISecondaryBounceGain * tex.rgb * color.rgb;
 					 
 					float4 result = float4(col.rgb, 2.0);

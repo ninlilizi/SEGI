@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Name: High
   m_EditorClassIdentifier: 
   voxelResolution: 256
+  updateVoxelsAfterXInterval: 0
   voxelAA: 1
   innerOcclusionLayers: 1
   infiniteBounces: 0
