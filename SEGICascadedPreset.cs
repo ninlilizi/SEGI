@@ -8,10 +8,12 @@ using UnityEngine.Rendering.PostProcessing;
 public sealed class SEGICascadedPreset : ScriptableObject
 {
 	public SEGICascaded.VoxelResolution voxelResolution = SEGICascaded.VoxelResolution.high;
-	public bool voxelAA = false;
+    public int updateVoxelsAfterXInterval = 1;
+    public bool voxelAA = false;
 	[Range(0, 2)]
 	public int innerOcclusionLayers = 1;
 	public bool infiniteBounces = true;
+    
 
     public bool useReflectionProbes = true;
     [Range(0, 2)]

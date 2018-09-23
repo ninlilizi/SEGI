@@ -360,7 +360,7 @@ public class SEGICascaded : MonoBehaviour
 
     //Delayed voxelization
     public bool updateVoxelsAfterXDoUpdate = false;
-    private double updateVoxelsAfterXInterval = 1;
+    public int updateVoxelsAfterXInterval = 1;
     private double updateVoxelsAfterXPrevX = 9223372036854775807;
     private double updateVoxelsAfterXPrevY = 9223372036854775807;
     private double updateVoxelsAfterXPrevZ = 9223372036854775807;
@@ -1020,6 +1020,8 @@ public class SEGICascaded : MonoBehaviour
 
         if (renderState == RenderState.Voxelize && updateVoxelsAfterXDoUpdate == true)
         {
+            //voxelCamera.rect = new Rect(0f, 0.5f, 0.5f, 0.5f);
+
             activeVolume = voxelFlipFlop == 0 ? volumeTextures[0] : volumeTextureB;
             previousActiveVolume = voxelFlipFlop == 0 ? volumeTextureB : volumeTextures[0];
 
@@ -1161,7 +1163,14 @@ public class SEGICascaded : MonoBehaviour
             Shader.SetGlobalTexture("SEGIVolumeTexture1", volumeTexture1);
 
             renderState = RenderState.Voxelize;
+
+            updateVoxelsAfterXDoUpdate = false;
+            updateVoxelsAfterXPrevX = attachedCamera.transform.position.x;
+            updateVoxelsAfterXPrevY = attachedCamera.transform.position.y;
+            updateVoxelsAfterXPrevZ = attachedCamera.transform.position.z;
         }
+        voxelCamera.rect = new Rect(0.0f, 0.0f, 1.0f, 1.0f);
+
         Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
         Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
 
@@ -1316,7 +1325,8 @@ public class SEGICascaded : MonoBehaviour
     public void SEGIBufferInit()
     {
         //CommandBuffer
-        SEGIBuffer.Clear();
+        if (SEGIBuffer != null) SEGIBuffer.Clear();
+        else return;
 
         updateVoxelsAfterXPrevX = 9223372036854775807;
         updateVoxelsAfterXPrevY = 9223372036854775807;

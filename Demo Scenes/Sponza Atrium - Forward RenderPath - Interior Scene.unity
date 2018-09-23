@@ -1611,7 +1611,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 2147483647
   shadowSpaceSize: 25
-  temporalBlendWeight: 0.75
+  temporalBlendWeight: 1
   visualizeVoxels: 0
   updateGI: 1
   skyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -1647,8 +1647,8 @@ MonoBehaviour:
   sphericalSkylight: 0
   SEGIRenderSource: {fileID: 0}
   SEGIRenderDestination: {fileID: 0}
-  SEGIRenderWidth: 904
-  SEGIRenderHeight: 664
+  SEGIRenderWidth: 1099
+  SEGIRenderHeight: 678
   filterMode: 0
   renderTextureFormat: 2
   gaussianMipFilter: 1
@@ -1660,6 +1660,7 @@ MonoBehaviour:
   reflectionProbeLayerMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  updateVoxelsAfterXDoUpdate: 1
 --- !u!20 &1499325570
 Camera:
   m_ObjectHideFlags: 0

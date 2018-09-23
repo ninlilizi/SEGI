@@ -47,6 +47,7 @@ public class SEGICascadedEditor : Editor
     SerializedProperty doReflections;
 
     SerializedProperty voxelAA;
+    SerializedProperty updateVoxelsAfterXInterval;
     SerializedProperty reflectionSteps;
     SerializedProperty skyReflectionIntensity;
     SerializedProperty gaussianMipFilter;
@@ -154,9 +155,10 @@ public class SEGICascadedEditor : Editor
         reflectionProbeAttribution = serObj.FindProperty("reflectionProbeAttribution");
         reflectionProbeLayerMask = serObj.FindProperty("reflectionProbeLayerMask");
         useFXAA = serObj.FindProperty("useFXAA");
+        updateVoxelsAfterXInterval = serObj.FindProperty("updateVoxelsAfterXInterval");
 
 
-        instance = target as SEGICascaded;
+    instance = target as SEGICascaded;
     }
 
     public override void OnInspectorGUI()
@@ -241,6 +243,7 @@ public class SEGICascadedEditor : Editor
             EditorGUILayout.PropertyField(shadowSpaceSize, new GUIContent("Shadow Space Size", "The size of the sun shadow texture used to inject sunlight with shadows into the voxels in world units. It is recommended to set this value similar to Voxel Space Size."));
             EditorGUILayout.PropertyField(giCullingMask, new GUIContent("GI Culling Mask", "Which layers should be voxelized and contribute to GI."));
             EditorGUILayout.PropertyField(updateGI, new GUIContent("Update GI", "Whether voxelization and multi-bounce rendering should update every frame. When disabled, GI tracing will use cached data from the last time this was enabled."));
+            EditorGUILayout.PropertyField(updateVoxelsAfterXInterval, new GUIContent("Update GI after distance", "Update the voxels after moving x distance"));
             EditorGUILayout.PropertyField(infiniteBounces, new GUIContent("Infinite Bounces", "Enables infinite bounces. This is expensive for complex scenes and is still experimental."));
             EditorGUILayout.PropertyField(followTransform, new GUIContent("Follow Transform", "If provided, the voxel volume will follow and be centered on this object instead of the camera. Useful for top-down scenes."));
             EditorGUILayout.EndVertical();
@@ -378,6 +381,7 @@ public class SEGICascadedEditor : Editor
 
         preset.voxelResolution = instance.voxelResolution;
         preset.voxelAA = instance.voxelAA;
+        preset.updateVoxelsAfterXInterval = instance.updateVoxelsAfterXInterval;
         preset.innerOcclusionLayers = instance.innerOcclusionLayers;
         preset.infiniteBounces = instance.infiniteBounces;
 
@@ -430,7 +434,12 @@ public class SEGICascadedEditor : Editor
 
     void LoadPreset()
     {
+        
+    }
 
+    void OnValidate()
+    {
+        //_target.SEGIBufferInit();
     }
 }
 /*
