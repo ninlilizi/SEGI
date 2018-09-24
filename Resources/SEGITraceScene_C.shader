@@ -13,7 +13,7 @@
 
 			Pass
 			{
-				CGPROGRAM
+				HLSLPROGRAM
 
 					#pragma target 5.0
 					#pragma vertex vert
@@ -409,7 +409,7 @@
 						return float4(0.0, 0.0, 0.0, 0.0);
 					}
 
-				ENDCG
+				ENDHLSL
 			}
 		}
 			FallBack Off

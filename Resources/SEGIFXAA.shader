@@ -3,7 +3,7 @@
 		_MainTex ("Texture", 2D) = "white" {}
 	}
 
-	CGINCLUDE
+	HLSLINCLUDE
 		#include "UnityCG.cginc"
 
 		UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
@@ -237,7 +237,7 @@
 			}
 			return float4(Sample(uv).rgb, l.m);
 		}
-	ENDCG
+	ENDHLSL
 
 	SubShader {
 		Cull Off
@@ -245,7 +245,7 @@
 		ZWrite Off
 
 		Pass { // 0 luminancePass
-			CGPROGRAM
+			HLSLPROGRAM
 				#pragma vertex VertexProgram
 				#pragma fragment FragmentProgram
 				#pragma multi_compile_instancing
@@ -262,11 +262,11 @@
 					#endif
 					return sample;
 				}
-			ENDCG
+			ENDHLSL
 		}
 
 		Pass { // 1 fxaaPass
-			CGPROGRAM
+			HLSLPROGRAM
 				#pragma vertex VertexProgram
 				#pragma fragment FragmentProgram
 				#pragma multi_compile_instancing
@@ -283,7 +283,7 @@
 					#endif
 					return sample;
 				}
-			ENDCG
+			ENDHLSL
 		}
 	}
 }

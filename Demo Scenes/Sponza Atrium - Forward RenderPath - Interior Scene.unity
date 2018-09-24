@@ -1583,6 +1583,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1499325571}
   - component: {fileID: 1499325570}
+  - component: {fileID: 1499325568}
   - component: {fileID: 1499325567}
   m_Layer: 0
   m_Name: Main Camera
@@ -1599,68 +1600,74 @@ MonoBehaviour:
   m_GameObject: {fileID: 1499325566}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f6545096e58f2445a95f9ff831d18fd, type: 3}
+  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  reflectionProbe: {fileID: 0}
-  voxelResolution: 256
-  visualizeSunDepthTexture: 0
-  visualizeGI: 0
-  sun: {fileID: 1226213135}
-  giCullingMask:
-    serializedVersion: 2
-    m_Bits: 2147483647
-  shadowSpaceSize: 25
-  temporalBlendWeight: 1
-  visualizeVoxels: 0
-  updateGI: 1
-  skyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
-  MatchAmbiantColor: 1
-  voxelSpaceSize: 25
-  useBilateralFiltering: 0
-  innerOcclusionLayers: 1
-  GIResolution: 1
-  stochasticSampling: 1
-  infiniteBounces: 1
-  followTransform: {fileID: 1529067319}
-  cones: 8
-  coneTraceSteps: 10
-  coneLength: 1
-  coneWidth: 3.9
-  occlusionStrength: 0.15
-  nearOcclusionStrength: 0.5
-  occlusionPower: 0.65
-  coneTraceBias: 2.8
-  nearLightGain: 0.72
-  giGain: 2
-  secondaryBounceGain: 0.9
-  softSunlight: 0.25
-  skyIntensity: 0
-  doReflections: 1
-  reflectionSteps: 12
-  reflectionOcclusionPower: 4
-  skyReflectionIntensity: 1
-  farOcclusionStrength: 1
-  farthestOcclusionStrength: 1
-  secondaryCones: 6
-  secondaryOcclusionStrength: 0.27
-  sphericalSkylight: 0
-  SEGIRenderSource: {fileID: 0}
-  SEGIRenderDestination: {fileID: 0}
-  SEGIRenderWidth: 1099
-  SEGIRenderHeight: 678
-  filterMode: 0
-  renderTextureFormat: 2
-  gaussianMipFilter: 1
-  voxelAA: 1
-  useFXAA: 1
-  useReflectionProbes: 1
-  reflectionProbeIntensity: 2
-  reflectionProbeAttribution: 2
-  reflectionProbeLayerMask:
+  sharedProfile: {fileID: 11400000, guid: dcc0f2fc461b612488e1f42294a335b7, type: 2}
+  isGlobal: 1
+  blendDistance: 0
+  weight: 1
+  priority: 0
+--- !u!114 &1499325568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1499325566}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 1499325571}
+  volumeLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  updateVoxelsAfterXDoUpdate: 1
+  stopNaNPropagation: 1
+  antialiasingMode: 0
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 1
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles:
+  - assemblyQualifiedName: SEGICascaded, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+  m_AfterStackBundles: []
 --- !u!20 &1499325570
 Camera:
   m_ObjectHideFlags: 0

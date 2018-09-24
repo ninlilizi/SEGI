@@ -1,4 +1,4 @@
-﻿float SEGIVoxelScaleFactor;
+float SEGIVoxelScaleFactor;
 
 int StochasticSampling;
 int TraceDirections;
@@ -18,17 +18,17 @@ float FarthestOcclusionStrength;
 
 half4 GISunColor;
 
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel0);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel1);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel2);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel3);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel4);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel5);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel6);
-UNITY_DECLARE_TEX3D(SEGIVolumeLevel7);
-UNITY_DECLARE_TEX3D(VolumeTexture1);
-UNITY_DECLARE_TEX3D(VolumeTexture2);
-UNITY_DECLARE_TEX3D(VolumeTexture3);
+TEXTURE3D_SAMPLER3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0);
+TEXTURE3D_SAMPLER3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1);
+TEXTURE3D_SAMPLER3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2);
+TEXTURE3D_SAMPLER3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3);
+TEXTURE3D_SAMPLER3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4);
+TEXTURE3D_SAMPLER3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5);
+//SAMPLER3D(SEGIVolumeLevel6);
+//SAMPLER3D(SEGIVolumeLevel7);
+TEXTURE3D_SAMPLER3D(SEGIVolumeTexture1, samplerSEGIVolumeTexture1);
+//TEXTURE3D_SAMPLER3D(VolumeTexture2, samplerVolumeTexture2);
+//TEXTURE3D_SAMPLER3D(VolumeTexture3, samplerVolumeTexture3);
 
 float4x4 SEGIVoxelProjection;
 float4x4 SEGIWorldToVoxel;
@@ -55,15 +55,15 @@ uniform half4 _MainTex_TexelSize;
 
 float4x4 ProjectionMatrixInverse;
 
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_MainTex);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_Albedo);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(PreviousGITexture);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture0);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture1);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraGBufferTexture2);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraMotionVectorsTexture);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture);
-UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
+TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
+TEXTURE2D_SAMPLER2D(_Albedo, sampler_Albedo);
+TEXTURE2D_SAMPLER2D(PreviousGITexture, samplerPreviousGITexture);
+TEXTURE2D_SAMPLER2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0);
+TEXTURE2D_SAMPLER2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1);
+TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
+TEXTURE2D_SAMPLER2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture);
+TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture);
+TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
 
 float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;
@@ -80,15 +80,15 @@ float4x4 _RightEyeToWorld;
 float GetDepthTexture(float2 coord)
 {
 #if defined(UNITY_REVERSED_Z)
-	return 1.0 - UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	return 1.0 - SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
 #else
-	return UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	return SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
 #endif
 }
 
 float4 GetViewSpacePosition(float2 coord, float2 uv)
 {
-	float depth = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
 
 	if (StereoEnabled)
 	{
@@ -172,27 +172,27 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 1)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 2)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 3)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 4)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 5)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else
 		{
@@ -230,7 +230,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
-	if (useReflectionProbes  && ForwardPath)
+	/*if (useReflectionProbes  && ForwardPath)
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
 		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
@@ -241,7 +241,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
 
 		probeColor = lerp(skyColor.rgb, (0.5).xxx, probeColor.rgb * reflectionProbeAttribution);
-	}
+	}*/
 	gi.rgb *= GIGain * 0.25;
 	gi += skyColor * skyVisibility * skyMult;
 
@@ -267,6 +267,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
+	[loop]
 	for (int i = 0; i < numSamples; i++)
 	{
 		float fi = ((float)i) / numSamples;
@@ -282,31 +283,31 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize), 0);
-			sample = lerp(sample, UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize + 1.0), 0), frac(coneSize));
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
+			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 1)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize), 0);
-			sample = lerp(sample, UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize + 1.0), 0), frac(coneSize));
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
+			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 2)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize), 0);
-			sample = lerp(sample, UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize + 1.0), 0), frac(coneSize));
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
+			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 3)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize), 0);
-			sample = lerp(sample, UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize + 1.0), 0), frac(coneSize));
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
+			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 4)
 		{
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize), 0);
-			sample = lerp(sample, UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize + 1.0), 0), frac(coneSize));
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
+			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 5)
-			sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize), 0);
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
 		else
 			sample = float4(0, 0, 0, 0);
 
@@ -319,7 +320,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		skyVisibility *= pow(saturate(1.0 - sample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
 	}
 
-	if (useReflectionProbes  && ForwardPath)
+	/*if (useReflectionProbes  && ForwardPath)
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
 		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
@@ -335,7 +336,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 		//gi.rgb *= GIGain * 0.15;
 		gi = lerp(gi, probeColor, (0.5).xxx);// *skyVisibility * skyMult * 10.0;
-	}
+	}*/
 
 	skyVisibility *= saturate(dot(worldNormal, kernel) * 0.7 + 0.3);
 	skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0), 1.0, SEGISphericalSkylight);
@@ -364,7 +365,7 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel)
 
 		float4 sample = float4(0.0, 0.0, 0.0, 0.0);
 
-		sample = UNITY_SAMPLE_TEX3D_LOD(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize), 0);
+		sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
 
 		float occlusion = skyVisibility;
 
@@ -379,9 +380,27 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel)
 
 float3 GetWorldNormal(float2 screenspaceUV)
 {
-	float4 dn = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_CameraDepthNormalsTexture, screenspaceUV);
+	float4 dn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, screenspaceUV);
 	float3 n = DecodeViewNormalStereo(dn);
 	float3 worldN = mul((float3x3)CameraToWorld, n);
 
 	return worldN;
 }
+
+
+// Tranforms position from object to homogenous space -- CG Includes added for SRP conversion
+#define UNITY_MATRIX_VP unity_MatrixVP
+inline float4 UnityObjectToClipPos(in float3 pos)
+{
+	#if defined(STEREO_CUBEMAP_RENDER_ON)
+		return UnityObjectToClipPosODS(pos);
+	#else
+		// More efficient than computing M*VP matrix product
+		return mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, float4(pos, 1.0)));
+	#endif
+}
+inline float4 UnityObjectToClipPos(float4 pos) // overload for float4; avoids "implicit truncation" warning for existing shaders
+{
+	return UnityObjectToClipPos(pos.xyz);
+}
+// END (Tranforms position from object to homogenous space -- CG Includes added for SRP conversion)
