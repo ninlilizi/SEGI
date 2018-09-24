@@ -1,3 +1,5 @@
+#pragma warning (disable : 3206)
+
 float SEGIVoxelScaleFactor;
 
 int StochasticSampling;
@@ -42,6 +44,7 @@ float4x4 CameraToWorld;
 half4 SEGISkyColor;
 
 float4 SEGISunlightVector;
+float4 _MainTex_ST;
 
 float reflectionProbeAttribution;
 float reflectionProbeIntensity;
@@ -390,14 +393,11 @@ float3 GetWorldNormal(float2 screenspaceUV)
 
 // Tranforms position from object to homogenous space -- CG Includes added for SRP conversion
 #define UNITY_MATRIX_VP unity_MatrixVP
+//#define UNITY_MATRIX_MVP unity_MatrixMVP
 inline float4 UnityObjectToClipPos(in float3 pos)
 {
-	#if defined(STEREO_CUBEMAP_RENDER_ON)
-		return UnityObjectToClipPosODS(pos);
-	#else
-		// More efficient than computing M*VP matrix product
-		return mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, float4(pos, 1.0)));
-	#endif
+	// More efficient than computing M*VP matrix product
+	return mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, float4(pos, 1.0)));
 }
 inline float4 UnityObjectToClipPos(float4 pos) // overload for float4; avoids "implicit truncation" warning for existing shaders
 {

@@ -454,8 +454,16 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
 
 
     public override void Render(PostProcessRenderContext context)
-    { 
+    {
         // Update
+
+        if (SEGIRenderWidth != context.width || SEGIRenderHeight != context.height)
+        {
+            SEGIRenderWidth = context.width;
+            SEGIRenderHeight = context.height;
+            InitCheck();
+            ResizeRenderTextures();
+        }
 
         if (!initChecker)
         {
@@ -492,12 +500,6 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
             ResizeDummyTexture();
         }
 
-        if (SEGIRenderWidth != context.width || SEGIRenderHeight != context.height)
-        {
-            SEGIRenderWidth = context.width;
-            SEGIRenderHeight = context.height;
-            ResizeRenderTextures();
-        }
         if (attachedCamera != context.camera) attachedCamera = context.camera;
 
         if (!shadowCam)
@@ -640,8 +642,8 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
                 shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
 
                 Graphics.SetRenderTarget(sunDepthTexture);
-                if (!UnityEngine.XR.XRSettings.enabled) shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
-
+                shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
+                shadowCam.forceIntoRenderTexture = true;
                 shadowCam.RenderWithShader(sunDepthShader, "");
 
                 Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
@@ -654,7 +656,7 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
             voxelCamera.nearClipPlane = 0.0f;
             voxelCamera.farClipPlane = voxelSpaceSize;
             voxelCamera.depth = -2;
-            voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
+            //voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
             voxelCamera.renderingPath = RenderingPath.Forward;
             voxelCamera.clearFlags = CameraClearFlags.Color;
             voxelCamera.backgroundColor = Color.black;
@@ -836,7 +838,7 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
         material.SetInt("StereoEnabled", context.stereoActive ? 1 : 0);
 
         //Blit once to downsample if required
-        context.command.Blit(context.source, RT_gi1, material, 13);
+        context.command.Blit(context.source, RT_gi1);
 
         if (context.camera.renderingPath == RenderingPath.Forward)
         {
@@ -865,11 +867,6 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
             context.command.Blit(RT_gi1, RT_reflections, material, Pass.SpecularTrace);
             context.command.SetGlobalTexture("Reflections", RT_reflections);
         }
-
-        //Debugging like a bitch
-        //context.command.Blit(RT_gi2, context.destination);
-        //return;
-        //END Bitching
 
         //If Half Resolution tracing is enabled
         if (giRenderRes >= 2)
@@ -971,6 +968,8 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
 
     public override void Init()
     {
+        if (SEGIRenderWidth == 0) return;
+
         if (!Sun) Sun = GameObject.Find("Enviro Directional Light").GetComponent<Light>();
         //if (!Sun) Sun = GameObject.Find("Directional Light").GetComponent<Light>();
 
@@ -1066,7 +1065,7 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
         shadowCam.clearFlags = CameraClearFlags.SolidColor;
         shadowCam.backgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
         shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
-        shadowCam.stereoTargetEye = StereoTargetEyeMask.None;
+        //shadowCam.stereoTargetEye = StereoTargetEyeMask.None;
         shadowCam.cullingMask = giCullingMask;
         shadowCam.useOcclusionCulling = false;
         shadowCamTransform = shadowCamGameObject.transform;
@@ -1077,7 +1076,7 @@ public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
             sunDepthTexture.Release();
             //DestroyImmediate(sunDepthTexture);
         }
-        sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 24, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
+        sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 32, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
         sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
         sunDepthTexture.filterMode = FilterMode.Point;
         sunDepthTexture.Create();

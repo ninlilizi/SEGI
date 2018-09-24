@@ -5,6 +5,7 @@
 
 	HLSLINCLUDE
 	#include "PostProcessing/Shaders/StdLib.hlsl"
+	#include "HLSLSupport.cginc"
 	#include "SEGI_C.cginc"
 	#pragma target 5.0
 
@@ -20,25 +21,42 @@
 		float4 vertex : SV_POSITION;
 		float2 texcoord : TEXCOORD0;
 		float2 texcoordStereo : TEXCOORD1;
-		#if UNITY_UV_STARTS_AT_TOP
-			half4 uv2 : TEXCOORD2;
-		#endif
+		//#if UNITY_UV_STARTS_AT_TOP
+		//	half4 uv2 : TEXCOORD2;
+		//#endif
 	};
 
 	VaryingsSEGI VertSEGI(AttributesSEGI v)
 	{
-		VaryingsSEGI o;
-		o.vertex = UnityObjectToClipPos(v.vertex);
-		o.texcoord = float4(v.texcoord.xy, 1, 1); //v.texcoord;
-		o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoord, 1.0);
+		if (StereoEnabled)
+		{
+			VaryingsSEGI o;
+			o.vertex = float4(v.texcoord.x - 0.5, v.texcoord.y + 0.5, 0, 0.5);
+			o.texcoord = float4(v.texcoord.x, v.texcoord.y, 0, 1);// TransformTriangleVertexToUV(v.vertex.xy);// *_UVTransform.xy + _UVTransform.zw;
+			o.texcoordStereo = UnityStereoScreenSpaceUVAdjust(o.texcoord, float4(1, 1, 0, 0));
+			o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoordStereo, 1.0);
 
-		#if UNITY_UV_STARTS_AT_TOP
-		o.uv2 = float4(v.texcoord.xy, 1, 1);
-		if (_MainTex_TexelSize.y < 0.0)
-			o.texcoord.y = 1.0 - o.texcoord.y;
-		#endif
+			#if UNITY_UV_STARTS_AT_TOP
+					o.vertex.y = 1 - o.vertex.y;
+			#endif
 
-		return o;
+			return o;
+		}
+		else
+		{
+			VaryingsSEGI o;
+			o.vertex = UnityObjectToClipPos(v.vertex);
+			o.texcoord = float4(v.texcoord.xy, 1, 1); //v.texcoord;
+			o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoord, 1.0);
+
+			#if UNITY_UV_STARTS_AT_TOP
+				//o.uv2 = float4(v.texcoord.xy, 1, 1);
+				if (_MainTex_TexelSize.y < 0.0)
+				o.texcoord.y = 1.0 - o.texcoord.y;
+			#endif
+
+			return o;
+		}
 	}
 	ENDHLSL
 
@@ -69,13 +87,13 @@
 					//UNITY_SETUP_INSTANCE_ID(input);
 					//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-					#if UNITY_UV_STARTS_AT_TOP
+					/*#if UNITY_UV_STARTS_AT_TOP
 						float2 coord = input.uv2.xy;
 						float2 uv = input.uv2;
-					#else
+					#else*/
 						float2 coord = input.texcoordStereo.xy;
 						float2 uv = input.texcoordStereo;
-					#endif
+					//#endif
 
 						//Get view space position and view vector
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
@@ -165,13 +183,13 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						#if UNITY_UV_STARTS_AT_TOP
+						/*#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
-						#else
+						#else*/
 							float2 coord = input.texcoordStereo.xy;
 							float2 uv = input.texcoordStereo;
-						#endif
+						//#endif
 
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
@@ -224,13 +242,13 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						#if UNITY_UV_STARTS_AT_TOP
+						/*#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
-						#else
+						#else*/
 							float2 coord = input.texcoordStereo.xy;
 							float2 uv = input.texcoordStereo;
-						#endif
+						//#endif
 
 						float4 albedoTex;
 						if (ForwardPath) albedoTex = SAMPLE_TEXTURE2D(_Albedo, sampler_Albedo, coord);
@@ -391,13 +409,13 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						#if UNITY_UV_STARTS_AT_TOP
+						/*#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
-						#else
+						#else*/
 							float2 coord = input.texcoordStereo.xy;
 							float2 uv = input.texcoordStereo;
-						#endif
+						//#endif
 
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 						float3 viewVector = normalize(viewSpacePosition.xyz);
@@ -577,13 +595,13 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						#if UNITY_UV_STARTS_AT_TOP
+						/*#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = input.uv2.xy;
 							float2 uv = input.texcoordStereo;
-						#else
-							float2 coord = input.uv2.xy;
+						#else*/
+							float2 coord = input.texcoordStereo.xy;
 							float2 uv = input.texcoordStereo;
-						#endif
+						//#endif
 
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 						float3 viewVector = normalize(viewSpacePosition.xyz);
@@ -624,13 +642,13 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						#if UNITY_UV_STARTS_AT_TOP
+						/*#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
-						#else
+						#else*/
 							float2 coord = input.texcoordStereo.xy;
 							float2 uv = input.texcoordStereo;
-						#endif
+						//#endif
 
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
