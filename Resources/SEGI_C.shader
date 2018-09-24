@@ -32,7 +32,7 @@
 		{
 			VaryingsSEGI o;
 			o.vertex = float4(v.texcoord.x - 0.5, v.texcoord.y + 0.5, 0, 0.5);
-			o.texcoord = float4(v.texcoord.x, v.texcoord.y, 0, 1);// TransformTriangleVertexToUV(v.vertex.xy);// *_UVTransform.xy + _UVTransform.zw;
+			o.texcoord = float4(v.texcoord.x, v.texcoord.y, 0, 1);
 			o.texcoordStereo = UnityStereoScreenSpaceUVAdjust(o.texcoord, float4(1, 1, 0, 0));
 			o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoordStereo, 1.0);
 
@@ -46,7 +46,7 @@
 		{
 			VaryingsSEGI o;
 			o.vertex = UnityObjectToClipPos(v.vertex);
-			o.texcoord = float4(v.texcoord.xy, 1, 1); //v.texcoord;
+			o.texcoord = float4(v.texcoord.xy, 1, 1);
 			o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoord, 1.0);
 
 			#if UNITY_UV_STARTS_AT_TOP
