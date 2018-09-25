@@ -25,7 +25,9 @@ public class Torchslider2 : MonoBehaviour {
 	}
 	
 	void Update() {
-		foreach (GameObject i in GameObject.FindGameObjectsWithTag("TagLight")) {
+		var cachedGameObjectFindGameObjectsWithTag = GameObject.FindGameObjectsWithTag("TagLight");
+		for (int indexOfCachedGameObjectFindGameObjectsWithTag = 0; indexOfCachedGameObjectFindGameObjectsWithTag < cachedGameObjectFindGameObjectsWithTag.Length; indexOfCachedGameObjectFindGameObjectsWithTag++) {
+			GameObject i = cachedGameObjectFindGameObjectsWithTag[indexOfCachedGameObjectFindGameObjectsWithTag];
 			i.GetComponent<Torchelight>().IntensityLight=Intensity_Light;
 		}
 	}
