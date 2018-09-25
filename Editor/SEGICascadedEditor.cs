@@ -8,8 +8,8 @@ using System;
 using System.Linq.Expressions;
 
 [Serializable]
-[PostProcessEditor(typeof(SEGICascaded))]
-public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
+[PostProcessEditor(typeof(SEGI_NKLI))]
+public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
 {
     //Allow callbacks to main script
     //SEGICascaded _target;
@@ -72,7 +72,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
 
     UnityEngine.Object SunProp;
 
-    SEGICascaded instance;
+    SEGI_NKLI instance;
 
     string presetPath = "Assets/SEGI/Resources/Cascaded Presets";
 
@@ -178,7 +178,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
         }*/
         EditorGUILayout.Space();
         EditorGUILayout.EndHorizontal();
-
+        /*
         //Presets
         showPresets = EditorGUILayout.Foldout(showPresets, new GUIContent("Presets"));
         if (showPresets)
@@ -227,7 +227,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
 
         EditorGUILayout.Space();
         EditorGUILayout.Space();
-
+        */
         //Main Configuration
         showMainConfig = EditorGUILayout.Foldout(showMainConfig, new GUIContent("Main Configuration"));
         if (showMainConfig)

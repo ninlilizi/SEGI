@@ -16,7 +16,7 @@ public class SEGI_SunLight : MonoBehaviour {
     {
         do
         {
-            SEGICascaded.Sun = GetComponent<Light>();
+            SEGI_NKLI.Sun = GetComponent<Light>();
             yield return new WaitForSeconds(1);
         } while (true);
     }

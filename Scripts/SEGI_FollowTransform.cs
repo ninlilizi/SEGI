@@ -16,7 +16,7 @@ public class SEGI_FollowTransform : MonoBehaviour {
     {
         do
         {
-            SEGICascaded.followTransform = GetComponent<Transform>();
+            SEGI_NKLI.followTransform = GetComponent<Transform>();
             yield return new WaitForSeconds(1);
         } while (true);
     }

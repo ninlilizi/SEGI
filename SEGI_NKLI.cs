@@ -35,7 +35,7 @@ namespace UnityEngine.Rendering.PostProcessing
     [Serializable]
     [PostProcess(typeof(SEGIRenderer), PostProcessEvent.BeforeTransparent, "NKLI/SEGI")]
 
-    public sealed class SEGICascaded : PostProcessEffectSettings
+    public sealed class SEGI_NKLI : PostProcessEffectSettings
     {
 
 
@@ -131,7 +131,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
     [ExecuteInEditMode]
     [ImageEffectAllowedInSceneView]
-    public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGICascaded>
+    public sealed class SEGIRenderer : PostProcessEffectRenderer<SEGI_NKLI>
     {
         public bool initChecker = false;
 
@@ -353,7 +353,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 ResizeAllTextures();
             }
 
-            if (SEGICascaded.Sun == null)
+            if (SEGI_NKLI.Sun == null)
             {
                 Debug.Log("<SEGI> Scipt 'SEGI_SunLight.cs' Must be attached to your main directional light!");
                 return;
@@ -468,9 +468,9 @@ namespace UnityEngine.Rendering.PostProcessing
                     //Setup the voxel volume origin position
                     float interval = settings.voxelSpaceSize.value / 8.0f;                                             //The interval at which the voxel volume will be "locked" in world-space
                     Vector3 origin;
-                    if (SEGICascaded.followTransform)
+                    if (SEGI_NKLI.followTransform)
                     {
-                        origin = SEGICascaded.followTransform.position;
+                        origin = SEGI_NKLI.followTransform.position;
                     }
                     else
                     {
@@ -520,10 +520,10 @@ namespace UnityEngine.Rendering.PostProcessing
 
                     Matrix4x4 voxelToGIProjection = (shadowCam.projectionMatrix) * (shadowCam.worldToCameraMatrix) * (voxelCamera.cameraToWorldMatrix);
                     Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProjection);
-                    Shader.SetGlobalVector("SEGISunlightVector", SEGICascaded.Sun ? Vector3.Normalize(SEGICascaded.Sun.transform.forward) : Vector3.up);
+                    Shader.SetGlobalVector("SEGISunlightVector", SEGI_NKLI.Sun ? Vector3.Normalize(SEGI_NKLI.Sun.transform.forward) : Vector3.up);
 
                     //Set paramteters
-                    Shader.SetGlobalColor("GISunColor", SEGICascaded.Sun == null ? Color.black : new Color(Mathf.Pow(SEGICascaded.Sun.color.r, 2.2f), Mathf.Pow(SEGICascaded.Sun.color.g, 2.2f), Mathf.Pow(SEGICascaded.Sun.color.b, 2.2f), Mathf.Pow(SEGICascaded.Sun.intensity, 2.2f)));
+                    Shader.SetGlobalColor("GISunColor", SEGI_NKLI.Sun == null ? Color.black : new Color(Mathf.Pow(SEGI_NKLI.Sun.color.r, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.color.g, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.color.b, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.intensity, 2.2f)));
                     Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(settings.skyColor.value.r * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.g * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.b * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.a, 2.2f)));
                     Shader.SetGlobalFloat("GIGain", settings.giGain.value);
                     Shader.SetGlobalFloat("SEGISecondaryBounceGain", settings.infiniteBounces.value ? settings.secondaryBounceGain.value : 0.0f);
@@ -533,11 +533,11 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
                     //Render the depth texture from the sun's perspective in order to inject sunlight with shadows during voxelization
-                    if (SEGICascaded.Sun != null)
+                    if (SEGI_NKLI.Sun != null)
                     {
                         shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
 
-                        Vector3 shadowCamPosition = voxelSpaceOrigin + Vector3.Normalize(-SEGICascaded.Sun.transform.forward) * shadowSpaceSize * 0.5f * shadowSpaceDepthRatio;
+                        Vector3 shadowCamPosition = voxelSpaceOrigin + Vector3.Normalize(-SEGI_NKLI.Sun.transform.forward) * shadowSpaceSize * 0.5f * shadowSpaceDepthRatio;
 
                         shadowCamTransform.position = shadowCamPosition;
                         shadowCamTransform.LookAt(voxelSpaceOrigin, Vector3.up);
