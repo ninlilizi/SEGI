@@ -1,14 +1,14 @@
-using UnityEngine;
-using System.Collections;
-using System;
-using System.IO;
-using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using UnityEngine.Rendering;
-using System.Collections.Generic;
-using Unity.Jobs;
-using Unity.Collections;
 using UnityEngine.Rendering.PostProcessing;
+using System.Runtime.Serialization;
+using System.Collections.Generic;
+using UnityEngine.Rendering;
+using System.Collections;
+using Unity.Collections;
+using UnityEngine;
+using Unity.Jobs;
+using System.IO;
+using System;
 
 namespace UnityEngine.Rendering.PostProcessing
 {
@@ -40,6 +40,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public VoxelResolution voxelResolution = new VoxelResolution { value = VoxelResolutionEnum.High };
         public FloatParameter voxelSpaceSize = new FloatParameter { value = 50.0f };
+        public BoolParameter updateVoxelsAfterX = new BoolParameter { value = false };
         public IntParameter updateVoxelsAfterXInterval = new IntParameter { value = 1 };
         public BoolParameter voxelAA = new BoolParameter { value = false };
         [Range(0, 2)]
@@ -107,12 +108,15 @@ namespace UnityEngine.Rendering.PostProcessing
         public BoolParameter visualizeGI = new BoolParameter { value = false };
         public BoolParameter visualizeVoxels = new BoolParameter { value = false };
         public BoolParameter visualizeSunDepthTexture = new BoolParameter { value = false };
-        public SEGISun Sun = new SEGISun { value = null };
+        
+        //public SEGISun Sun = new SEGISun { value = null };
+        public static Light Sun;
 
         public SEGILayerMask giCullingMask = new SEGILayerMask { value = 2147483647 };
         public SEGILayerMask reflectionProbeLayerMask = new SEGILayerMask { value = 2147483647 };
 
-        public SEGITransform followTransform = new SEGITransform { value = null };
+        //public SEGITransform followTransform = new SEGITransform { value = null };
+        public static Transform followTransform;
 
         [Range(0.0f, 16.0f)]
         public FloatParameter softSunlight = new FloatParameter { value = 0.0f };
@@ -295,10 +299,6 @@ namespace UnityEngine.Rendering.PostProcessing
         int sunShadowResolution = 256;
         int prevSunShadowResolution;
 
-
-
-
-
         public Shader sunDepthShader;
 
         float shadowSpaceDepthRatio = 10.0f;
@@ -354,15 +354,6 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public int voxelFlipFlop = 0;
 
-
-        public int giRenderRes
-        {
-            get
-            {
-                return settings.GIResolution;
-            }
-        }
-
         public enum RenderState
         {
             Voxelize,
@@ -392,29 +383,30 @@ namespace UnityEngine.Rendering.PostProcessing
 
         //Delayed voxelization
         public bool updateVoxelsAfterXDoUpdate = false;
-        //public int updateVoxelsAfterXInterval = 1;
         private double updateVoxelsAfterXPrevX = 9223372036854775807;
         private double updateVoxelsAfterXPrevY = 9223372036854775807;
         private double updateVoxelsAfterXPrevZ = 9223372036854775807;
 
+        public int GIResolutionPrev = 0;
 
-
-
+        [ImageEffectOpaque]
         public override void Render(PostProcessRenderContext context)
         {
             // Update
+            InitCheck();
 
-            if (SEGIRenderWidth != context.width || SEGIRenderHeight != context.height)
+            if (SEGIRenderWidth != context.width || SEGIRenderHeight != context.height  || settings.GIResolution.value != GIResolutionPrev)
             {
+                GIResolutionPrev = settings.GIResolution.value;
                 SEGIRenderWidth = context.width;
                 SEGIRenderHeight = context.height;
-                InitCheck();
+
                 ResizeRenderTextures();
             }
 
-            if (settings.Sun.GetValue<Light>() == null)
+            if (SEGICascaded.Sun == null)
             {
-                Debug.Log("<SEGI> Light property must be connected to a prefab!");
+                Debug.Log("<SEGI> Scipt 'SEGI_SunLight.cs' Must be attached to your main directional light!");
                 return;
             }
 
@@ -467,82 +459,74 @@ namespace UnityEngine.Rendering.PostProcessing
             //Force reinitialization to make sure that everything is working properly if one of the cameras was unexpectedly destroyed
             //if (!voxelCamera || !false;
 
-            InitCheck();
+               if (attachedCamera.renderingPath == RenderingPath.Forward && reflectionProbe.enabled)
+               {
+                   reflectionProbe.enabled = true;
+                   reflectionProbe.intensity = settings.reflectionProbeIntensity;
+                   reflectionProbe.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
+               }
+               else
+               {
+                   reflectionProbe.enabled = false;
+               }
 
-            if (!settings.updateGI)
-            {
-                return;
-            }
+               // only use main camera for voxel simulations
+               if (attachedCamera != Camera.main)
+               {
+                   Debug.Log("<SEGI> Instance not attached to Main Camera. Please ensure the attached camera has the 'MainCamera' tag.");
+                   return;
+               }
 
-            if (attachedCamera.renderingPath == RenderingPath.Forward && reflectionProbe.enabled)
-            {
-                reflectionProbe.enabled = true;
-                reflectionProbe.intensity = settings.reflectionProbeIntensity;
-                reflectionProbe.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
-            }
-            else
-            {
-                reflectionProbe.enabled = false;
-            }
+               //Update SkyColor
+               if (settings.MatchAmbiantColor)
+               {
+                   settings.skyColor.value = RenderSettings.ambientLight;
+                   settings.skyIntensity.value = RenderSettings.ambientIntensity;
+               }
 
-            // only use main camera for voxel simulations
-            if (attachedCamera != Camera.main)
-            {
-                Debug.Log("<SEGI> Instance not attached to Main Camera. Please ensure the attached camera has the 'MainCamera' tag.");
-                return;
-            }
+               //calculationSEGIObject = this;
+               //Debug.Log(Camera.current.name + "," + Camera.current.stereoActiveEye + ", " + calculationSEGIObject.name + ", " + Time.frameCount + ", " + Time.renderedFrameCount);
+               //Cache the previous active render texture to avoid issues with other Unity rendering going on
+               RenderTexture previousActive = RenderTexture.active;
+               Shader.SetGlobalInt("SEGIVoxelAA", settings.voxelAA ? 1 : 0);
 
-            //Update SkyColor
-            if (settings.MatchAmbiantColor)
-            {
-                settings.skyColor.value = RenderSettings.ambientLight;
-                settings.skyIntensity.value = RenderSettings.ambientIntensity;
-            }
+               //Temporarily disable rendering of shadows on the directional light during voxelization pass. Cache the result to set it back to what it was after voxelization is done
+               LightShadows prevSunShadowSetting = LightShadows.None;
+               if (SEGICascaded.Sun != null)
+               {
+                   prevSunShadowSetting = SEGICascaded.Sun.shadows;
+                   SEGICascaded.Sun.shadows = LightShadows.None;
+               }
 
-            //calculationSEGIObject = this;
-            //Debug.Log(Camera.current.name + "," + Camera.current.stereoActiveEye + ", " + calculationSEGIObject.name + ", " + Time.frameCount + ", " + Time.renderedFrameCount);
-            //Cache the previous active render texture to avoid issues with other Unity rendering going on
-            RenderTexture previousActive = RenderTexture.active;
-            Shader.SetGlobalInt("SEGIVoxelAA", settings.voxelAA ? 1 : 0);
+               context.command.SetGlobalMatrix("WorldToGI", shadowCam.worldToCameraMatrix);
+               Shader.SetGlobalMatrix("GIToWorld", shadowCam.cameraToWorldMatrix);
+               Shader.SetGlobalMatrix("GIProjection", shadowCam.projectionMatrix);
+               Shader.SetGlobalMatrix("GIProjectionInverse", shadowCam.projectionMatrix.inverse);
+               Shader.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
+               Shader.SetGlobalFloat("GIDepthRatio", shadowSpaceDepthRatio);
+               Shader.SetGlobalColor("GISunColor", SEGICascaded.Sun == null ? Color.black : new Color(Mathf.Pow(SEGICascaded.Sun.color.r, 2.2f), Mathf.Pow(SEGICascaded.Sun.color.g, 2.2f), Mathf.Pow(SEGICascaded.Sun.color.b, 2.2f), Mathf.Pow(SEGICascaded.Sun.intensity, 2.2f)));
+               Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(settings.skyColor.value.r * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.g * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.b * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.a, 2.2f)));
+               Shader.SetGlobalFloat("GIGain", settings.giGain);
 
-            //Temporarily disable rendering of shadows on the directional light during voxelization pass. Cache the result to set it back to what it was after voxelization is done
-            LightShadows prevSunShadowSetting = LightShadows.None;
-            if (settings.Sun.GetValue<Light>() != null)
-            {
-                prevSunShadowSetting = settings.Sun.GetValue<Light>().shadows;
-                settings.Sun.GetValue<Light>().shadows = LightShadows.None;
-            }
+               Shader.SetGlobalInt("SEGIvoxelResolution", (int)settings.voxelResolution.value);
 
-            context.command.SetGlobalMatrix("WorldToGI", shadowCam.worldToCameraMatrix);
-            Shader.SetGlobalMatrix("GIToWorld", shadowCam.cameraToWorldMatrix);
-            Shader.SetGlobalMatrix("GIProjection", shadowCam.projectionMatrix);
-            Shader.SetGlobalMatrix("GIProjectionInverse", shadowCam.projectionMatrix.inverse);
-            Shader.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
-            Shader.SetGlobalFloat("GIDepthRatio", shadowSpaceDepthRatio);
+               Shader.SetGlobalMatrix("SEGIVoxelViewFront", TransformViewMatrix(voxelCamera.transform.worldToLocalMatrix));
+               Shader.SetGlobalMatrix("SEGIVoxelViewLeft", TransformViewMatrix(leftViewPoint.transform.worldToLocalMatrix));
+               Shader.SetGlobalMatrix("SEGIVoxelViewTop", TransformViewMatrix(topViewPoint.transform.worldToLocalMatrix));
+               Shader.SetGlobalMatrix("SEGIWorldToVoxel", voxelCamera.worldToCameraMatrix);
+               Shader.SetGlobalMatrix("SEGIVoxelProjection", voxelCamera.projectionMatrix);
+               Shader.SetGlobalMatrix("SEGIVoxelProjectionInverse", voxelCamera.projectionMatrix.inverse);
 
-            Shader.SetGlobalColor("GISunColor", settings.Sun.GetValue<Light>() == null ? Color.black : new Color(Mathf.Pow(settings.Sun.GetValue<Light>().color.r, 2.2f), Mathf.Pow(settings.Sun.GetValue<Light>().color.g, 2.2f), Mathf.Pow(settings.Sun.GetValue<Light>().color.b, 2.2f), Mathf.Pow(settings.Sun.GetValue<Light>().intensity, 2.2f)));
-            Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(settings.skyColor.value.r * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.g * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.b * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.a, 2.2f)));
-            Shader.SetGlobalFloat("GIGain", settings.giGain);
+               Shader.SetGlobalFloat("SEGISecondaryBounceGain", settings.infiniteBounces ? settings.secondaryBounceGain : 0.0f);
+               Shader.SetGlobalFloat("SEGISoftSunlight", settings.softSunlight.value);
+               Shader.SetGlobalInt("SEGISphericalSkylight", settings.sphericalSkylight ? 1 : 0);
+               Shader.SetGlobalInt("SEGIInnerOcclusionLayers", settings.innerOcclusionLayers);
 
-            Shader.SetGlobalInt("SEGIvoxelResolution", (int)settings.voxelResolution.value);
+               Matrix4x4 voxelToGIProjection = (shadowCam.projectionMatrix) * (shadowCam.worldToCameraMatrix) * (voxelCamera.cameraToWorldMatrix);
+               Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProjection);
+               Shader.SetGlobalVector("SEGISunlightVector", SEGICascaded.Sun ? Vector3.Normalize(SEGICascaded.Sun.transform.forward) : Vector3.up);
 
-            Shader.SetGlobalMatrix("SEGIVoxelViewFront", TransformViewMatrix(voxelCamera.transform.worldToLocalMatrix));
-            Shader.SetGlobalMatrix("SEGIVoxelViewLeft", TransformViewMatrix(leftViewPoint.transform.worldToLocalMatrix));
-            Shader.SetGlobalMatrix("SEGIVoxelViewTop", TransformViewMatrix(topViewPoint.transform.worldToLocalMatrix));
-            Shader.SetGlobalMatrix("SEGIWorldToVoxel", voxelCamera.worldToCameraMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelProjection", voxelCamera.projectionMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelProjectionInverse", voxelCamera.projectionMatrix.inverse);
-
-            Shader.SetGlobalFloat("SEGISecondaryBounceGain", settings.infiniteBounces ? settings.secondaryBounceGain : 0.0f);
-            Shader.SetGlobalFloat("SEGISoftSunlight", settings.softSunlight);
-            Shader.SetGlobalInt("SEGISphericalSkylight", settings.sphericalSkylight ? 1 : 0);
-            Shader.SetGlobalInt("SEGIInnerOcclusionLayers", settings.innerOcclusionLayers);
-
-            Matrix4x4 voxelToGIProjection = (shadowCam.projectionMatrix) * (shadowCam.worldToCameraMatrix) * (voxelCamera.cameraToWorldMatrix);
-            Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProjection);
-            Shader.SetGlobalVector("SEGISunlightVector", settings.Sun.GetValue<Light>() ? Vector3.Normalize(settings.Sun.GetValue<Light>().transform.forward) : Vector3.up);
-
-
+            if (!settings.updateVoxelsAfterX) updateVoxelsAfterXDoUpdate = true;
             if (attachedCamera.transform.position.x - updateVoxelsAfterXPrevX >= settings.updateVoxelsAfterXInterval) updateVoxelsAfterXDoUpdate = true;
             if (updateVoxelsAfterXPrevX - attachedCamera.transform.position.x >= settings.updateVoxelsAfterXInterval) updateVoxelsAfterXDoUpdate = true;
 
@@ -552,154 +536,166 @@ namespace UnityEngine.Rendering.PostProcessing
             if (attachedCamera.transform.position.z - updateVoxelsAfterXPrevZ >= settings.updateVoxelsAfterXInterval) updateVoxelsAfterXDoUpdate = true;
             if (updateVoxelsAfterXPrevZ - attachedCamera.transform.position.z >= settings.updateVoxelsAfterXInterval) updateVoxelsAfterXDoUpdate = true;
 
-
-            if (renderState == RenderState.Voxelize && updateVoxelsAfterXDoUpdate == true)
+            if (settings.updateGI)
             {
-                //voxelCamera.rect = new Rect(0f, 0f, 0.5f, 0.5f);
 
-                activeVolume = voxelFlipFlop == 0 ? volumeTextures[0] : volumeTextureB;
-                previousActiveVolume = voxelFlipFlop == 0 ? volumeTextureB : volumeTextures[0];
-
-                float voxelTexel = (1.0f * settings.voxelSpaceSize) / (int)settings.voxelResolution.value * 0.5f;
-
-                float interval = settings.voxelSpaceSize / 8.0f;
-                Vector3 origin;
-                if (settings.followTransform.GetValue<Transform>())
+                if (renderState == RenderState.Voxelize && updateVoxelsAfterXDoUpdate == true)
                 {
-                    origin = settings.followTransform.GetValue<Transform>().position;
-                }
-                else
-                {
-                    origin = attachedCamera.transform.position + attachedCamera.transform.forward * settings.voxelSpaceSize / 4.0f;
-                }
-                voxelSpaceOrigin = new Vector3(Mathf.Round(origin.x / interval) * interval, Mathf.Round(origin.y / interval) * interval, Mathf.Round(origin.z / interval) * interval) + new Vector3(1.0f, 1.0f, 1.0f) * ((float)voxelFlipFlop * 2.0f - 1.0f) * voxelTexel * 0.0f;
+                    //voxelCamera.rect = new Rect(0f, 0f, 0.5f, 0.5f);
+                    Debug.Log("<SEGI> Voxelizing scene");
 
-                voxelSpaceOriginDelta = voxelSpaceOrigin - previousVoxelSpaceOrigin;
-                Shader.SetGlobalVector("SEGIVoxelSpaceOriginDelta", voxelSpaceOriginDelta / settings.voxelSpaceSize);
+                    activeVolume = voxelFlipFlop == 0 ? volumeTextures[0] : volumeTextureB;
+                    previousActiveVolume = voxelFlipFlop == 0 ? volumeTextureB : volumeTextures[0];
 
-                previousVoxelSpaceOrigin = voxelSpaceOrigin;
+                    float voxelTexel = (1.0f * settings.voxelSpaceSize.value) / (int)settings.voxelResolution.value * 0.5f;
 
-                if (settings.Sun != null)
-                {
-                    shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
-
-                    Vector3 shadowCamPosition = voxelSpaceOrigin + Vector3.Normalize(-settings.Sun.GetValue<Light>().transform.forward) * shadowSpaceSize * 0.5f * shadowSpaceDepthRatio;
-
-                    shadowCamTransform.position = shadowCamPosition;
-                    shadowCamTransform.LookAt(voxelSpaceOrigin, Vector3.up);
-
-                    shadowCam.renderingPath = RenderingPath.Forward;
-                    shadowCam.depthTextureMode |= DepthTextureMode.None;
-
-                    shadowCam.orthographicSize = shadowSpaceSize;
-                    shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
-
-                    Graphics.SetRenderTarget(sunDepthTexture);
-                    shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
-                    shadowCam.forceIntoRenderTexture = true;
-                    shadowCam.RenderWithShader(sunDepthShader, "");
-
-                    Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
-                }
-
-
-                voxelCamera.enabled = false;
-                voxelCamera.orthographic = true;
-                voxelCamera.orthographicSize = settings.voxelSpaceSize * 0.5f;
-                voxelCamera.nearClipPlane = 0.0f;
-                voxelCamera.farClipPlane = settings.voxelSpaceSize;
-                voxelCamera.depth = -2;
-                //voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
-                voxelCamera.renderingPath = RenderingPath.Forward;
-                voxelCamera.clearFlags = CameraClearFlags.Color;
-                voxelCamera.backgroundColor = Color.black;
-                voxelCamera.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
-
-
-
-
-                voxelFlipFlop += 1;
-                voxelFlipFlop = voxelFlipFlop % 2;
-
-                voxelCameraGO.transform.position = voxelSpaceOrigin - Vector3.forward * settings.voxelSpaceSize * 0.5f;
-                voxelCameraGO.transform.rotation = rotationFront;
-
-                leftViewPoint.transform.position = voxelSpaceOrigin + Vector3.left * settings.voxelSpaceSize * 0.5f;
-                leftViewPoint.transform.rotation = rotationLeft;
-                topViewPoint.transform.position = voxelSpaceOrigin + Vector3.up * settings.voxelSpaceSize * 0.5f;
-                topViewPoint.transform.rotation = rotationTop;
-
-                clearCompute.SetTexture(0, "RG0", intTex1);
-                clearCompute.SetInt("Res", (int)settings.voxelResolution.value);
-                clearCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
-
-
-                Graphics.SetRandomWriteTarget(1, intTex1);
-                voxelCamera.targetTexture = dummyVoxelTexture;
-                voxelCamera.RenderWithShader(voxelizationShader, "");
-                Graphics.ClearRandomWriteTargets();
-
-                transferInts.SetTexture(0, "Result", activeVolume);
-                transferInts.SetTexture(0, "PrevResult", previousActiveVolume);
-                transferInts.SetTexture(0, "RG0", intTex1);
-                transferInts.SetInt("VoxelAA", settings.voxelAA ? 1 : 0);
-                transferInts.SetInt("Resolution", (int)settings.voxelResolution.value);
-                transferInts.SetVector("VoxelOriginDelta", (voxelSpaceOriginDelta / settings.voxelSpaceSize) * (int)settings.voxelResolution.value);
-                transferInts.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
-
-                Shader.SetGlobalTexture("SEGIVolumeLevel0", activeVolume);
-
-                for (int i = 0; i < numMipLevels - 1; i++)
-                {
-                    RenderTexture source = volumeTextures[i];
-
-                    if (i == 0)
+                    float interval = settings.voxelSpaceSize.value / 8.0f;
+                    Vector3 origin;
+                    if (SEGICascaded.followTransform)
                     {
-                        source = activeVolume;
+                        origin = SEGICascaded.followTransform.position;
+                    }
+                    else
+                    {
+                        origin = attachedCamera.transform.position + attachedCamera.transform.forward * settings.voxelSpaceSize.value / 4.0f;
+                    }
+                    voxelSpaceOrigin = new Vector3(Mathf.Round(origin.x / interval) * interval, Mathf.Round(origin.y / interval) * interval, Mathf.Round(origin.z / interval) * interval) + new Vector3(1.0f, 1.0f, 1.0f) * ((float)voxelFlipFlop * 2.0f - 1.0f) * voxelTexel * 0.0f;
+
+                    voxelSpaceOriginDelta = voxelSpaceOrigin - previousVoxelSpaceOrigin;
+                    Shader.SetGlobalVector("SEGIVoxelSpaceOriginDelta", voxelSpaceOriginDelta / settings.voxelSpaceSize.value);
+
+                    previousVoxelSpaceOrigin = voxelSpaceOrigin;
+
+                    if (SEGICascaded.Sun != null)
+                    {
+                        shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
+
+                        Vector3 shadowCamPosition = voxelSpaceOrigin + Vector3.Normalize(-SEGICascaded.Sun.transform.forward) * shadowSpaceSize * 0.5f * shadowSpaceDepthRatio;
+
+                        shadowCamTransform.position = shadowCamPosition;
+                        shadowCamTransform.LookAt(voxelSpaceOrigin, Vector3.up);
+
+                        shadowCam.renderingPath = RenderingPath.Forward;
+                        shadowCam.depthTextureMode |= DepthTextureMode.None;
+
+                        shadowCam.orthographicSize = shadowSpaceSize;
+                        shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
+
+                        Graphics.SetRenderTarget(sunDepthTexture);
+                        shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
+                        shadowCam.forceIntoRenderTexture = true;
+                        shadowCam.RenderWithShader(sunDepthShader, "");
+
+                        Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
                     }
 
-                    int destinationRes = (int)settings.voxelResolution.value / Mathf.RoundToInt(Mathf.Pow((float)2, (float)i + 1.0f));
-                    mipFilter.SetInt("destinationRes", destinationRes);
-                    mipFilter.SetTexture(mipFilterKernel, "Source", source);
-                    mipFilter.SetTexture(mipFilterKernel, "Destination", volumeTextures[i + 1]);
-                    mipFilter.Dispatch(mipFilterKernel, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
-                    Shader.SetGlobalTexture("SEGIVolumeLevel" + (i + 1).ToString(), volumeTextures[i + 1]);
-                }
 
-                if (settings.infiniteBounces)
+                    voxelCamera.enabled = false;
+                    voxelCamera.orthographic = true;
+                    voxelCamera.orthographicSize = settings.voxelSpaceSize.value * 0.5f;
+                    voxelCamera.nearClipPlane = 0.0f;
+                    voxelCamera.farClipPlane = settings.voxelSpaceSize.value;
+                    voxelCamera.depth = -2;
+                    voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
+                    voxelCamera.renderingPath = RenderingPath.Forward;
+                    voxelCamera.clearFlags = CameraClearFlags.Color;
+                    voxelCamera.backgroundColor = Color.black;
+                    voxelCamera.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
+
+
+
+
+                    voxelFlipFlop += 1;
+                    voxelFlipFlop = voxelFlipFlop % 2;
+
+                    voxelCameraGO.transform.position = voxelSpaceOrigin - Vector3.forward * settings.voxelSpaceSize.value * 0.5f;
+                    voxelCameraGO.transform.rotation = rotationFront;
+
+                    leftViewPoint.transform.position = voxelSpaceOrigin + Vector3.left * settings.voxelSpaceSize.value * 0.5f;
+                    leftViewPoint.transform.rotation = rotationLeft;
+                    topViewPoint.transform.position = voxelSpaceOrigin + Vector3.up * settings.voxelSpaceSize.value * 0.5f;
+                    topViewPoint.transform.rotation = rotationTop;
+
+                    clearCompute.SetTexture(0, "RG0", intTex1);
+                    clearCompute.SetInt("Res", (int)settings.voxelResolution.value);
+                    clearCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
+
+
+                    Graphics.SetRandomWriteTarget(1, intTex1);
+                    voxelCamera.targetTexture = dummyVoxelTexture;
+                    voxelCamera.RenderWithShader(voxelizationShader, "");
+                    Graphics.ClearRandomWriteTargets();
+
+                    transferInts.SetTexture(0, "Result", activeVolume);
+                    transferInts.SetTexture(0, "PrevResult", previousActiveVolume);
+                    transferInts.SetTexture(0, "RG0", intTex1);
+                    transferInts.SetInt("VoxelAA", settings.voxelAA ? 1 : 0);
+                    transferInts.SetInt("Resolution", (int)settings.voxelResolution.value);
+                    transferInts.SetVector("VoxelOriginDelta", (voxelSpaceOriginDelta / settings.voxelSpaceSize.value) * (int)settings.voxelResolution.value);
+                    transferInts.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
+
+                    Shader.SetGlobalTexture("SEGIVolumeLevel0", activeVolume);
+
+                    for (int i = 0; i < numMipLevels - 1; i++)
+                    {
+                        RenderTexture source = volumeTextures[i];
+
+                        if (i == 0)
+                        {
+                            source = activeVolume;
+                        }
+
+                        int destinationRes = (int)settings.voxelResolution.value / Mathf.RoundToInt(Mathf.Pow((float)2, (float)i + 1.0f));
+                        mipFilter.SetInt("destinationRes", destinationRes);
+                        mipFilter.SetTexture(mipFilterKernel, "Source", source);
+                        mipFilter.SetTexture(mipFilterKernel, "Destination", volumeTextures[i + 1]);
+                        mipFilter.Dispatch(mipFilterKernel, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
+                        Shader.SetGlobalTexture("SEGIVolumeLevel" + (i + 1).ToString(), volumeTextures[i + 1]);
+                    }
+
+                    if (settings.infiniteBounces)
+                    {
+                        renderState = RenderState.Bounce;
+                    }
+                    else
+                    {
+                        updateVoxelsAfterXDoUpdate = false;
+                        updateVoxelsAfterXPrevX = attachedCamera.transform.position.x;
+                        updateVoxelsAfterXPrevY = attachedCamera.transform.position.y;
+                        updateVoxelsAfterXPrevZ = attachedCamera.transform.position.z;
+                    }
+                }
+                else if (renderState == RenderState.Bounce && updateVoxelsAfterXDoUpdate == true)
                 {
-                    renderState = RenderState.Bounce;
+
+                    clearCompute.SetTexture(0, "RG0", intTex1);
+                    clearCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
+
+                    Shader.SetGlobalInt("SEGISecondaryCones", settings.secondaryCones);
+                    Shader.SetGlobalFloat("SEGISecondaryOcclusionStrength", settings.secondaryOcclusionStrength);
+
+                    Graphics.SetRandomWriteTarget(1, intTex1);
+                    voxelCamera.targetTexture = dummyVoxelTexture2;
+                    voxelCamera.RenderWithShader(voxelTracingShader, "");
+                    Graphics.ClearRandomWriteTargets();
+
+                    transferInts.SetTexture(1, "Result", volumeTexture1);
+                    transferInts.SetTexture(1, "RG0", intTex1);
+                    transferInts.SetInt("Resolution", (int)settings.voxelResolution.value);
+                    transferInts.Dispatch(1, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
+
+                    Shader.SetGlobalTexture("SEGIVolumeTexture1", volumeTexture1);
+
+                    renderState = RenderState.Voxelize;
                 }
-                else
+
+                RenderTexture.active = previousActive;
+
+                //Set the sun's shadow setting back to what it was before voxelization
+                if (SEGICascaded.Sun != null)
                 {
-                    updateVoxelsAfterXDoUpdate = false;
-                    updateVoxelsAfterXPrevX = attachedCamera.transform.position.x;
-                    updateVoxelsAfterXPrevY = attachedCamera.transform.position.y;
-                    updateVoxelsAfterXPrevZ = attachedCamera.transform.position.z;
+                    SEGICascaded.Sun.shadows = prevSunShadowSetting;
                 }
-            }
-            else if (renderState == RenderState.Bounce && updateVoxelsAfterXDoUpdate == true)
-            {
-
-                clearCompute.SetTexture(0, "RG0", intTex1);
-                clearCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
-
-                Shader.SetGlobalInt("SEGISecondaryCones", settings.secondaryCones);
-                Shader.SetGlobalFloat("SEGISecondaryOcclusionStrength", settings.secondaryOcclusionStrength);
-
-                Graphics.SetRandomWriteTarget(1, intTex1);
-                voxelCamera.targetTexture = dummyVoxelTexture2;
-                voxelCamera.RenderWithShader(voxelTracingShader, "");
-                Graphics.ClearRandomWriteTargets();
-
-                transferInts.SetTexture(1, "Result", volumeTexture1);
-                transferInts.SetTexture(1, "RG0", intTex1);
-                transferInts.SetInt("Resolution", (int)settings.voxelResolution.value);
-                transferInts.Dispatch(1, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
-
-                Shader.SetGlobalTexture("SEGIVolumeTexture1", volumeTexture1);
-
-                renderState = RenderState.Voxelize;
             }
             //voxelCamera.rect = new Rect(0.0f, 0f, 1.0f, 1.0f);
 
@@ -729,15 +725,6 @@ namespace UnityEngine.Rendering.PostProcessing
                 material.SetMatrix("_RightEyeProjection", rightEye);
             }
             //Fix stereo rendering matrix/
-
-            RenderTexture.active = previousActive;
-
-            //Set the sun's shadow setting back to what it was before voxelization
-            if (settings.Sun.GetValue<Light>() != null)
-            {
-                settings.Sun.GetValue<Light>().shadows = prevSunShadowSetting;
-            }
-
 
 
             // OnRenderImage #################################################################
@@ -822,7 +809,7 @@ namespace UnityEngine.Rendering.PostProcessing
             }
 
             //If Half Resolution tracing is enabled
-            if (giRenderRes >= 2)
+            if (settings.GIResolution.value >= 2)
             {
                 //Prepare the half-resolution diffuse GI result to be bilaterally upsampled
                 //SEGIBuffer.Blit(RT_gi2, RT_gi4);
@@ -923,7 +910,7 @@ namespace UnityEngine.Rendering.PostProcessing
         {
             if (SEGIRenderWidth == 0) return;
 
-            //if (!settings.Sun.GetValue<Light>()) settings.Sun.GetValue<Light>() = GameObject.Find("Enviro Directional Light").GetComponent<Light>();
+            //if (!SEGICascaded.Sun) SEGICascaded.Sun = GameObject.Find("Enviro Directional Light").GetComponent<Light>();
             //if (!Sun) Sun = GameObject.Find("Directional Light").GetComponent<Light>();
 
             //Gaussian Filter
@@ -987,8 +974,8 @@ namespace UnityEngine.Rendering.PostProcessing
             reflectionProbe.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
             reflectionProbe.size = new Vector3(settings.updateVoxelsAfterXInterval * 2.5f, settings.updateVoxelsAfterXInterval * 2.5f, settings.updateVoxelsAfterXInterval * 2.5f);
             reflectionProbe.mode = ReflectionProbeMode.Realtime;
-            reflectionProbe.shadowDistance = settings.voxelSpaceSize;
-            reflectionProbe.farClipPlane = settings.voxelSpaceSize;
+            reflectionProbe.shadowDistance = settings.voxelSpaceSize.value;
+            reflectionProbe.farClipPlane = settings.voxelSpaceSize.value;
             reflectionProbe.backgroundColor = Color.black;
             reflectionProbe.boxProjection = true;
 
@@ -1067,9 +1054,9 @@ namespace UnityEngine.Rendering.PostProcessing
             voxelCameraGO.hideFlags = HideFlags.HideAndDontSave;
             voxelCamera.enabled = false;
             voxelCamera.orthographic = true;
-            voxelCamera.orthographicSize = settings.voxelSpaceSize * 0.5f;
+            voxelCamera.orthographicSize = settings.voxelSpaceSize.value * 0.5f;
             voxelCamera.nearClipPlane = 0.0f;
-            voxelCamera.farClipPlane = settings.voxelSpaceSize;
+            voxelCamera.farClipPlane = settings.voxelSpaceSize.value;
             voxelCamera.depth = -2;
             voxelCamera.renderingPath = RenderingPath.Forward;
             voxelCamera.clearFlags = CameraClearFlags.Color;
@@ -1230,7 +1217,7 @@ namespace UnityEngine.Rendering.PostProcessing
             if (SEGIRenderHeight == 0) SEGIRenderHeight = attachedCamera.scaledPixelHeight;
 
             RenderTextureDescriptor RT_Disc0 = new RenderTextureDescriptor(SEGIRenderWidth, SEGIRenderHeight, renderTextureFormat, 24);
-            RenderTextureDescriptor RT_Disc1 = new RenderTextureDescriptor(SEGIRenderWidth / (int)giRenderRes, SEGIRenderHeight / (int)giRenderRes, renderTextureFormat, 24);
+            RenderTextureDescriptor RT_Disc1 = new RenderTextureDescriptor(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, renderTextureFormat, 24);
 
             //SEGIRenderWidth = attachedCamera.scaledPixelWidth == 0 ? 2 : attachedCamera.scaledPixelWidth;
             //SEGIRenderHeight = attachedCamera.scaledPixelHeight == 0 ? 2 : attachedCamera.scaledPixelHeight;
@@ -1318,6 +1305,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
             //SEGIBufferInit();
             //StartCoroutine(updateVoxels());
+            updateVoxelsAfterXDoUpdate = true;
         }
 
         /*void CheckSupport()

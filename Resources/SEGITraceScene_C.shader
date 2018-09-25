@@ -87,7 +87,7 @@
 					[maxvertexcount(3)]
 					void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 					{
-						UNITY_SETUP_INSTANCE_ID(input);
+						//UNITY_SETUP_INSTANCE_ID(input);
 						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
 						v2g p[3];
@@ -332,7 +332,7 @@
 
 					float4 frag(g2f input) : SV_TARGET
 					{
-						UNITY_SETUP_INSTANCE_ID(input);
+						//UNITY_SETUP_INSTANCE_ID(input);
 						UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
 						int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));

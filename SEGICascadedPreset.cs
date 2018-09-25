@@ -4,8 +4,7 @@ using System.Collections;
 using UnityEngine.Rendering.PostProcessing;
 
 [Serializable]
-[PostProcess(typeof(SEGICascadedRenderer), PostProcessEvent.AfterStack, "NKLI/SEGI")]
-public sealed class SEGICascadedPreset : PostProcessEffectSettings
+public sealed class SEGICascadedPreset : ScriptableObject
 {
 	public int VoxelResolution = 128;
     public int updateVoxelsAfterXInterval = 1;

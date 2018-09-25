@@ -1348,6 +1348,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1226213136}
   - component: {fileID: 1226213135}
+  - component: {fileID: 1226213137}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -1405,6 +1406,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 95, y: 46, z: 0}
+--- !u!114 &1226213137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1226213134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 386dd354230d26445b9826b2d10db9f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1243590051
 Prefab:
   m_ObjectHideFlags: 0
@@ -1624,7 +1636,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   stopNaNPropagation: 1
-  antialiasingMode: 0
+  antialiasingMode: 2
   temporalAntialiasing:
     jitterSpread: 0.75
     sharpness: 0.25
@@ -1663,10 +1675,10 @@ MonoBehaviour:
   m_ShowToolkit: 1
   m_ShowCustomSorter: 0
   breakBeforeColorGrading: 0
-  m_BeforeTransparentBundles: []
-  m_BeforeStackBundles:
-  - assemblyQualifiedName: SEGICascaded, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
+  m_BeforeTransparentBundles:
+  - assemblyQualifiedName: UnityEngine.Rendering.PostProcessing.SEGICascaded, Assembly-CSharp,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+  m_BeforeStackBundles: []
   m_AfterStackBundles: []
 --- !u!20 &1499325570
 Camera:
@@ -1729,6 +1741,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1529067319}
+  - component: {fileID: 1529067320}
   m_Layer: 0
   m_Name: Camera Pivot
   m_TagString: Untagged
@@ -1750,6 +1763,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: -8.85, y: -98.43, z: 0}
+--- !u!114 &1529067320
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1529067318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20b71243adac32e40832429ca9b2f2a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1569641460
 GameObject:
   m_ObjectHideFlags: 0

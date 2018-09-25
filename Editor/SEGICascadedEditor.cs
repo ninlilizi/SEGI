@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine.Rendering.PostProcessing;
 using UnityEditor.Rendering.PostProcessing;
 using System;
+using System.Linq.Expressions;
 
 [Serializable]
 [PostProcessEditor(typeof(SEGICascaded))]
@@ -18,7 +19,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
     SerializedParameterOverride VoxelResolution;
     SerializedParameterOverride visualizeSunDepthTexture;
     SerializedParameterOverride visualizeGI;
-    SerializedParameterOverride Sun;
+    //SerializedParameterOverride Sun;
     SerializedParameterOverride giCullingMask;
     SerializedParameterOverride shadowVolumeMask;
     SerializedParameterOverride showVolumeObjects;
@@ -33,7 +34,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
     SerializedParameterOverride GIResolution;
     SerializedParameterOverride stochasticSampling;
     SerializedParameterOverride infiniteBounces;
-    SerializedParameterOverride followTransform;
+    //SerializedParameterOverride followTransform;
     SerializedParameterOverride cones;
     SerializedParameterOverride coneTraceSteps;
     SerializedParameterOverride coneLength;
@@ -49,6 +50,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
     SerializedParameterOverride doReflections;
 
     SerializedParameterOverride voxelAA;
+    SerializedParameterOverride updateVoxelsAfterX;
     SerializedParameterOverride updateVoxelsAfterXInterval;
     SerializedParameterOverride reflectionSteps;
     SerializedParameterOverride skyReflectionIntensity;
@@ -66,8 +68,9 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
     SerializedParameterOverride reflectionProbeIntensity;
     SerializedParameterOverride reflectionProbeAttribution;
     SerializedParameterOverride reflectionProbeLayerMask;
-
     SerializedParameterOverride useFXAA;
+
+    UnityEngine.Object SunProp;
 
     SEGICascaded instance;
 
@@ -103,7 +106,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
         VoxelResolution = FindParameterOverride(x => x.voxelResolution);
         visualizeGI = FindParameterOverride(x => x.visualizeGI);
         visualizeSunDepthTexture = FindParameterOverride(x => x.visualizeSunDepthTexture);
-        Sun = FindParameterOverride(x => x.Sun);
+        //Sun = FindParameterOverride(x <= x.Sun);
         giCullingMask = FindParameterOverride(x => x.giCullingMask);
         //shadowVolumeMask = FindParameterOverride(x => x.sha);
         //showVolumeObjects = serObj.FindProperty("showVolumeObjects");
@@ -118,7 +121,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
         GIResolution = FindParameterOverride(x => x.GIResolution);
         stochasticSampling = FindParameterOverride(x => x.stochasticSampling);
         infiniteBounces = FindParameterOverride(x => x.infiniteBounces);
-        followTransform = FindParameterOverride(x => x.followTransform);
+        //followTransform = FindParameterOverride(x => x.followTransform);
         cones = FindParameterOverride(x => x.cones);
         coneTraceSteps = FindParameterOverride(x => x.coneTraceSteps);
         coneLength = FindParameterOverride(x => x.coneLength);
@@ -150,6 +153,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
         reflectionProbeAttribution = FindParameterOverride(x => x.reflectionProbeAttribution);
         reflectionProbeLayerMask = FindParameterOverride(x => x.reflectionProbeLayerMask);
         useFXAA = FindParameterOverride(x => x.useFXAA);
+        updateVoxelsAfterX = FindParameterOverride(x => x.updateVoxelsAfterX);
         updateVoxelsAfterXInterval = FindParameterOverride(x => x.updateVoxelsAfterXInterval);
 
 
@@ -203,7 +207,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
             {
                 if (presetPaths.Length > 0)
                 {
-                    //SEGICascadedPreset preset = AssetDatabase.LoadAssetAtPath<SEGICascaded>(presetPaths[presetPopupIndex]);
+                    SEGICascadedPreset preset = AssetDatabase.LoadAssetAtPath<SEGICascadedPreset>(presetPaths[presetPopupIndex]);
                     //instance.ApplyPreset(preset);
                     //EditorUtility.SetDirty(target);
                 }
@@ -238,9 +242,10 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
             //PropertyField(shadowSpaceSize, new GUIContent("Shadow Space Size", "The size of the sun shadow texture used to inject sunlight with shadows into the voxels in world units. It is recommended to set this value similar to Voxel Space Size."));
             PropertyField(giCullingMask, new GUIContent("GI Culling Mask", "Which layers should be voxelized and contribute to GI."));
             PropertyField(updateGI, new GUIContent("Update GI", "Whether voxelization and multi-bounce rendering should update every frame. When disabled, GI tracing will use cached data from the last time this was enabled."));
+            PropertyField(updateVoxelsAfterX, new GUIContent("Update GI After X Moved", "Weather Voxel should be updated after a specified distance is moved rather than every frame"));
             PropertyField(updateVoxelsAfterXInterval, new GUIContent("Update GI after distance", "Update the voxels after moving x distance"));
             PropertyField(infiniteBounces, new GUIContent("Infinite Bounces", "Enables infinite bounces. This is expensive for complex scenes and is still experimental."));
-            PropertyField(followTransform, new GUIContent("Follow Transform", "If provided, the voxel volume will follow and be centered on this object instead of the camera. Useful for top-down scenes."));
+            //PropertyField(followTransform, new GUIContent("Follow Transform", "If provided, the voxel volume will follow and be centered on this object instead of the camera. Useful for top-down scenes."));
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space();
             //LabelField("VRAM Usage: " + instance.vramUsage.ToString("F2") + " MB", vramLabelStyle);
@@ -268,14 +273,14 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
 
         //Environment
         showEnvironmentProperties = EditorGUILayout.Foldout(showEnvironmentProperties, new GUIContent("Environment Properties"));
-        if (Sun == null)
+        /*if (Sun == null)
         {
             showEnvironmentProperties = true;
-        }
+        }*/
         if (showEnvironmentProperties)
         {
             EditorGUI.indentLevel++;
-            PropertyField(Sun, new GUIContent("Sun", "The main directional light that will cast indirect light into the scene (sunlight or moonlight)."));
+            //PropertyField(Sun, new GUIContent("Sun", "The main directional light that will cast indirect light into the scene (sunlight or moonlight)."));
             PropertyField(softSunlight, new GUIContent("Soft Sunlight", "The amount of soft diffuse sunlight that will be added to the scene. Use this to simulate the effect of clouds/haze scattering soft sunlight onto the scene."));
             PropertyField(MatchAmbientColor, new GUIContent("Match Scene Lighting", "Sync Sky Color and intensity to scene lighting"));
             PropertyField(skyColor, new GUIContent("Sky Color", "The color of the light scattered onto the scene coming from the sky."));
@@ -363,3 +368,4 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGICascaded>
         //serObj.ApplyModifiedProperties();
     }
 }
+

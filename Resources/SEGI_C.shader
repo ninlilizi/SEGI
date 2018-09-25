@@ -5,7 +5,7 @@
 
 	HLSLINCLUDE
 	#include "PostProcessing/Shaders/StdLib.hlsl"
-	#include "HLSLSupport.cginc"
+	//#include "HLSLSupport.cginc"
 	#include "SEGI_C.cginc"
 	#pragma target 5.0
 
@@ -71,7 +71,6 @@
 		Pass //0
 		{
 			HLSLPROGRAM
-				#pragma warning disable
 				#pragma vertex VertSEGI
 				#pragma fragment Frag
 				#pragma multi_compile_instancing

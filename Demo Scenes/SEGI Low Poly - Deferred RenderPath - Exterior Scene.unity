@@ -24,7 +24,7 @@ RenderSettings:
   m_AmbientEquatorColor: {r: 0, g: 0, b: 0, a: 0}
   m_AmbientGroundColor: {r: 0, g: 0, b: 0, a: 0}
   m_AmbientIntensity: 0
-  m_AmbientMode: 1
+  m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
   m_SkyboxMaterial: {fileID: 2100000, guid: 86c0be2dad2a8a6469a5b10563543587, type: 2}
   m_HaloStrength: 0.5
@@ -44,7 +44,7 @@ RenderSettings:
 LightmapSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 11
-  m_GIWorkflowMode: 0
+  m_GIWorkflowMode: 1
   m_GISettings:
     serializedVersion: 2
     m_BounceScale: 1
@@ -8364,6 +8364,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1297580668}
   - component: {fileID: 1297580667}
+  - component: {fileID: 1297580669}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -8381,7 +8382,7 @@ Light:
   serializedVersion: 8
   m_Type: 1
   m_Color: {r: 1, g: 0.95068145, b: 0.8161765, a: 1}
-  m_Intensity: 0.5
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_CookieSize: 10
@@ -8421,6 +8422,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1297580669
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1297580666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 386dd354230d26445b9826b2d10db9f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1301257111
 GameObject:
   m_ObjectHideFlags: 0
@@ -9816,6 +9828,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1448437544}
   - component: {fileID: 1448437543}
+  - component: {fileID: 1448437545}
   m_Layer: 0
   m_Name: FirstPersonFlyingController
   m_TagString: Untagged
@@ -9857,6 +9870,17 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1448437545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1448437542}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20b71243adac32e40832429ca9b2f2a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &1457371259
 Transform:
   m_ObjectHideFlags: 0
@@ -10892,6 +10916,7 @@ GameObject:
   - component: {fileID: 1689627606}
   - component: {fileID: 1689627609}
   - component: {fileID: 1689627608}
+  - component: {fileID: 1689627610}
   - component: {fileID: 1689627607}
   m_Layer: 0
   m_Name: Camera
@@ -10922,67 +10947,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 1689627605}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f6545096e58f2445a95f9ff831d18fd, type: 3}
+  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  reflectionProbe: {fileID: 0}
-  voxelResolution: 256
-  visualizeSunDepthTexture: 0
-  visualizeGI: 0
-  sun: {fileID: 1297580667}
-  giCullingMask:
-    serializedVersion: 2
-    m_Bits: 2147483647
-  shadowSpaceSize: 50
-  temporalBlendWeight: 0.1
-  visualizeVoxels: 0
-  updateGI: 1
-  skyColor: {r: 0.58431375, g: 0.4862745, b: 0.42352942, a: 0}
-  MatchAmbiantColor: 0
-  voxelSpaceSize: 50
-  useBilateralFiltering: 0
-  innerOcclusionLayers: 0
-  GIResolution: 1
-  stochasticSampling: 1
-  infiniteBounces: 1
-  followTransform: {fileID: 1448437544}
-  cones: 14
-  coneTraceSteps: 14
-  coneLength: 1
-  coneWidth: 5.5
-  occlusionStrength: 1
-  nearOcclusionStrength: 0.5
-  occlusionPower: 1.5
-  coneTraceBias: 1
-  nearLightGain: 1
-  giGain: 1
-  secondaryBounceGain: 1
-  softSunlight: 1
-  skyIntensity: 1
-  doReflections: 1
-  reflectionSteps: 64
-  reflectionOcclusionPower: 1
-  skyReflectionIntensity: 1
-  farOcclusionStrength: 1
-  farthestOcclusionStrength: 1
-  secondaryCones: 6
-  secondaryOcclusionStrength: 1
-  sphericalSkylight: 0
-  SEGIRenderSource: {fileID: 0}
-  SEGIRenderDestination: {fileID: 0}
-  SEGIRenderWidth: 904
-  SEGIRenderHeight: 664
-  filterMode: 0
-  renderTextureFormat: 2
-  gaussianMipFilter: 0
-  voxelAA: 1
-  useFXAA: 0
-  useReflectionProbes: 1
-  reflectionProbeIntensity: 0.5
-  reflectionProbeAttribution: 1
-  reflectionProbeLayerMask:
-    serializedVersion: 2
-    m_Bits: 2147483647
+  sharedProfile: {fileID: 11400000, guid: dcc0f2fc461b612488e1f42294a335b7, type: 2}
+  isGlobal: 1
+  blendDistance: 0
+  weight: 1
+  priority: 0
 --- !u!81 &1689627608
 AudioListener:
   m_ObjectHideFlags: 0
@@ -11028,10 +11000,70 @@ Camera:
   m_HDR: 1
   m_AllowMSAA: 1
   m_AllowDynamicResolution: 0
-  m_ForceIntoRT: 0
+  m_ForceIntoRT: 1
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &1689627610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1689627605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  volumeTrigger: {fileID: 1689627606}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  stopNaNPropagation: 1
+  antialiasingMode: 2
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 0
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles:
+  - assemblyQualifiedName: UnityEngine.Rendering.PostProcessing.SEGICascaded, Assembly-CSharp,
+      Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!4 &1700912724 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 418394, guid: 034b1c2c5bc333e4b8f33c538d1eb219,
