@@ -449,7 +449,7 @@ MonoBehaviour:
     value: 1
   useFXAA:
     overrideState: 1
-    value: 0
+    value: 1
   visualizeGI:
     overrideState: 1
     value: 0
@@ -471,10 +471,10 @@ MonoBehaviour:
       m_Bits: 2147483647
   softSunlight:
     overrideState: 1
-    value: 0
+    value: 1.42
   skyColor:
     overrideState: 1
-    value: {r: 0, g: 0, b: 0, a: 1}
+    value: {r: 0.46075112, g: 0.55029446, b: 0.5849056, a: 1}
   MatchAmbiantColor:
     overrideState: 1
     value: 1
