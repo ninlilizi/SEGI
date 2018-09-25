@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: SEGI PostProcessing Profile
   m_EditorClassIdentifier: 
   settings:
-  - {fileID: 114426335551530090}
+  - {fileID: 114111429328954808}
 --- !u!114 &114063555157306854
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -170,6 +170,163 @@ MonoBehaviour:
   sphericalSkylight:
     overrideState: 0
     value: 0
+--- !u!114 &114111429328954808
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f6545096e58f2445a95f9ff831d18fd, type: 3}
+  m_Name: SEGICascaded
+  m_EditorClassIdentifier: 
+  active: 1
+  enabled:
+    overrideState: 1
+    value: 1
+  voxelResolution:
+    overrideState: 1
+    value: 256
+  voxelSpaceSize:
+    overrideState: 1
+    value: 50
+  updateVoxelsAfterX:
+    overrideState: 1
+    value: 1
+  updateVoxelsAfterXInterval:
+    overrideState: 1
+    value: 1
+  voxelAA:
+    overrideState: 1
+    value: 0
+  innerOcclusionLayers:
+    overrideState: 1
+    value: 1
+  infiniteBounces:
+    overrideState: 1
+    value: 1
+  useReflectionProbes:
+    overrideState: 1
+    value: 1
+  reflectionProbeIntensity:
+    overrideState: 1
+    value: 0.5
+  reflectionProbeAttribution:
+    overrideState: 1
+    value: 1
+  doReflections:
+    overrideState: 1
+    value: 1
+  temporalBlendWeight:
+    overrideState: 1
+    value: 1
+  useBilateralFiltering:
+    overrideState: 1
+    value: 1
+  GIResolution:
+    overrideState: 1
+    value: 1
+  stochasticSampling:
+    overrideState: 1
+    value: 1
+  updateGI:
+    overrideState: 1
+    value: 1
+  cones:
+    overrideState: 1
+    value: 13
+  coneTraceSteps:
+    overrideState: 1
+    value: 8
+  coneLength:
+    overrideState: 1
+    value: 1
+  coneWidth:
+    overrideState: 1
+    value: 6
+  coneTraceBias:
+    overrideState: 1
+    value: 0.63
+  occlusionStrength:
+    overrideState: 1
+    value: 1
+  nearOcclusionStrength:
+    overrideState: 1
+    value: 0
+  occlusionPower:
+    overrideState: 1
+    value: 1
+  nearLightGain:
+    overrideState: 1
+    value: 1
+  giGain:
+    overrideState: 1
+    value: 1
+  secondaryBounceGain:
+    overrideState: 1
+    value: 1
+  reflectionSteps:
+    overrideState: 1
+    value: 12
+  reflectionOcclusionPower:
+    overrideState: 1
+    value: 1
+  skyReflectionIntensity:
+    overrideState: 1
+    value: 1
+  gaussianMipFilter:
+    overrideState: 1
+    value: 0
+  farOcclusionStrength:
+    overrideState: 1
+    value: 1
+  farthestOcclusionStrength:
+    overrideState: 1
+    value: 1
+  secondaryCones:
+    overrideState: 1
+    value: 6
+  secondaryOcclusionStrength:
+    overrideState: 1
+    value: 1
+  useFXAA:
+    overrideState: 1
+    value: 0
+  visualizeGI:
+    overrideState: 1
+    value: 0
+  visualizeVoxels:
+    overrideState: 1
+    value: 0
+  visualizeSunDepthTexture:
+    overrideState: 1
+    value: 0
+  giCullingMask:
+    overrideState: 1
+    value:
+      serializedVersion: 2
+      m_Bits: 2147483647
+  reflectionProbeLayerMask:
+    overrideState: 1
+    value:
+      serializedVersion: 2
+      m_Bits: 2147483647
+  softSunlight:
+    overrideState: 1
+    value: 0
+  skyColor:
+    overrideState: 1
+    value: {r: 0, g: 0, b: 0, a: 1}
+  MatchAmbiantColor:
+    overrideState: 1
+    value: 0
+  skyIntensity:
+    overrideState: 1
+    value: 1
+  sphericalSkylight:
+    overrideState: 1
+    value: 0
 --- !u!114 &114210413578460312
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -326,163 +483,6 @@ MonoBehaviour:
     value: 1
   sphericalSkylight:
     overrideState: 0
-    value: 0
---- !u!114 &114426335551530090
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f6545096e58f2445a95f9ff831d18fd, type: 3}
-  m_Name: SEGICascaded
-  m_EditorClassIdentifier: 
-  active: 1
-  enabled:
-    overrideState: 1
-    value: 1
-  voxelResolution:
-    overrideState: 1
-    value: 256
-  voxelSpaceSize:
-    overrideState: 1
-    value: 50
-  updateVoxelsAfterX:
-    overrideState: 1
-    value: 0
-  updateVoxelsAfterXInterval:
-    overrideState: 1
-    value: 1
-  voxelAA:
-    overrideState: 1
-    value: 0
-  innerOcclusionLayers:
-    overrideState: 1
-    value: 1
-  infiniteBounces:
-    overrideState: 1
-    value: 1
-  useReflectionProbes:
-    overrideState: 1
-    value: 1
-  reflectionProbeIntensity:
-    overrideState: 1
-    value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 1
-    value: 1
-  doReflections:
-    overrideState: 1
-    value: 1
-  temporalBlendWeight:
-    overrideState: 1
-    value: 1
-  useBilateralFiltering:
-    overrideState: 1
-    value: 1
-  GIResolution:
-    overrideState: 1
-    value: 1
-  stochasticSampling:
-    overrideState: 1
-    value: 1
-  updateGI:
-    overrideState: 1
-    value: 1
-  cones:
-    overrideState: 1
-    value: 13
-  coneTraceSteps:
-    overrideState: 1
-    value: 8
-  coneLength:
-    overrideState: 1
-    value: 1
-  coneWidth:
-    overrideState: 1
-    value: 6
-  coneTraceBias:
-    overrideState: 1
-    value: 0.63
-  occlusionStrength:
-    overrideState: 1
-    value: 1
-  nearOcclusionStrength:
-    overrideState: 1
-    value: 0
-  occlusionPower:
-    overrideState: 1
-    value: 1
-  nearLightGain:
-    overrideState: 1
-    value: 1
-  giGain:
-    overrideState: 1
-    value: 1
-  secondaryBounceGain:
-    overrideState: 1
-    value: 1
-  reflectionSteps:
-    overrideState: 1
-    value: 12
-  reflectionOcclusionPower:
-    overrideState: 1
-    value: 1
-  skyReflectionIntensity:
-    overrideState: 1
-    value: 1
-  gaussianMipFilter:
-    overrideState: 1
-    value: 0
-  farOcclusionStrength:
-    overrideState: 1
-    value: 1
-  farthestOcclusionStrength:
-    overrideState: 1
-    value: 1
-  secondaryCones:
-    overrideState: 1
-    value: 6
-  secondaryOcclusionStrength:
-    overrideState: 1
-    value: 1
-  useFXAA:
-    overrideState: 1
-    value: 1
-  visualizeGI:
-    overrideState: 1
-    value: 0
-  visualizeVoxels:
-    overrideState: 1
-    value: 0
-  visualizeSunDepthTexture:
-    overrideState: 1
-    value: 0
-  giCullingMask:
-    overrideState: 1
-    value:
-      serializedVersion: 2
-      m_Bits: 2147483647
-  reflectionProbeLayerMask:
-    overrideState: 1
-    value:
-      serializedVersion: 2
-      m_Bits: 2147483647
-  softSunlight:
-    overrideState: 1
-    value: 1.42
-  skyColor:
-    overrideState: 1
-    value: {r: 0.46075112, g: 0.55029446, b: 0.5849056, a: 1}
-  MatchAmbiantColor:
-    overrideState: 1
-    value: 1
-  skyIntensity:
-    overrideState: 1
-    value: 1
-  sphericalSkylight:
-    overrideState: 1
     value: 0
 --- !u!114 &114470370058284476
 MonoBehaviour:
