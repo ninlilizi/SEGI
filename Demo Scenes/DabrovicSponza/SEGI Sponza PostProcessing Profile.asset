@@ -866,7 +866,7 @@ MonoBehaviour:
     value: 18
   updateVoxelsAfterX:
     overrideState: 1
-    value: 1
+    value: 0
   updateVoxelsAfterXInterval:
     overrideState: 1
     value: 1

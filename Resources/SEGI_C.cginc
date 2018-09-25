@@ -389,18 +389,3 @@ float3 GetWorldNormal(float2 screenspaceUV)
 
 	return worldN;
 }
-
-
-// Tranforms position from object to homogenous space -- CG Includes added for SRP conversion
-#define UNITY_MATRIX_VP unity_MatrixVP
-//#define UNITY_MATRIX_MVP unity_MatrixMVP
-inline float4 UnityObjectToClipPos(in float3 pos)
-{
-	// More efficient than computing M*VP matrix product
-	return mul(UNITY_MATRIX_VP, mul(unity_ObjectToWorld, float4(pos, 1.0)));
-}
-inline float4 UnityObjectToClipPos(float4 pos) // overload for float4; avoids "implicit truncation" warning for existing shaders
-{
-	return UnityObjectToClipPos(pos.xyz);
-}
-// END (Tranforms position from object to homogenous space -- CG Includes added for SRP conversion)

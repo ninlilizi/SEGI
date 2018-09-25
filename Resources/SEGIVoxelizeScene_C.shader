@@ -15,13 +15,14 @@
 
 			Pass
 			{
-				CGPROGRAM
+				HLSLPROGRAM
 
 					#pragma target 5.0
-					#pragma vertex vert
-					#pragma fragment frag
-					#pragma geometry geom
-					#include "UnityCG.cginc"
+					#pragma vertex vertSEGIVoxelization
+					#pragma fragment Frag
+					#pragma geometry Geom
+					#include "PostProcessing/Shaders/StdLib.hlsl"
+					#include "SEGI_HLSL_Helpers.cginc"
 
 					RWTexture3D<uint> RG0;
 
@@ -31,8 +32,8 @@
 					float4x4 SEGIVoxelViewLeft;
 					float4x4 SEGIVoxelViewTop;
 
-					sampler2D _MainTex;
-					sampler2D _EmissionMap;
+					TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
+					TEXTURE2D_SAMPLER2D(_EmissionMap, sampler_EmissionMap);
 					float _Cutoff;
 					float4 _MainTex_ST;
 					half4 _EmissionColor;
@@ -41,6 +42,13 @@
 
 					float _BlockerValue;
 
+					struct AttributesSEGIv2g
+					{
+						float4 vertex : POSITION;
+						half4 texcoord : TEXCOORD0;
+						float3 normal : TEXCOORD1;
+						float angle : TEXCOORD2;
+					};
 
 					struct v2g
 					{
@@ -60,17 +68,17 @@
 
 					half4 _Color;
 
-					v2g vert(appdata_full v)
+					v2g vertSEGIVoxelization(AttributesSEGIv2g v)
 					{
 						v2g o;
-						UNITY_INITIALIZE_OUTPUT(v2g, o);
 
-						float4 vertex = v.vertex;
+						float3 vertex = v.vertex.xyz;
 
 						o.normal = UnityObjectToWorldNormal(v.normal);
 						float3 absNormal = abs(o.normal);
 
-						o.pos = vertex;
+						o.pos = v.vertex;
+						o.angle = v.angle;
 
 						o.uv = float4(TRANSFORM_TEX(v.texcoord.xy, _MainTex), 1.0, 1.0);
 
@@ -81,7 +89,7 @@
 					int SEGIVoxelResolution;
 
 					[maxvertexcount(3)]
-					void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
+					void Geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
 					{
 						v2g p[3];
 						int i = 0;
@@ -252,7 +260,7 @@
 
 					float4x4 SEGIVoxelToGIProjection;
 					float4x4 SEGIVoxelProjectionInverse;
-					sampler2D SEGISunDepth;
+					TEXTURE2D_SAMPLER2D(SEGISunDepth, samplerSEGISunDepth);
 					float4 SEGISunlightVector;
 					float4 GISunColor;
 					float4 SEGIVoxelSpaceOriginDelta;
@@ -265,7 +273,7 @@
 
 					int SEGIVoxelAA;
 
-					float4 frag(g2f input) : SV_TARGET
+					float3 Frag(g2f input) : SV_TARGET
 					{
 						int3 coord = int3((int)(input.pos.x), (int)(input.pos.y), (int)(input.pos.z * VoxelResolution));
 
@@ -292,7 +300,7 @@
 						shadowPos = mul(SEGIVoxelToGIProjection, shadowPos);
 						shadowPos.xyz = shadowPos.xyz * 0.5 + 0.5;
 
-						float sunDepth = tex2Dlod(SEGISunDepth, float4(shadowPos.xy, 0, 0)).x;
+						float sunDepth = SAMPLE_TEXTURE2D_LOD(SEGISunDepth, samplerSEGISunDepth, shadowPos.xy, 0).x;
 						#if defined(UNITY_REVERSED_Z)
 						sunDepth = 1.0 - sunDepth;
 						#endif
@@ -302,8 +310,8 @@
 
 						float sunNdotL = saturate(dot(input.normal, -SEGISunlightVector.xyz));
 
-						float4 tex = tex2D(_MainTex, input.uv.xy);
-						float4 emissionTex = tex2D(_EmissionMap, input.uv.xy);
+						float4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv.xy);
+						float4 emissionTex = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, input.uv.xy);
 
 						float4 color = _Color;
 
@@ -345,10 +353,10 @@
 							interlockedAddFloat4b(RG0, coord - int3((int)(input.normal.x * sqrt2 * 2.0), (int)(input.normal.y * sqrt2 * 2.0), (int)(input.normal.z * sqrt2 * 2.0)), float4(0.0, 0.0, 0.0, 22.0));
 						}
 
-						return float4(0.0, 0.0, 0.0, 0.0);
+						return float3(0.0, 0.0, 0.0);
 					}
 
-				ENDCG
+				ENDHLSL
 			}
 		}
 			FallBack Off

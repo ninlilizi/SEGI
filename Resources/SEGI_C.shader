@@ -5,7 +5,7 @@
 
 	HLSLINCLUDE
 	#include "PostProcessing/Shaders/StdLib.hlsl"
-	//#include "HLSLSupport.cginc"
+	#include "SEGI_HLSL_Helpers.cginc"
 	#include "SEGI_C.cginc"
 	#pragma target 5.0
 

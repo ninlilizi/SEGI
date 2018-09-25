@@ -337,6 +337,8 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public int GIResolutionPrev = 0;
 
+        public LightShadows ShadowStateCache;
+
         [ImageEffectOpaque]
         public override void Render(PostProcessRenderContext context)
         {
@@ -535,6 +537,9 @@ namespace UnityEngine.Rendering.PostProcessing
                     //Render the depth texture from the sun's perspective in order to inject sunlight with shadows during voxelization
                     if (SEGI_NKLI.Sun != null)
                     {
+                        //Cache Shadow State
+                        //ShadowStateCache = SEGI_NKLI.Sun.shadows;
+
                         shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
 
                         Vector3 shadowCamPosition = voxelSpaceOrigin + Vector3.Normalize(-SEGI_NKLI.Sun.transform.forward) * shadowSpaceSize * 0.5f * shadowSpaceDepthRatio;
@@ -555,6 +560,9 @@ namespace UnityEngine.Rendering.PostProcessing
                         shadowCam.RenderWithShader(sunDepthShader, "");
 
                         Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
+
+                        //Restore Shadow State
+                        //SEGI_NKLI.Sun.shadows = ShadowStateCache;
                     }
 
                     //Clear the volume texture that is immediately written to in the voxelization scene shader
@@ -562,12 +570,17 @@ namespace UnityEngine.Rendering.PostProcessing
                     clearCompute.SetInt("Res", (int)settings.voxelResolution.value);
                     clearCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
 
+                    //Cache Shadow State
+                    //ShadowStateCache = SEGI_NKLI.Sun.shadows;
+
                     //Render the scene with the voxel proxy camera object with the voxelization shader to voxelize the scene to the volume integer texture
                     Graphics.SetRandomWriteTarget(1, integerVolume);
                     voxelCamera.targetTexture = dummyVoxelTextureAAScaled;
                     voxelCamera.RenderWithShader(voxelizationShader, "");
                     Graphics.ClearRandomWriteTargets();
 
+                    //Restore Shadow State
+                    //SEGI_NKLI.Sun.shadows = ShadowStateCache;
 
                     //Transfer the data from the volume integer texture to the main volume texture used for GI tracing. 
                     transferIntsCompute.SetTexture(0, "Result", activeVolume);
@@ -625,11 +638,17 @@ namespace UnityEngine.Rendering.PostProcessing
                     Shader.SetGlobalInt("SEGISecondaryCones", settings.secondaryCones.value);
                     Shader.SetGlobalFloat("SEGISecondaryOcclusionStrength", settings.secondaryOcclusionStrength.value);
 
+                    //Cache Shadow State
+                    //ShadowStateCache = SEGI_NKLI.Sun.shadows;
+
                     //Render the scene from the voxel camera object with the voxel tracing shader to render a bounce of GI into the irradiance volume
                     Graphics.SetRandomWriteTarget(1, integerVolume);
                     voxelCamera.targetTexture = dummyVoxelTextureFixed;
                     voxelCamera.RenderWithShader(voxelTracingShader, "");
                     Graphics.ClearRandomWriteTargets();
+
+                    //Restore Shadow State
+                    //SEGI_NKLI.Sun.shadows = ShadowStateCache;
 
 
                     //Transfer the data from the volume integer texture to the irradiance volume texture. This result is added to the next main voxelization pass to create a feedback loop for infinite bounces
@@ -863,9 +882,6 @@ namespace UnityEngine.Rendering.PostProcessing
         public override void Init()
         {
             if (SEGIRenderWidth == 0) return;
-
-            //if (!SEGICascaded.Sun) SEGICascaded.Sun = GameObject.Find("Enviro Directional Light").GetComponent<Light>();
-            //if (!Sun) Sun = GameObject.Find("Directional Light").GetComponent<Light>();
 
             //Gaussian Filter
             Gaussian_Shader = Shader.Find("Hidden/SEGI Gaussian Blur Filter");

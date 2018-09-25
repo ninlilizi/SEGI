@@ -39,7 +39,7 @@ public class SEGI_Helper_Debug : MonoBehaviour {
 
 
     // Update is called once per frame
-    void OnPostRender () {
+    void Update () {
 
         if (CollectData)
         {
