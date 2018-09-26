@@ -23,7 +23,7 @@ float4x4 glstate_matrix_projection;
 float4x4 unity_MatrixV;
 float4x4 unity_MatrixInvV;
 //float4x4 unity_MatrixVP;
-int unity_StereoEyeIndex;
+//int unity_StereoEyeIndex;
 #endif
 
 float4 unity_ShadowColor;

@@ -70,6 +70,8 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
     SerializedParameterOverride reflectionProbeLayerMask;
     SerializedParameterOverride useFXAA;
 
+    SerializedParameterOverride NVIDIAVRWorksEnable;
+
     UnityEngine.Object SunProp;
 
     SEGI_NKLI instance;
@@ -96,6 +98,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
     static bool showPresets = true;
     static bool showReflectionProperties = true;
     static bool showPostEffect = true;
+    static bool showVR = true;
 
     string presetToSaveName;
 
@@ -155,6 +158,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
         useFXAA = FindParameterOverride(x => x.useFXAA);
         updateVoxelsAfterX = FindParameterOverride(x => x.updateVoxelsAfterX);
         updateVoxelsAfterXInterval = FindParameterOverride(x => x.updateVoxelsAfterXInterval);
+        NVIDIAVRWorksEnable = FindParameterOverride(x => x.NVIDIAVRWorksEnable);
 
 
         //instance = target as SEGICascaded;
@@ -348,6 +352,19 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
             EditorGUI.indentLevel--;
         }
 
+
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
+
+        showVR = EditorGUILayout.Foldout(showVR, new GUIContent("Stereo Rendering"));
+        if (showReflectionProperties)
+        {
+            EditorGUI.indentLevel++;
+            #if VRWORKS
+                PropertyField(NVIDIAVRWorksEnable, new GUIContent("NVIDIA VRWorks", "Enables VRWorks if present and running on a Pascall class GPU."));
+            #endif
+            EditorGUI.indentLevel--;
+        }
 
         EditorGUILayout.Space();
         EditorGUILayout.Space();

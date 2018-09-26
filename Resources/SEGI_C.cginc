@@ -83,15 +83,27 @@ float4x4 _RightEyeToWorld;
 float GetDepthTexture(float2 coord)
 {
 #if defined(UNITY_REVERSED_Z)
-	return 1.0 - SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
+	#if defined(VRWORKS)
+		return 1.0 - SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(float2(coord.x, coord.y))).x;
+	#else
+		return 1.0 - SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
+	#endif
 #else
-	return SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	#if defined(VRWORKS)
+		return SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(float4(coord.x, coord.y, 0.0, 0.0))).x;
+	#else
+		return SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	#endif
 #endif
 }
 
 float4 GetViewSpacePosition(float2 coord, float2 uv)
 {
-	float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
+	#if defined(VRWORKS)
+		float depth = SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(uv).xy).x;
+	#else
+		float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
+	#endif
 
 	if (StereoEnabled)
 	{
@@ -383,7 +395,11 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel)
 
 float3 GetWorldNormal(float2 screenspaceUV)
 {
-	float4 dn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, screenspaceUV);
+	#if defined(VRWORKS)
+		float4 dn = SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(screenspaceUV));
+	#else
+		float4 dn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, screenspaceUV);
+	#endif
 	float3 n = DecodeViewNormalStereo(dn);
 	float3 worldN = mul((float3x3)CameraToWorld, n);
 

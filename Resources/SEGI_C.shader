@@ -13,14 +13,14 @@
 	{
 		float4 vertex : POSITION;
 		half2 texcoord : TEXCOORD0;
-		float2 texcoordStereo : TEXCOORD1;
+		//float2 texcoord : TEXCOORD1;
 	};
 
 	struct VaryingsSEGI
 	{
 		float4 vertex : SV_POSITION;
 		float2 texcoord : TEXCOORD0;
-		float2 texcoordStereo : TEXCOORD1;
+		//float2 texcoord : TEXCOORD1;
 		//#if UNITY_UV_STARTS_AT_TOP
 		//	half4 uv2 : TEXCOORD2;
 		//#endif
@@ -32,9 +32,10 @@
 		{
 			VaryingsSEGI o;
 			o.vertex = float4(v.texcoord.x - 0.5, v.texcoord.y + 0.5, 0, 0.5);
-			o.texcoord = float4(v.texcoord.x, v.texcoord.y, 0, 1);
-			o.texcoordStereo = UnityStereoScreenSpaceUVAdjust(o.texcoord, float4(1, 1, 0, 0));
-			o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoordStereo, 1.0);
+			//o.texcoord = float4(v.texcoord.x, v.texcoord.y, 0, 1);
+			o.texcoord = TRANSFORM_TEX(v.texcoord.xy, _MainTex);
+			//o.texcoordstereo = o.texcoord;// UnityStereoScreenSpaceUVAdjust(o.texcoord, float4(1, 1, 0, 0));
+			//o.texcoordstereo = TransformStereoScreenSpaceTex(o.texcoord, 1.0);
 
 			#if UNITY_UV_STARTS_AT_TOP
 					o.vertex.y = 1 - o.vertex.y;
@@ -47,7 +48,7 @@
 			VaryingsSEGI o;
 			o.vertex = UnityObjectToClipPos(v.vertex);
 			o.texcoord = float4(v.texcoord.xy, 1, 1);
-			o.texcoordStereo = TransformStereoScreenSpaceTex(o.texcoord, 1.0);
+			//o.texcoordstereo = TransformStereoScreenSpaceTex(o.texcoord, 1.0);
 
 			#if UNITY_UV_STARTS_AT_TOP
 				//o.uv2 = float4(v.texcoord.xy, 1, 1);
@@ -74,6 +75,9 @@
 				#pragma vertex VertSEGI
 				#pragma fragment Frag
 				#pragma multi_compile_instancing
+				#if defined (VRWORKS)
+					#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+				#endif
 
 				int FrameSwitch;
 
@@ -90,8 +94,8 @@
 						float2 coord = input.uv2.xy;
 						float2 uv = input.uv2;
 					#else*/
-						float2 coord = input.texcoordStereo.xy;
-						float2 uv = input.texcoordStereo;
+						float2 coord = input.texcoord.xy;
+						float2 uv = input.texcoord;
 					//#endif
 
 						//Get view space position and view vector
@@ -120,7 +124,7 @@
 						const float gAngle = phi * PI * 1.0;
 
 						//Get blue noise
-						float2 noiseCoord = (input.texcoordStereo.xy * _MainTex_TexelSize.zw) / (64.0).xx;
+						float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 						float3 blueNoise = SAMPLE_TEXTURE2D_LOD(NoiseTexture, samplerNoiseTexture, noiseCoord, 0);
 
 						//Trace GI cones
@@ -167,6 +171,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float2 Kernel;
 
@@ -186,13 +193,17 @@
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
 						#else*/
-							float2 coord = input.texcoordStereo.xy;
-							float2 uv = input.texcoordStereo;
+							float2 coord = input.texcoord.xy;
+							float2 uv = input.texcoord;
 						//#endif
 
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
-						float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, coord).x);
+						#if defined (VRWORKS)				
+							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy).x);
+						#else
+							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, coord).x);
+						#endif
 						half3 normal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
 						float thresh = 0.26;
 
@@ -205,7 +216,11 @@
 						for (int i = -4; i <= 4; i++)
 						{
 							float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy * 1.0;
-							float sampleDepth = LinearEyeDepth(SAMPLE_TEXTURE2D_LOD(_CameraDepthTexture, sampler_CameraDepthTexture, coord + offs.xy * 1, 0).x);
+							#if defined (VRWORKS)
+								float sampleDepth = LinearEyeDepth(SAMPLE_TEXTURE2D_LOD(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy + offs.xy * 1, 0).x);
+							#else
+								float sampleDepth = LinearEyeDepth(SAMPLE_TEXTURE2D_LOD(_CameraDepthTexture, sampler_CameraDepthTexture, coord + offs.xy * 1, 0).x);
+							#endif
 							half3 sampleNormal = normalize(SAMPLE_TEXTURE2D_LOD(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord + offs.xy * 1, 0).rgb * 2.0 - 1.0);
 
 							float weight = saturate(1.0 - abs(depth - sampleDepth) / thresh);
@@ -230,6 +245,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					TEXTURE2D_SAMPLER2D(GITexture, samplerGITexture);
 					TEXTURE2D_SAMPLER2D(Reflections, samplerReflections);
@@ -245,8 +263,8 @@
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
 						#else*/
-							float2 coord = input.texcoordStereo.xy;
-							float2 uv = input.texcoordStereo;
+							float2 coord = input.texcoord.xy;
+							float2 uv = input.texcoord;
 						//#endif
 
 						float4 albedoTex;
@@ -312,6 +330,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					TEXTURE2D_SAMPLER2D(GITexture, samplerGITexture);
 					TEXTURE2D_SAMPLER2D(PreviousDepth, samplerPreviousDepth);
@@ -333,19 +354,19 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						float3 gi = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoordStereo.xy).rgb;
+						float3 gi = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord.xy).rgb;
 
-						float depth = GetDepthTexture(input.texcoordStereo.xy);
+						float depth = GetDepthTexture(input.texcoord.xy);
 
-						float4 currentPos = float4(input.texcoordStereo.x * 2.0 - 1.0, input.texcoordStereo.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+						float4 currentPos = float4(input.texcoord.x * 2.0 - 1.0, input.texcoord.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
 
 						float4 fragpos = mul(ProjectionMatrixInverse, currentPos);
 						fragpos = mul(CameraToWorld, fragpos);
 						fragpos /= fragpos.w;
 						float4 thisWorldPosition = fragpos;
 
-						float2 motionVectors = SAMPLE_TEXTURE2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture, float4(input.texcoordStereo.xy, 0.0, 0.0)).xy;
-						float2 reprojCoord = input.texcoordStereo.xy - motionVectors.xy;
+						float2 motionVectors = SAMPLE_TEXTURE2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture, float4(input.texcoord.xy, 0.0, 0.0)).xy;
+						float2 reprojCoord = input.texcoord.xy - motionVectors.xy;
 
 						float prevDepth = (SAMPLE_TEXTURE2D(PreviousDepth, samplerPreviousDepth, float4(reprojCoord + _MainTex_TexelSize.xy * 0.0, 0.0, 0.0)).x);
 						#if defined(UNITY_REVERSED_Z)
@@ -364,16 +385,16 @@
 						float3 minPrev = float3(10000, 10000, 10000);
 						float3 maxPrev = float3(0, 0, 0);
 
-						float3 s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoordStereo.xy + _MainTex_TexelSize.xy * float2(0.5, 0.5), 0, 0)).rgb;
+						float3 s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoord.xy + _MainTex_TexelSize.xy * float2(0.5, 0.5), 0, 0)).rgb;
 						minPrev = s0;
 						maxPrev = s0;
-						s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoordStereo.xy + _MainTex_TexelSize.xy * float2(0.5, -0.5), 0, 0)).rgb;
+						s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoord.xy + _MainTex_TexelSize.xy * float2(0.5, -0.5), 0, 0)).rgb;
 						minPrev = min(minPrev, s0);
 						maxPrev = max(maxPrev, s0);
-						s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoordStereo.xy + _MainTex_TexelSize.xy * float2(-0.5, 0.5), 0, 0)).rgb;
+						s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoord.xy + _MainTex_TexelSize.xy * float2(-0.5, 0.5), 0, 0)).rgb;
 						minPrev = min(minPrev, s0);
 						maxPrev = max(maxPrev, s0);
-						s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoordStereo.xy + _MainTex_TexelSize.xy * float2(-0.5, -0.5), 0, 0)).rgb;
+						s0 = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float4(input.texcoord.xy + _MainTex_TexelSize.xy * float2(-0.5, -0.5), 0, 0)).rgb;
 						minPrev = min(minPrev, s0);
 						maxPrev = max(maxPrev, s0);
 
@@ -397,6 +418,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					//UNITY_DECLARE_TEX3D(SEGIVolumeTexture1);
 
@@ -412,8 +436,8 @@
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
 						#else*/
-							float2 coord = input.texcoordStereo.xy;
-							float2 uv = input.texcoordStereo;
+							float2 coord = input.texcoord.xy;
+							float2 uv = input.texcoord;
 						//#endif
 
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
@@ -429,7 +453,7 @@
 
 						float3 worldNormal;
 						if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
-						else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, input.texcoordStereo).rgb * 2.0 - 1.0);
+						else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, input.texcoord).rgb * 2.0 - 1.0);
 
 						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.006 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
 
@@ -477,13 +501,17 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float4 Frag(VaryingsSEGI input) : COLOR0
 					{
-						//UNITY_SETUP_INSTANCE_ID(input);
-						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-
-						float4 tex = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.texcoordStereo.xy);
+						#if defined (VRWORKS)
+							float4 tex = SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy);
+						#else
+							float4 tex = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.texcoord.xy);
+						#endif
 						return tex;
 					}
 
@@ -496,14 +524,18 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float4 Frag(VaryingsSEGI input) : COLOR0
 					{
-						//UNITY_SETUP_INSTANCE_ID(input);
-						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-
-						float2 coord = input.texcoordStereo.xy;
-						float4 tex = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, coord);
+						float2 coord = input.texcoord.xy;
+						#if defined(VRWORKS)
+							float4 tex = SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV((input.texcoord).xy);
+						#else
+							float4 tex = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, input.texcoord.xy);
+						#endif
 						return tex;
 					}
 
@@ -517,6 +549,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					TEXTURE2D_SAMPLER2D(GITexture, samplerGITexture);
 
@@ -525,9 +560,9 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						float4 albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, input.texcoordStereo.xy);
+						float4 albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, input.texcoord.xy);
 						float3 albedo = albedoTex.rgb;
-						float3 gi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, input.texcoordStereo.xy).rgb;
+						float3 gi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, input.texcoord.xy).rgb;
 						return float4(gi, 1.0);
 					}
 
@@ -542,6 +577,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float4 Frag(VaryingsSEGI input) : COLOR0
 					{
@@ -560,6 +598,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float LayerToVisualize;
 					int MipLevelToVisualize;
@@ -571,7 +612,7 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						return float4(SAMPLE_TEXTURE3D(SEGIVolumeTexture1, samplerSEGIVolumeTexture1, float3(input.texcoordStereo.xy, LayerToVisualize)).rgb, 1.0);
+						return float4(SAMPLE_TEXTURE3D(SEGIVolumeTexture1, samplerSEGIVolumeTexture1, float3(input.texcoord.xy, LayerToVisualize)).rgb, 1.0);
 					}
 
 				ENDHLSL
@@ -586,6 +627,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float4 CameraPosition;
 
@@ -596,10 +640,10 @@
 
 						/*#if UNITY_UV_STARTS_AT_TOP
 							float2 coord = input.uv2.xy;
-							float2 uv = input.texcoordStereo;
+							float2 uv = input.texcoord;
 						#else*/
-							float2 coord = input.texcoordStereo.xy;
-							float2 uv = input.texcoordStereo;
+							float2 coord = input.texcoord.xy;
+							float2 uv = input.texcoord;
 						//#endif
 
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
@@ -624,6 +668,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					float2 Kernel;
 
@@ -645,15 +692,20 @@
 							float2 coord = input.uv2.xy;
 							float2 uv = input.uv2;
 						#else*/
-							float2 coord = input.texcoordStereo.xy;
-							float2 uv = input.texcoordStereo;
+							float2 coord = input.texcoord.xy;
+							float2 uv = input.texcoord;
 						//#endif
 
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
-						float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, coord).x);
-						half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, coord));
+						#if defined(VRWORKS)
+							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy).x);
+							half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(input.texcoord).xy));
+						#else
+							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, coord).x);
+							half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, coord));
+						#endif												
 						float thresh = 0.26;
 
 						float3 viewPosition = GetViewSpacePosition(coord, uv).xyz;
@@ -720,6 +772,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 
 					TEXTURE2D_SAMPLER2D(GITexture, samplerGITexture);
 					TEXTURE2D_SAMPLER2D(PreviousDepth, samplerPreviousDepth);
@@ -741,13 +796,13 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						float3 gi = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoordStereo.xy).rgb;
+						float3 gi = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord.xy).rgb;
 
-						float2 depthLookupCoord = round(input.texcoordStereo.xy * _MainTex_TexelSize.zw) * _MainTex_TexelSize.xy;
-						depthLookupCoord = input.texcoordStereo.xy;
+						float2 depthLookupCoord = round(input.texcoord.xy * _MainTex_TexelSize.zw) * _MainTex_TexelSize.xy;
+						depthLookupCoord = input.texcoord.xy;
 						float depth = GetDepthTexture(depthLookupCoord);
 
-						float4 currentPos = float4(input.texcoordStereo.x * 2.0 - 1.0, input.texcoordStereo.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+						float4 currentPos = float4(input.texcoord.x * 2.0 - 1.0, input.texcoord.y * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
 
 						float4 fragpos = mul(ProjectionMatrixInverse, currentPos);
 						float4 thisViewPos = fragpos;
@@ -764,8 +819,8 @@
 
 						float2 diff = currentPos.xy - prevPos.xy;
 
-						float2 reprojCoord = input.texcoordStereo.xy - diff.xy * 0.5;
-						float2 previousTexcoord = input.texcoordStereo.xy + diff.xy * 0.5;
+						float2 reprojCoord = input.texcoord.xy - diff.xy * 0.5;
+						float2 previousTexcoord = input.texcoord.xy + diff.xy * 0.5;
 
 
 						float blendWeight = BlendWeight;
@@ -798,6 +853,9 @@
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
 					#pragma multi_compile_instancing
+					#if defined (VRWORKS)
+						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+					#endif
 					
 					//half4 _MainTex_ST;
 
@@ -828,7 +886,7 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoordStereo);
+						return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord);
 					}
 
 				ENDHLSL

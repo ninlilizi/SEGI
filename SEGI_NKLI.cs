@@ -9,6 +9,9 @@ using UnityEngine;
 using Unity.Jobs;
 using System.IO;
 using System;
+#if VRWORKS
+using NVIDIA;
+#endif
 
 namespace UnityEngine.Rendering.PostProcessing
 {
@@ -126,6 +129,9 @@ namespace UnityEngine.Rendering.PostProcessing
         [Range(0.0f, 8.0f)]
         public FloatParameter skyIntensity = new FloatParameter { value = 1.0f };
         public BoolParameter sphericalSkylight = new BoolParameter { value = false };
+
+        //VR
+        public BoolParameter NVIDIAVRWorksEnable = new BoolParameter { value = false };
 
     }
 
@@ -337,7 +343,11 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public int GIResolutionPrev = 0;
 
-        public LightShadows ShadowStateCache;
+        //public LightShadows ShadowStateCache;
+
+        public bool VRWorksActuallyEnabled;
+
+
 
         [ImageEffectOpaque]
         public override void Render(PostProcessRenderContext context)
@@ -406,6 +416,46 @@ namespace UnityEngine.Rendering.PostProcessing
                 return;
             }
 
+            //VRWorks
+            #if VRWORKS
+            if (settings.NVIDIAVRWorksEnable)
+            {
+                if (!VRWorksActuallyEnabled)
+                {
+                    VRWorks VRWorksComponent = context.camera.GetComponent<VRWorks>();
+                    if (!VRWorksComponent)
+                    {
+                        VRWorksComponent = context.camera.gameObject.AddComponent<VRWorks>();
+                        context.camera.gameObject.AddComponent<VRWorksPresent>();
+                    }
+                    /*if (VRWorksComponent.IsFeatureAvailable(VRWorks.Feature.LensMatchedShading))
+                    {
+                        VRWorksComponent.SetActiveFeature(VRWorks.Feature.LensMatchedShading);
+                    }
+                    else*/ if (VRWorksComponent.IsFeatureAvailable(VRWorks.Feature.SinglePassStereo))
+                    {
+                        VRWorksComponent.SetActiveFeature(VRWorks.Feature.SinglePassStereo);
+                    }
+                    material.EnableKeyword("VRWORKS");
+                    VRWorksActuallyEnabled = true;
+                }
+                NVIDIA.VRWorks.SetKeywords(material);
+            }
+            else
+            {
+                if (VRWorksActuallyEnabled)
+                {
+                    VRWorks VRWorksComponent = context.camera.GetComponent<VRWorks>();
+                    if (VRWorksComponent)
+                    {
+                        VRWorksComponent.SetActiveFeature(VRWorks.Feature.None);
+                    }
+                    material.DisableKeyword("VRWORKS");
+                    VRWorksActuallyEnabled = false;
+                }
+            }
+            #endif
+            //END VRWorks
 
             // OnPreRender
 
