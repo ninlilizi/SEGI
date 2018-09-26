@@ -31,6 +31,59 @@ float4 unity_ShadowColor;
 CBUFFER_END
 
 
+// HLSLSupport.cginc Cubemaps
+#define UNITY_DECLARE_TEXCUBE(tex) TextureCube tex; SamplerState sampler##tex
+#define UNITY_ARGS_TEXCUBE(tex) TextureCube tex, SamplerState sampler##tex
+#define UNITY_PASS_TEXCUBE(tex) tex, sampler##tex
+#define UNITY_PASS_TEXCUBE_SAMPLER(tex,samplertex) tex, sampler##samplertex
+#define UNITY_PASS_TEXCUBE_SAMPLER_LOD(tex, samplertex, lod) tex, sampler##samplertex, lod
+#define UNITY_DECLARE_TEXCUBE_NOSAMPLER(tex) TextureCube tex
+#define UNITY_SAMPLE_TEXCUBE(tex,coord) tex.Sample (sampler##tex,coord)
+#define UNITY_SAMPLE_TEXCUBE_LOD(tex,coord,lod) tex.SampleLevel (sampler##tex,coord, lod)
+#define UNITY_SAMPLE_TEXCUBE_SAMPLER(tex,samplertex,coord) tex.Sample (sampler##samplertex,coord)
+#define UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(tex, samplertex, coord, lod) tex.SampleLevel (sampler##samplertex, coord, lod)
+//END HLSLSupport.cginc Cubemaps
+
+
+//UnityShaderVariables.cginc Cubemaps
+UNITY_DECLARE_TEXCUBE(unity_SpecCube0);
+UNITY_DECLARE_TEXCUBE_NOSAMPLER(unity_SpecCube1);
+
+CBUFFER_START(UnityReflectionProbes)
+float4 unity_SpecCube0_BoxMax;
+float4 unity_SpecCube0_BoxMin;
+float4 unity_SpecCube0_ProbePosition;
+half4  unity_SpecCube0_HDR;
+
+float4 unity_SpecCube1_BoxMax;
+float4 unity_SpecCube1_BoxMin;
+float4 unity_SpecCube1_ProbePosition;
+half4  unity_SpecCube1_HDR;
+CBUFFER_END
+//END UnityShaderVariables.cginc Cubemaps
+
+
+//UnityCG.cginc - Decode Cubemaps
+// Decodes HDR textures
+// handles dLDR, RGBM formats
+inline half3 DecodeHDR(half4 data, half4 decodeInstructions)
+{
+	// Take into account texture alpha if decodeInstructions.w is true(the alpha value affects the RGB channels)
+	half alpha = decodeInstructions.w * (data.a - 1.0) + 1.0;
+
+	// If Linear mode is not supported we can skip exponent part
+#if defined(UNITY_COLORSPACE_GAMMA)
+	return (decodeInstructions.x * alpha) * data.rgb;
+#else
+#   if defined(UNITY_USE_NATIVE_HDR)
+	return decodeInstructions.x * data.rgb; // Multiplier for future HDRI relative to absolute conversion.
+#   else
+	return (decodeInstructions.x * PositivePow(alpha, decodeInstructions.y)) * data.rgb;
+#   endif
+#endif
+}
+//ENDUnityCG.cginc - Decode Cubemaps
+
 
 // Tranforms position from object to homogenous space -- CG Includes added for SRP conversion
 inline float4 UnityObjectToClipPos(in float3 pos)

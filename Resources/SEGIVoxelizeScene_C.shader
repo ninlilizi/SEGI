@@ -194,7 +194,7 @@
 						float v = (float(vi) / 2047.0) * 10.0;
 						float a = ai * 2.0;
 
-						v = pow(v, 3.0);
+						v = PositivePow(v, 3.0);
 
 						float3 color = hsv2rgb(float3(h, s, v));
 
@@ -205,7 +205,7 @@
 					{
 						//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
 						float3 hsv = rgb2hsv(color.rgb);
-						hsv.z = pow(hsv.z, 1.0 / 3.0);
+						hsv.z = PositivePow(hsv.z, 1.0 / 3.0);
 
 						uint result = 0;
 

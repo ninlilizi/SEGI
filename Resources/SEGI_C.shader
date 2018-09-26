@@ -268,7 +268,7 @@
 						//#endif
 
 						float4 albedoTex;
-						if (ForwardPath) albedoTex = SAMPLE_TEXTURE2D(_Albedo, sampler_Albedo, coord);
+						if (ForwardPath) albedoTex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, coord);
 						else albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
 						float3 albedo = albedoTex.rgb;
 						float3 gi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, coord).rgb;
@@ -461,19 +461,18 @@
 
 						float smoothness;
 						float3 specularColor;
-						/*if (ForwardPath)
+						if (ForwardPath)
 						{
-							float3 reflectedDir = reflect(viewVector, worldNormal);
-							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
-							half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
-							smoothness = probeData.a * 0.5;
-							specularColor = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_Albedo, coord).rgb;
+							float3 reflectedDir = reflect(-viewVector, worldNormal);
+							half4 probeData = UNITY_SAMPLE_TEXCUBE(_SEGICube, reflectedDir);
+							smoothness = probeData.a;
+							specularColor = float3(_SEGICube_HDRx, _SEGICube_HDRy, _SEGICube_HDRz);
 						}
 						else
-						{*/
+						{
 							smoothness = SAMPLE_TEXTURE2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1, coord).a * 0.5;
 							specularColor = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord).rgb;
-						//}
+						}
 
 						float4 reflection = (0.0).xxxx;
 

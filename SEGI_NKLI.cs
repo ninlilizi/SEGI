@@ -55,8 +55,8 @@ namespace UnityEngine.Rendering.PostProcessing
         public BoolParameter useReflectionProbes = new BoolParameter { value = true };
         [Range(0, 2)]
         public FloatParameter reflectionProbeIntensity = new FloatParameter { value = 0.5f };
-        [Range(0, 2)]
-        public FloatParameter reflectionProbeAttribution = new FloatParameter { value = 1f };
+        //[Range(0, 2)]
+        //public FloatParameter reflectionProbeAttribution = new FloatParameter { value = 1f };
         public BoolParameter doReflections = new BoolParameter { value = true };
 
         [Range(0.01f, 1.0f)]
@@ -428,11 +428,7 @@ namespace UnityEngine.Rendering.PostProcessing
                         VRWorksComponent = context.camera.gameObject.AddComponent<VRWorks>();
                         context.camera.gameObject.AddComponent<VRWorksPresent>();
                     }
-                    /*if (VRWorksComponent.IsFeatureAvailable(VRWorks.Feature.LensMatchedShading))
-                    {
-                        VRWorksComponent.SetActiveFeature(VRWorks.Feature.LensMatchedShading);
-                    }
-                    else*/ if (VRWorksComponent.IsFeatureAvailable(VRWorks.Feature.SinglePassStereo))
+                    if (VRWorksComponent.IsFeatureAvailable(VRWorks.Feature.SinglePassStereo))
                     {
                         VRWorksComponent.SetActiveFeature(VRWorks.Feature.SinglePassStereo);
                     }
@@ -797,7 +793,7 @@ namespace UnityEngine.Rendering.PostProcessing
             material.SetFloat("BlendWeight", settings.temporalBlendWeight.value);
             material.SetInt("useReflectionProbes", settings.useReflectionProbes.value ? 1 : 0);
             material.SetFloat("reflectionProbeIntensity", settings.reflectionProbeIntensity.value);
-            material.SetFloat("reflectionProbeAttribution", settings.reflectionProbeAttribution.value);
+            //material.SetFloat("reflectionProbeAttribution", settings.reflectionProbeAttribution.value);
             material.SetInt("StereoEnabled", context.stereoActive ? 1 : 0);
 
             //Blit once to downsample if required
@@ -805,8 +801,12 @@ namespace UnityEngine.Rendering.PostProcessing
 
             if (context.camera.renderingPath == RenderingPath.Forward)
             {
+                context.command.SetGlobalTexture("_SEGICube", reflectionProbe.texture);
+                //context.command.SetGlobalFloat("_SEGICube_HDRw", reflectionProbe.textureHDRDecodeValues.w);
+                context.command.SetGlobalFloat("_SEGICube_HDRx", reflectionProbe.textureHDRDecodeValues.x);
+                context.command.SetGlobalFloat("_SEGICube_HDRy", reflectionProbe.textureHDRDecodeValues.y);
+                context.command.SetGlobalFloat("_SEGICube_HDRz", reflectionProbe.textureHDRDecodeValues.z);
                 context.command.SetGlobalInt("ForwardPath", 1);
-                context.command.SetGlobalTexture("_Albedo", context.source);
             }
             else context.command.SetGlobalInt("ForwardPath", 0);
 
@@ -989,7 +989,7 @@ namespace UnityEngine.Rendering.PostProcessing
             reflectionProbeGameObject.hideFlags = HideFlags.HideAndDontSave;
             reflectionProbeGameObject.transform.parent = attachedCamera.transform;
             reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-            reflectionProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
+            reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
             reflectionProbe.clearFlags = ReflectionProbeClearFlags.SolidColor;
             reflectionProbe.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
             reflectionProbe.size = new Vector3(settings.updateVoxelsAfterXInterval.value * 2.5f, settings.updateVoxelsAfterXInterval.value * 2.5f, settings.updateVoxelsAfterXInterval.value * 2.5f);
@@ -998,11 +998,10 @@ namespace UnityEngine.Rendering.PostProcessing
             reflectionProbe.farClipPlane = settings.voxelSpaceSize.value;
             reflectionProbe.backgroundColor = Color.black;
             reflectionProbe.boxProjection = true;
-
             reflectionProbe.resolution = 128;
-            reflectionProbe.importance = 0;
+            reflectionProbe.importance = 1;
             reflectionProbe.enabled = true;
-            reflectionProbe.hdr = false;
+            reflectionProbe.hdr = true;
 
 
             //Find the proxy shadow rendering camera if it exists

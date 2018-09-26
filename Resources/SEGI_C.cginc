@@ -46,7 +46,7 @@ half4 SEGISkyColor;
 float4 SEGISunlightVector;
 float4 _MainTex_ST;
 
-float reflectionProbeAttribution;
+//float reflectionProbeAttribution;
 float reflectionProbeIntensity;
 int useReflectionProbes;
 int ReflectionSteps;
@@ -59,7 +59,6 @@ uniform half4 _MainTex_TexelSize;
 float4x4 ProjectionMatrixInverse;
 
 TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
-TEXTURE2D_SAMPLER2D(_Albedo, sampler_Albedo);
 TEXTURE2D_SAMPLER2D(PreviousGITexture, samplerPreviousGITexture);
 TEXTURE2D_SAMPLER2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0);
 TEXTURE2D_SAMPLER2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1);
@@ -67,6 +66,11 @@ TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
 TEXTURE2D_SAMPLER2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture);
 TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture);
 TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
+
+UNITY_DECLARE_TEXCUBE(_SEGICube);
+float _SEGICube_HDRx;
+float _SEGICube_HDRy;
+float _SEGICube_HDRz;
 
 float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;
@@ -214,18 +218,16 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 			sample = float4(1, 1, 1, 0);
 		}
 
-
 		float occlusion = skyVisibility * skyVisibility;
-
-		float falloffFix = pow(fi, 1.0) * 4.0 + NearLightGain;
+		float falloffFix = PositivePow(fi, 1.0) * 4.0 + NearLightGain;
 
 		sample.a *= lerp(saturate(coneSize / 1.0), 1.0, NearOcclusionStrength);
 		gi.rgb += sample.rgb * (coneSize * 1.0 + 1.0) * occlusion * falloffFix;
 
-		skyVisibility *= pow(saturate(1.0 - (sample.a) * (coneSize * 0.2 * FarOcclusionStrength + 1.0 + coneSize * coneSize * 0.05 * FarthestOcclusionStrength) * OcclusionStrength), lerp(0.014, 1.5 * OcclusionPower, min(1.0, coneSize / 5.0)));
+		skyVisibility *= PositivePow(saturate(1.0 - (sample.a) * (coneSize * 0.2 * FarOcclusionStrength + 1.0 + coneSize * coneSize * 0.05 * FarthestOcclusionStrength) * OcclusionStrength), lerp(0.014, 1.5 * OcclusionPower, min(1.0, coneSize / 5.0)));
 	}
 
-	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
+	float NdotL = PositivePow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
 
 	gi *= NdotL;
 	skyVisibility *= NdotL;
@@ -242,21 +244,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float upGradient = saturate(dot(1, float3(0.0, 1.0, 0.0)));
 	float sunGradient = saturate(dot(1, -SEGISunlightVector.xyz));
-	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
-	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, PositivePow(upGradient, (0.5).xxx));
+	skyColor += GISunColor.rgb * PositivePow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
-	/*if (useReflectionProbes  && ForwardPath)
-	{
-		float3 reflectedDir = reflect(viewDir, worldNormal);
-		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
-		half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
-
-		//half4 lightColor = UNITY_SAMPLE_TEX2D(_LightmapTexture, uv);
-		//probeColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
-		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
-
-		probeColor = lerp(skyColor.rgb, (0.5).xxx, probeColor.rgb * reflectionProbeAttribution);
-	}*/
 	gi.rgb *= GIGain * 0.25;
 	gi += skyColor * skyVisibility * skyMult;
 
@@ -294,7 +284,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 0.12 * coneLength + 0.001);
 
 		float4 sample = float4(0.0, 0.0, 0.0, 0.0);
-		coneSize = pow(coneSize / 5.0, 2.0) * 5.0;
+		coneSize = PositivePow(coneSize / 5.0, 2.0) * 5.0;
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
@@ -332,14 +322,14 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 		gi.rgb += sample.rgb * (coneSize * 5.0 + 1.0) * occlusion * 0.5;
 		sample.a *= lerp(saturate(fi / 0.2), 1.0, NearOcclusionStrength);
-		skyVisibility *= pow(saturate(1.0 - sample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
+		skyVisibility *= PositivePow(saturate(1.0 - sample.a * 0.5), (lerp(4.0, 1.0, smoothness) + coneSize * 0.5) * ReflectionOcclusionPower);
 	}
 
 	/*if (useReflectionProbes  && ForwardPath)
 	{
 		float3 reflectedDir = reflect(viewDir, worldNormal);
-		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
-		half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
+		half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, worldNormal, 0);
+		half3 probeColor = probeData;// DecodeHDR(probeData, _SEGICube_HDR);
 
 		//half4 lightColor = UNITY_SAMPLE_TEX2D(_LightmapTexture, uv);
 
@@ -347,7 +337,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		//skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 		//probeColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 		//probeColor = (skyColor.rgb + probeColor.rgb) * 0.25;
-		probeColor = probeColor.rgb * (1 - reflectionProbeAttribution);
+		probeColor = probeColor.rgb * reflectionProbeAttribution;
 
 		//gi.rgb *= GIGain * 0.15;
 		gi = lerp(gi, probeColor, (0.5).xxx);// *skyVisibility * skyMult * 10.0;

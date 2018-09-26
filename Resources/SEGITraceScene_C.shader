@@ -219,13 +219,13 @@
 
 							float occlusion = skyVisibility * skyVisibility * skyVisibility;
 
-							float falloffFix = pow(fi, 1.0) * 4.0 + 0.0456;
+							float falloffFix = PositivePow(fi, 1.0) * 4.0 + 0.0456;
 
 							gi.rgb += sample.rgb * (coneSize * 1.0 + 1.0) * occlusion * falloffFix;
 
 							sample.a *= SEGISecondaryOcclusionStrength;
 
-							skyVisibility *= pow(saturate(1.0 - (sample.a) * (coneSize * 0.2 + 1.0 + coneSize * coneSize * 0.08)), lerp(0.014, 1.0, min(1.0, coneSize / 5.0)));
+							skyVisibility *= PositivePow(saturate(1.0 - (sample.a) * (coneSize * 0.2 + 1.0 + coneSize * coneSize * 0.08)), lerp(0.014, 1.0, min(1.0, coneSize / 5.0)));
 
 						}
 
@@ -238,8 +238,8 @@
 
 						float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
 						float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
-						skyColor += lerp(SEGISkyColor.rgb * 2.0, SEGISkyColor.rgb, pow(upGradient, (0.5).xxx));
-						skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+						skyColor += lerp(SEGISkyColor.rgb * 2.0, SEGISkyColor.rgb, PositivePow(upGradient, (0.5).xxx));
+						skyColor += GISunColor.rgb * PositivePow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
 						gi *= 0.5;
 
@@ -287,7 +287,7 @@
 						float v = (float(vi) / 2047.0) * 10.0;
 						float a = ai * 2.0;
 
-						v = pow(v, 3.0);
+						v = PositivePow(v, 3.0);
 
 						float3 color = hsv2rgb(float3(h, s, v));
 
@@ -298,7 +298,7 @@
 					{
 						//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
 						float3 hsv = rgb2hsv(color.rgb);
-						hsv.z = pow(hsv.z, 1.0 / 3.0);
+						hsv.z = PositivePow(hsv.z, 1.0 / 3.0);
 
 						uint result = 0;
 

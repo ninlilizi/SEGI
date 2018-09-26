@@ -66,7 +66,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
     SerializedParameterOverride sunDepthTextureDepth;
     SerializedParameterOverride useReflectionProbes;
     SerializedParameterOverride reflectionProbeIntensity;
-    SerializedParameterOverride reflectionProbeAttribution;
+    //SerializedParameterOverride reflectionProbeAttribution;
     SerializedParameterOverride reflectionProbeLayerMask;
     SerializedParameterOverride useFXAA;
 
@@ -153,7 +153,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
         //sunDepthTextureDepth = FindParameterOverride(x => x.sun);
         useReflectionProbes = FindParameterOverride(x => x.useReflectionProbes);
         reflectionProbeIntensity = FindParameterOverride(x => x.reflectionProbeIntensity);
-        reflectionProbeAttribution = FindParameterOverride(x => x.reflectionProbeAttribution);
+        //reflectionProbeAttribution = FindParameterOverride(x => x.reflectionProbeAttribution);
         reflectionProbeLayerMask = FindParameterOverride(x => x.reflectionProbeLayerMask);
         useFXAA = FindParameterOverride(x => x.useFXAA);
         updateVoxelsAfterX = FindParameterOverride(x => x.updateVoxelsAfterX);
@@ -266,7 +266,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
             EditorGUI.indentLevel++;
             PropertyField(useReflectionProbes, new GUIContent("Use Reflection Probe", "Approximates path traced Specular values using a Reflection Probe."));
             PropertyField(reflectionProbeIntensity, new GUIContent("Reflection Probe Intensity", "Intensity of Reflection Probe influence."));
-            PropertyField(reflectionProbeAttribution, new GUIContent("Reflection Probe Attribution", "How much Reflection Probes contribute to GI"));
+            //PropertyField(reflectionProbeAttribution, new GUIContent("Reflection Probe Attribution", "How much Reflection Probes contribute to GI"));
             PropertyField(reflectionProbeLayerMask, new GUIContent("Reflection Probe Layer Mask", "Enables the writing of additional black occlusio"));
             EditorGUI.indentLevel--;
         }
