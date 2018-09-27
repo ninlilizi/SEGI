@@ -866,7 +866,7 @@ MonoBehaviour:
     value: 100
   updateVoxelsAfterX:
     overrideState: 1
-    value: 0
+    value: 1
   updateVoxelsAfterXInterval:
     overrideState: 1
     value: 1
@@ -887,7 +887,7 @@ MonoBehaviour:
     value: 2
   doReflections:
     overrideState: 1
-    value: 0
+    value: 1
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -984,16 +984,16 @@ MonoBehaviour:
       m_Bits: 4294967295
   softSunlight:
     overrideState: 1
-    value: 2.16
+    value: 0
   skyColor:
     overrideState: 1
     value: {r: 0.9833391, g: 1, b: 0.8349056, a: 1}
   MatchAmbiantColor:
     overrideState: 1
-    value: 1
+    value: 0
   skyIntensity:
     overrideState: 1
-    value: 1.22
+    value: 1
   sphericalSkylight:
     overrideState: 1
     value: 0
