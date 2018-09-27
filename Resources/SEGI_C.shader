@@ -296,7 +296,8 @@
 							albedo = albedoTex.rgb;
 						}
 
-						result = scene + gi * albedoTex.a * albedoTex.rgb;
+						result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
+						result += min(lerp(albedoTex.rgb, gi.rgb, albedoTex.a * 0.5 + 0.5), result) * 2;
 
 						if (DoReflections > 0)
 						{

@@ -389,7 +389,7 @@ MonoBehaviour:
     value: 1
   cones:
     overrideState: 1
-    value: 10
+    value: 12
   coneTraceSteps:
     overrideState: 1
     value: 10
@@ -422,10 +422,10 @@ MonoBehaviour:
     value: 1
   reflectionSteps:
     overrideState: 1
-    value: 30
+    value: 32
   reflectionOcclusionPower:
     overrideState: 1
-    value: 1.33
+    value: 4
   skyReflectionIntensity:
     overrideState: 1
     value: 1
@@ -477,7 +477,7 @@ MonoBehaviour:
     value: 1
   skyIntensity:
     overrideState: 1
-    value: 1
+    value: 8
   sphericalSkylight:
     overrideState: 1
     value: 0

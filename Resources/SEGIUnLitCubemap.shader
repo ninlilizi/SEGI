@@ -111,10 +111,11 @@ Shader "Hidden/SEGIUnLitCubemap"
 				//fixed4 col = float4(tex2D(_MainTex, i.uv).rgb, _Glossiness);
 				fixed4 col = tex2D(_MainTex, i.uv) * diffuse * nl;
 				col.rgb *= _Color;
+				fixed4 finalcol = col;
 
 				// multiply by lighting
 				col *= i.diff * pow(1 - saturate(dot(i.viewDir, i.normalDir)), 1);
-				
+
 				//Calculate final specular alpha value		
 				//col.a *= _Glossiness * LinearRgbToLuminance(col.rgb);
 

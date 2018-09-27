@@ -1032,7 +1032,7 @@ namespace UnityEngine.Rendering.PostProcessing
             {
                 reflectionProbe = reflectionProbeGameObject.AddComponent<ReflectionProbe>();
             }*/
-            reflectionProbeGameObject.hideFlags = HideFlags.DontSave;
+            reflectionProbeGameObject.hideFlags = HideFlags.HideAndDontSave;
             reflectionProbeGameObject.transform.parent = attachedCamera.transform;
             reflectionProbeGameObject.transform.localPosition = new Vector3(0, 0, 0);
             reflectionProbeGameObject.transform.localRotation = Quaternion.identity;
@@ -1395,6 +1395,7 @@ namespace UnityEngine.Rendering.PostProcessing
             RT_FXAARTluminance = new RenderTexture(RT_Disc0);
             if (UnityEngine.XR.XRSettings.enabled) RT_FXAARTluminance.vrUsage = VRTextureUsage.TwoEyes;
             RT_FXAARTluminance.Create();
+
 
             if (RT_Albedo) RT_Albedo.Release();
             int RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 2);
