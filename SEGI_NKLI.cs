@@ -149,7 +149,8 @@ namespace UnityEngine.Rendering.PostProcessing
         public GameObject shadowCamGameObject;
         public Texture2D[] blueNoise;
 
-        public ReflectionProbe reflectionProbe;
+        //public ReflectionProbe reflectionProbe;
+        public Camera reflectionCamera;
         public GameObject reflectionProbeGameObject;
 
         public float shadowSpaceSize = 50.0f;
@@ -178,6 +179,7 @@ namespace UnityEngine.Rendering.PostProcessing
         public static RenderTexture RT_blur0;
         public static RenderTexture RT_blur1;
         public static RenderTexture RT_FXAARTluminance;
+        public static RenderTexture RT_Albedo;
 
         public static int SEGIRenderWidth;
         public static int SEGIRenderHeight;
@@ -328,6 +330,12 @@ namespace UnityEngine.Rendering.PostProcessing
         private Shader FXAA_Shader;
         private Material FXAA_Material;
 
+        private Shader CubeMap_Shader;
+
+        //Color Correction
+        //private Shader ColorCorrection_Shader;
+        //private Material ColorCorrection_Material;
+
         //Forward Rendering
         //public bool useReflectionProbes = true;
         //[Range(0, 2)]
@@ -349,7 +357,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
 
-        [ImageEffectOpaque]
+        //[ImageEffectOpaque]
         public override void Render(PostProcessRenderContext context)
         {
             // Update
@@ -417,7 +425,7 @@ namespace UnityEngine.Rendering.PostProcessing
             }
 
             //VRWorks
-            #if VRWORKS
+#if VRWORKS
             if (settings.NVIDIAVRWorksEnable)
             {
                 if (!VRWorksActuallyEnabled)
@@ -450,7 +458,7 @@ namespace UnityEngine.Rendering.PostProcessing
                     VRWorksActuallyEnabled = false;
                 }
             }
-            #endif
+#endif
             //END VRWorks
 
             // OnPreRender
@@ -458,16 +466,44 @@ namespace UnityEngine.Rendering.PostProcessing
             //Force reinitialization to make sure that everything is working properly if one of the cameras was unexpectedly destroyed
             //if (!voxelCamera || !false;
 
-            if (attachedCamera.renderingPath == RenderingPath.Forward && reflectionProbe.enabled)
+            if (context.camera.renderingPath == RenderingPath.Forward && settings.useReflectionProbes)
             {
-                reflectionProbe.enabled = true;
-                reflectionProbe.intensity = settings.reflectionProbeIntensity.value;
-                reflectionProbe.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
+                //reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
+                //reflectionProbe.intensity = settings.reflectionProbeIntensity.value;
+                reflectionCamera.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
+
+                //Cache Shadow State
+                LightShadows ShadowStateCache = SEGI_NKLI.Sun.shadows;
+                Color ambientColorCache = RenderSettings.ambientLight;
+                AmbientMode ambientModeCache = RenderSettings.ambientMode;
+                float IntensityCache = SEGI_NKLI.Sun.intensity;
+                float ambientCache = RenderSettings.ambientIntensity;
+
+                //SEGI_NKLI.Sun.shadows = LightShadows.None;
+                RenderSettings.ambientMode = AmbientMode.Flat;
+                RenderSettings.ambientLight = Color.white;
+                RenderSettings.ambientIntensity = 1;
+                SEGI_NKLI.Sun.intensity = 1;
+
+                var faceToRender = Time.frameCount % 6;
+                var faceMask = 1 << faceToRender;
+                //reflectionProbe.RenderProbe();
+                //reflectionProbe.enabled = false;
+                reflectionCamera.SetReplacementShader(CubeMap_Shader, "");
+                reflectionCamera.RenderToCubemap(RT_Albedo, faceMask, Camera.MonoOrStereoscopicEye.Mono);
+                //reflectionProbe.enabled = true;
+                
+                //Restore Shadow State
+                SEGI_NKLI.Sun.shadows = ShadowStateCache;
+                RenderSettings.ambientLight = ambientColorCache;
+                RenderSettings.ambientMode = ambientModeCache;
+                RenderSettings.ambientIntensity = ambientCache;
+                SEGI_NKLI.Sun.intensity = IntensityCache;
             }
-            else
+            /*else
             {
-                reflectionProbe.enabled = false;
-            }
+                reflectionProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
+            }*/
 
             // only use main camera for voxel simulations
             if (attachedCamera != Camera.main)
@@ -696,7 +732,6 @@ namespace UnityEngine.Rendering.PostProcessing
                     //Restore Shadow State
                     //SEGI_NKLI.Sun.shadows = ShadowStateCache;
 
-
                     //Transfer the data from the volume integer texture to the irradiance volume texture. This result is added to the next main voxelization pass to create a feedback loop for infinite bounces
                     transferIntsCompute.SetTexture(1, "Result", secondaryIrradianceVolume);
                     transferIntsCompute.SetTexture(1, "RG0", integerVolume);
@@ -801,11 +836,10 @@ namespace UnityEngine.Rendering.PostProcessing
 
             if (context.camera.renderingPath == RenderingPath.Forward)
             {
-                context.command.SetGlobalTexture("_SEGICube", reflectionProbe.texture);
-                //context.command.SetGlobalFloat("_SEGICube_HDRw", reflectionProbe.textureHDRDecodeValues.w);
-                context.command.SetGlobalFloat("_SEGICube_HDRx", reflectionProbe.textureHDRDecodeValues.x);
-                context.command.SetGlobalFloat("_SEGICube_HDRy", reflectionProbe.textureHDRDecodeValues.y);
-                context.command.SetGlobalFloat("_SEGICube_HDRz", reflectionProbe.textureHDRDecodeValues.z);
+                //context.command.Blit(context.source, RT_Albedo, ColorCorrection_Material, 0);
+
+                context.command.SetGlobalTexture("_SEGICube", RT_Albedo);
+                //context.command.SetGlobalTexture("_SEGIReflectCube", reflectionProbe.texture);
                 context.command.SetGlobalInt("ForwardPath", 1);
             }
             else context.command.SetGlobalInt("ForwardPath", 0);
@@ -947,6 +981,12 @@ namespace UnityEngine.Rendering.PostProcessing
             FXAA_Material.SetFloat("_SubpixelBlending", 1f);
             FXAA_Material.DisableKeyword("LUMINANCE_GREEN");
 
+            CubeMap_Shader = Shader.Find("Hidden/SEGIUnLitCubemap");
+
+            //Color Correction
+            //ColorCorrection_Shader = Shader.Find("Hidden/Delighter/ColorCorrection");
+            //ColorCorrection_Material = new Material(ColorCorrection_Shader);
+
             //Setup shaders and materials
             sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
             clearCompute = Resources.Load("SEGIClear_C") as ComputeShader;
@@ -976,32 +1016,53 @@ namespace UnityEngine.Rendering.PostProcessing
             {
                 reflectionProbeGameObject = new GameObject("SEGI_REFLECTIONPROBE");
             }
-            reflectionProbe = reflectionProbeGameObject.GetComponent<ReflectionProbe>();
+            /*reflectionProbe = reflectionProbeGameObject.GetComponent<ReflectionProbe>();
             if (!reflectionProbe)
             {
                 reflectionProbe = reflectionProbeGameObject.AddComponent<ReflectionProbe>();
+
+            }*/
+            reflectionCamera = reflectionProbeGameObject.GetComponent<Camera>();
+            if (!reflectionCamera)
+            {
+                reflectionCamera = reflectionProbeGameObject.AddComponent<Camera>();
 
             }
             /*if (!reflectionProbe)
             {
                 reflectionProbe = reflectionProbeGameObject.AddComponent<ReflectionProbe>();
             }*/
-            reflectionProbeGameObject.hideFlags = HideFlags.HideAndDontSave;
+            reflectionProbeGameObject.hideFlags = HideFlags.DontSave;
             reflectionProbeGameObject.transform.parent = attachedCamera.transform;
-            reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
-            reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
+            reflectionProbeGameObject.transform.localPosition = new Vector3(0, 0, 0);
+            reflectionProbeGameObject.transform.localRotation = Quaternion.identity;
+            /*reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
+            reflectionProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
             reflectionProbe.clearFlags = ReflectionProbeClearFlags.SolidColor;
             reflectionProbe.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
-            reflectionProbe.size = new Vector3(settings.updateVoxelsAfterXInterval.value * 2.5f, settings.updateVoxelsAfterXInterval.value * 2.5f, settings.updateVoxelsAfterXInterval.value * 2.5f);
-            reflectionProbe.mode = ReflectionProbeMode.Realtime;
-            reflectionProbe.shadowDistance = settings.voxelSpaceSize.value;
+            reflectionProbe.size = new Vector3(settings.voxelSpaceSize.value, settings.voxelSpaceSize.value, settings.voxelSpaceSize.value);
+            reflectionProbe.shadowDistance = 0;// settings.voxelSpaceSize.value;
             reflectionProbe.farClipPlane = settings.voxelSpaceSize.value;
+            reflectionProbe.mode = ReflectionProbeMode.Realtime;
+            //reflectionProbe.customBakedTexture = RT_Albedo;
             reflectionProbe.backgroundColor = Color.black;
             reflectionProbe.boxProjection = true;
             reflectionProbe.resolution = 128;
             reflectionProbe.importance = 1;
-            reflectionProbe.enabled = true;
-            reflectionProbe.hdr = true;
+            reflectionProbe.enabled = false;
+            reflectionProbe.hdr = false;*/
+            reflectionCamera.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
+            reflectionCamera.farClipPlane = settings.voxelSpaceSize.value;
+            reflectionCamera.renderingPath = RenderingPath.Forward;
+            reflectionCamera.clearFlags = CameraClearFlags.Color;
+            reflectionCamera.backgroundColor = Color.black;
+            reflectionCamera.allowHDR = false;
+            reflectionCamera.enabled = false;
+            reflectionCamera.aspect = 1;
+
+
+
+            reflectionCamera.backgroundColor = Color.black;
 
 
             //Find the proxy shadow rendering camera if it exists
@@ -1335,6 +1396,15 @@ namespace UnityEngine.Rendering.PostProcessing
             if (UnityEngine.XR.XRSettings.enabled) RT_FXAARTluminance.vrUsage = VRTextureUsage.TwoEyes;
             RT_FXAARTluminance.Create();
 
+            if (RT_Albedo) RT_Albedo.Release();
+            int RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 2);
+            RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
+            //if (UnityEngine.XR.XRSettings.enabled) RT_Albedo.vrUsage = VRTextureUsage.TwoEyes;
+            RT_Albedo.dimension = TextureDimension.Cube;
+            RT_Albedo.filterMode = FilterMode.Point;
+            RT_Albedo.isPowerOfTwo = true;
+            RT_Albedo.Create();
+
             Debug.Log("<SEGI> Render Textures resized");
 
             //SEGIBufferInit();
@@ -1385,6 +1455,7 @@ namespace UnityEngine.Rendering.PostProcessing
             if (RT_blur0) RT_blur0.Release();
             if (RT_blur1) RT_blur1.Release();
             if (RT_FXAARTluminance) RT_FXAARTluminance.Release();
+            CleanupTexture(ref RT_Albedo);
         }
 
         void CleanupTexture(ref RenderTexture texture)
@@ -1394,16 +1465,14 @@ namespace UnityEngine.Rendering.PostProcessing
                 texture.Release();
             }
         }
-
     }
 }
 
-    //####################################################################################################################################
-    //####################################################################################################################################
-    //####################################################################################################################################
+//####################################################################################################################################
+//####################################################################################################################################
+//####################################################################################################################################
 
-    //####################################################################################################################################
-    //####################################################################################################################################
-    //####################################################################################################################################
+//####################################################################################################################################
+//####################################################################################################################################
+//####################################################################################################################################
 
-   

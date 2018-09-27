@@ -1,7 +1,9 @@
 //UNITY_SHADER_NO_UPGRADE
 
 #define UNITY_MATRIX_P glstate_matrix_projection
+#define UNITY_MATRIX_M unity_ObjectToWorld
 #define UNITY_MATRIX_VP unity_MatrixVP
+
 
 
 CBUFFER_START(UnityPerDraw)
@@ -27,6 +29,16 @@ float4x4 unity_MatrixInvV;
 #endif
 
 float4 unity_ShadowColor;
+
+CBUFFER_END
+
+CBUFFER_START(UnityLighting)
+
+#ifdef USING_DIRECTIONAL_LIGHT
+half4 _WorldSpaceLightPos0;
+#else
+float4 _WorldSpaceLightPos0;
+#endif
 
 CBUFFER_END
 
@@ -106,3 +118,58 @@ inline float3 UnityObjectToWorldNormal( in float3 norm )
     return normalize(mul(norm, (float3x3)unity_WorldToObject));
 #endif
 }
+
+// Convert rgb to luminance
+// with rgb in linear space with sRGB primaries and D65 white point
+half LinearRgbToLuminance(half3 linearRgb)
+{
+	return dot(linearRgb, half3(0.2126729f, 0.7151522f, 0.0721750f));
+}
+
+//Colospace conversion
+float Epsilon = 1e-10;
+
+float3 rgb2hsv(float3 c)
+{
+	float4 k = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+	float4 p = lerp(float4(c.bg, k.wz), float4(c.gb, k.xy), step(c.b, c.g));
+	float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+
+	float d = q.x - min(q.w, q.y);
+	float e = 1.0e-10;
+
+	return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+float3 hsv2rgb(float3 c)
+{
+	float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
+	return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
+}
+
+float3 rgb2hcv(in float3 RGB)
+{
+	// Based on work by Sam Hocevar and Emil Persson
+	float4 P = lerp(float4(RGB.bg, -1.0, 2.0 / 3.0), float4(RGB.gb, 0.0, -1.0 / 3.0), step(RGB.b, RGB.g));
+	float4 Q = lerp(float4(P.xyw, RGB.r), float4(RGB.r, P.yzx), step(P.x, RGB.r));
+	float C = Q.x - min(Q.w, Q.y);
+	float H = abs((Q.w - Q.y) / (6 * C + Epsilon) + Q.z);
+	return float3(H, C, Q.x);
+}
+
+float3 rgb2hsl(in float3 RGB)
+{
+	float3 HCV = rgb2hcv(RGB);
+	float L = HCV.z - HCV.y * 0.5;
+	float S = HCV.y / (1 - abs(L * 2 - 1) + Epsilon);
+	return float3(HCV.x, S, L);
+}
+
+float3 hsl2rgb(float3 c)
+{
+	c = float3(frac(c.x), clamp(c.yz, 0.0, 1.0));
+	float3 rgb = clamp(abs(fmod(c.x * 6.0 + float3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+	return c.z + c.y * (rgb - 0.5) * (1.0 - abs(2.0 * c.z - 1.0));
+}
+//END Colospace conversion

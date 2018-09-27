@@ -55,9 +55,6 @@ MonoBehaviour:
   reflectionProbeIntensity:
     overrideState: 1
     value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 1
-    value: 1
   doReflections:
     overrideState: 1
     value: 1
@@ -168,6 +165,9 @@ MonoBehaviour:
     overrideState: 0
     value: 1
   sphericalSkylight:
+    overrideState: 0
+    value: 0
+  NVIDIAVRWorksEnable:
     overrideState: 0
     value: 0
 --- !u!114 &114210413578460312
@@ -212,9 +212,6 @@ MonoBehaviour:
   reflectionProbeIntensity:
     overrideState: 0
     value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 0
-    value: 1
   doReflections:
     overrideState: 0
     value: 1
@@ -325,6 +322,9 @@ MonoBehaviour:
     overrideState: 0
     value: 1
   sphericalSkylight:
+    overrideState: 0
+    value: 0
+  NVIDIAVRWorksEnable:
     overrideState: 0
     value: 0
 --- !u!114 &114470370058284476
@@ -369,9 +369,6 @@ MonoBehaviour:
   reflectionProbeIntensity:
     overrideState: 0
     value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 0
-    value: 1
   doReflections:
     overrideState: 0
     value: 1
@@ -482,6 +479,9 @@ MonoBehaviour:
     overrideState: 0
     value: 1
   sphericalSkylight:
+    overrideState: 0
+    value: 0
+  NVIDIAVRWorksEnable:
     overrideState: 0
     value: 0
 --- !u!114 &114488656910555096
@@ -571,9 +571,6 @@ MonoBehaviour:
   reflectionProbeIntensity:
     overrideState: 0
     value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 0
-    value: 1
   doReflections:
     overrideState: 0
     value: 1
@@ -684,6 +681,9 @@ MonoBehaviour:
     overrideState: 0
     value: 1
   sphericalSkylight:
+    overrideState: 0
+    value: 0
+  NVIDIAVRWorksEnable:
     overrideState: 0
     value: 0
 --- !u!114 &114808373179966328
@@ -728,9 +728,6 @@ MonoBehaviour:
   reflectionProbeIntensity:
     overrideState: 0
     value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 0
-    value: 1
   doReflections:
     overrideState: 0
     value: 1
@@ -843,6 +840,9 @@ MonoBehaviour:
   sphericalSkylight:
     overrideState: 0
     value: 0
+  NVIDIAVRWorksEnable:
+    overrideState: 0
+    value: 0
 --- !u!114 &114838099021147394
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -884,10 +884,7 @@ MonoBehaviour:
     value: 1
   reflectionProbeIntensity:
     overrideState: 1
-    value: 0.5
-  reflectionProbeAttribution:
-    overrideState: 1
-    value: 1
+    value: 2
   doReflections:
     overrideState: 1
     value: 0
@@ -947,7 +944,7 @@ MonoBehaviour:
     value: 1
   skyReflectionIntensity:
     overrideState: 1
-    value: 1
+    value: 0.97
   gaussianMipFilter:
     overrideState: 1
     value: 1
@@ -984,19 +981,22 @@ MonoBehaviour:
     overrideState: 1
     value:
       serializedVersion: 2
-      m_Bits: 2147483647
+      m_Bits: 4294967295
   softSunlight:
     overrideState: 1
-    value: 1.16
+    value: 2.16
   skyColor:
     overrideState: 1
     value: {r: 0.9833391, g: 1, b: 0.8349056, a: 1}
   MatchAmbiantColor:
     overrideState: 1
-    value: 0
+    value: 1
   skyIntensity:
     overrideState: 1
-    value: 1
+    value: 1.22
   sphericalSkylight:
     overrideState: 1
+    value: 0
+  NVIDIAVRWorksEnable:
+    overrideState: 0
     value: 0

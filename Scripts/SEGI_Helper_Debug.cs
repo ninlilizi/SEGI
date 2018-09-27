@@ -20,6 +20,7 @@ public class SEGI_Helper_Debug : MonoBehaviour {
     public RenderTexture RT_blur0;
     public RenderTexture RT_blur1;
     public RenderTexture RT_FXAARTluminance;
+    public RenderTexture RT_Albedo;
 
     public RenderTexture sunDepthTexture;
     public RenderTexture previousResult;
@@ -53,6 +54,7 @@ public class SEGI_Helper_Debug : MonoBehaviour {
             RT_gi4 = SEGIRenderer.RT_gi4;
             RT_blur0 = SEGIRenderer.RT_blur0;
             RT_blur1 = SEGIRenderer.RT_blur1;
+            RT_Albedo = SEGIRenderer.RT_Albedo;
             RT_FXAARTluminance = SEGIRenderer.RT_FXAARTluminance;
             sunDepthTexture = SEGIRenderer.sunDepthTexture;
             previousResult = SEGIRenderer.previousResult;

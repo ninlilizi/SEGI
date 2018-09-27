@@ -264,7 +264,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
         if (showForwardConfig)
         {
             EditorGUI.indentLevel++;
-            PropertyField(useReflectionProbes, new GUIContent("Use Reflection Probe", "Approximates path traced Specular values using a Reflection Probe."));
+            PropertyField(useReflectionProbes, new GUIContent("Update Reflection Probe", "Approximates path traced Specular values using a Reflection Probe."));
             PropertyField(reflectionProbeIntensity, new GUIContent("Reflection Probe Intensity", "Intensity of Reflection Probe influence."));
             //PropertyField(reflectionProbeAttribution, new GUIContent("Reflection Probe Attribution", "How much Reflection Probes contribute to GI"));
             PropertyField(reflectionProbeLayerMask, new GUIContent("Reflection Probe Layer Mask", "Enables the writing of additional black occlusio"));

@@ -68,9 +68,10 @@ TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTextur
 TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
 
 UNITY_DECLARE_TEXCUBE(_SEGICube);
-float _SEGICube_HDRx;
-float _SEGICube_HDRy;
-float _SEGICube_HDRz;
+//UNITY_DECLARE_TEXCUBE(_SEGIReflectCube);
+half4 _SEGICube_HDR;
+//half4 _SEGIReflectCube_HDR;
+
 
 float4x4 WorldToCamera;
 float4x4 ProjectionMatrix;
@@ -315,6 +316,11 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
 		else
 			sample = float4(0, 0, 0, 0);
+
+		if (ForwardPath)
+		{
+			sample.a = smoothness;
+		}
 
 		float occlusion = skyVisibility;
 

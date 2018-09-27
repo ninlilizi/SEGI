@@ -11,15 +11,17 @@
 
 	struct AttributesSEGI
 	{
-		float4 vertex : POSITION;
-		half2 texcoord : TEXCOORD0;
+		float4 vertex	: POSITION;
+		float3 normal	: NORMAL;
+		half2 texcoord  : TEXCOORD0;
 		//float2 texcoord : TEXCOORD1;
 	};
 
 	struct VaryingsSEGI
 	{
-		float4 vertex : SV_POSITION;
+		float4 vertex	: SV_POSITION;
 		float2 texcoord : TEXCOORD0;
+		half3 normal    : TEXCOORD1;
 		//float2 texcoord : TEXCOORD1;
 		//#if UNITY_UV_STARTS_AT_TOP
 		//	half4 uv2 : TEXCOORD2;
@@ -41,6 +43,8 @@
 					o.vertex.y = 1 - o.vertex.y;
 			#endif
 
+			o.normal = v.normal;
+
 			return o;
 		}
 		else
@@ -55,6 +59,8 @@
 				if (_MainTex_TexelSize.y < 0.0)
 				o.texcoord.y = 1.0 - o.texcoord.y;
 			#endif
+
+			o.normal = v.normal;
 
 			return o;
 		}
@@ -268,47 +274,55 @@
 						//#endif
 
 						float4 albedoTex;
-						if (ForwardPath) albedoTex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, coord);
-						else albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
-						float3 albedo = albedoTex.rgb;
+						float3 albedo;
 						float3 gi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, coord).rgb;
 						float3 scene = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, coord).rgb;
 						float3 reflections = SAMPLE_TEXTURE2D(Reflections, samplerReflections, coord).rgb;
 
-						float3 result = scene + gi * albedoTex.a * albedoTex.rgb;
-
-						float4 spec;
+						float3 result;
 						float smoothness;
-						float3 specularColor;
+						if (ForwardPath)
+						{
+							float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
+							float4 worldViewVector = mul(CameraToWorld, float4(viewSpacePosition.xyz, 0.0));
+							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, worldViewVector.xyz, 0);
+							albedoTex = float4(DecodeHDR(probeData, _SEGICube_HDR), probeData.a);
+							albedo = albedoTex.rgb;
+							//smoothness = probeData.a * 0.5;
+						}
+						else
+						{
+							albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
+							albedo = albedoTex.rgb;
+						}
+
+						result = scene + gi * albedoTex.a * albedoTex.rgb;
+
 						if (DoReflections > 0)
 						{
 							float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 							float3 viewVector = normalize(viewSpacePosition.xyz);
 							float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-							/*if (useReflectionProbes  && ForwardPath)
+							
+							float3 specularColor;
+							float3 worldNormal;
+							if (ForwardPath) worldNormal = GetWorldNormal(coord);
+							else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
+							float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
+
+							if (ForwardPath)
 							{
-								float3 worldNormal = GetWorldNormal(coord).rgb;
-								//float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
-								//float3 viewVector = normalize(viewSpacePosition.xyz);
-								float3 reflectedDir = reflect(viewVector, worldNormal);
-								half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, worldNormal, 0);
-								half3 probeColor = DecodeHDR(probeData, unity_SpecCube0_HDR);
-								smoothness = probeData.a * 0.5;
-								specularColor = probeColor.rgb * 0.5;
+								half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
+								half3 probeColor = DecodeHDR(probeData, _SEGICube_HDR);
+								specularColor = probeColor.rgb;
+								smoothness = 1 - probeData.a * 0.5;
 							}
 							else
-							{*/
-								spec = SAMPLE_TEXTURE2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1, coord);
-								smoothness = spec.a;
-								specularColor = spec.rgb;
-							//}
-
-							float3 worldNormal;
-							if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
-							else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
-
-							float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
+							{
+								smoothness = SAMPLE_TEXTURE2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1, coord).a * 0.5;
+								specularColor = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord).rgb;
+							}
 
 							float3 fresnel = pow(saturate(dot(worldViewVector.xyz, reflectionKernel.xyz)) * (smoothness * 0.5 + 0.5), 5.0);
 							fresnel = lerp(fresnel, (1.0).xxx, specularColor.rgb);
@@ -316,6 +330,8 @@
 							fresnel *= saturate(smoothness * 4.0);
 
 							result = lerp(result, reflections, fresnel);
+
+							//return float4(fresnel, 1.0);
 						}
 
 						return float4(result, 1.0);
@@ -452,21 +468,29 @@
 						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
 
 						float3 worldNormal;
-						if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
+						if (ForwardPath) worldNormal = GetWorldNormal(coord);
 						else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, input.texcoord).rgb * 2.0 - 1.0);
 
 						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.006 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
 
 						float2 dither = rand(coord + (float)FrameSwitch * 0.11734);
 
+						float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
+
 						float smoothness;
 						float3 specularColor;
 						if (ForwardPath)
 						{
-							float3 reflectedDir = reflect(-viewVector, worldNormal);
-							half4 probeData = UNITY_SAMPLE_TEXCUBE(_SEGICube, reflectedDir);
-							smoothness = probeData.a;
-							specularColor = float3(_SEGICube_HDRx, _SEGICube_HDRy, _SEGICube_HDRz);
+							/*half4 probeData = UNITY_SAMPLE_TEXCUBE(_SEGICube, reflectionKernel);
+							half3 probeColor = DecodeHDR(probeData, _SEGICube_HDR);
+							specularColor = probeColor.rgb;
+							smoothness = probeData.a;*/
+
+							//float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
+							//float4 worldViewVector = mul(CameraToWorld, float4(viewSpacePosition.xyz, 0.0));
+							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
+							specularColor = DecodeHDR(probeData, _SEGICube_HDR);
+							smoothness = 1 - probeData.a * 0.5;
 						}
 						else
 						{
@@ -475,8 +499,6 @@
 						}
 
 						float4 reflection = (0.0).xxxx;
-
-						float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
 
 						float3 fresnel = pow(saturate(dot(worldViewVector.xyz, reflectionKernel.xyz)) * (smoothness * 0.5 + 0.5), 5.0);
 						fresnel = lerp(fresnel, (1.0).xxx, specularColor.rgb);
