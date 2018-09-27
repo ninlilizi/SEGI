@@ -371,7 +371,7 @@ MonoBehaviour:
     value: 2
   doReflections:
     overrideState: 1
-    value: 1
+    value: 0
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -383,7 +383,7 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 1
+    value: 0
   updateGI:
     overrideState: 1
     value: 1
