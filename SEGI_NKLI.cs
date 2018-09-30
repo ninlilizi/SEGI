@@ -180,6 +180,7 @@ namespace UnityEngine.Rendering.PostProcessing
         public static RenderTexture RT_blur1;
         public static RenderTexture RT_FXAARTluminance;
         public static RenderTexture RT_Albedo;
+        public static RenderTexture RT_AlbedoX2;
 
         public static int SEGIRenderWidth;
         public static int SEGIRenderHeight;
@@ -837,8 +838,9 @@ namespace UnityEngine.Rendering.PostProcessing
             if (context.camera.renderingPath == RenderingPath.Forward)
             {
                 //context.command.Blit(context.source, RT_Albedo, ColorCorrection_Material, 0);
-
+                context.command.Blit(RT_Albedo, RT_AlbedoX2, material, Pass.BilateralUpsample);
                 context.command.SetGlobalTexture("_SEGICube", RT_Albedo);
+                context.command.SetGlobalTexture("_SEGICubeX2", RT_AlbedoX2);
                 //context.command.SetGlobalTexture("_SEGIReflectCube", reflectionProbe.texture);
                 context.command.SetGlobalInt("ForwardPath", 1);
             }
@@ -1396,15 +1398,21 @@ namespace UnityEngine.Rendering.PostProcessing
             if (UnityEngine.XR.XRSettings.enabled) RT_FXAARTluminance.vrUsage = VRTextureUsage.TwoEyes;
             RT_FXAARTluminance.Create();
 
-
+            int RT_AlbedoResolution;
             if (RT_Albedo) RT_Albedo.Release();
-            int RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 2);
+            if (RT_AlbedoX2) RT_Albedo.Release();
+            if (XR.XRSettings.enabled) RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 8);
+            else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
             RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
-            //if (UnityEngine.XR.XRSettings.enabled) RT_Albedo.vrUsage = VRTextureUsage.TwoEyes;
             RT_Albedo.dimension = TextureDimension.Cube;
             RT_Albedo.filterMode = FilterMode.Point;
             RT_Albedo.isPowerOfTwo = true;
             RT_Albedo.Create();
+            RT_AlbedoX2 = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
+            RT_AlbedoX2.dimension = TextureDimension.Cube;
+            RT_AlbedoX2.filterMode = FilterMode.Point;
+            RT_AlbedoX2.isPowerOfTwo = true;
+            RT_AlbedoX2.Create();
 
             Debug.Log("<SEGI> Render Textures resized");
 
@@ -1457,6 +1465,7 @@ namespace UnityEngine.Rendering.PostProcessing
             if (RT_blur1) RT_blur1.Release();
             if (RT_FXAARTluminance) RT_FXAARTluminance.Release();
             CleanupTexture(ref RT_Albedo);
+            CleanupTexture(ref RT_AlbedoX2);
         }
 
         void CleanupTexture(ref RenderTexture texture)

@@ -68,9 +68,9 @@ TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTextur
 TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
 
 UNITY_DECLARE_TEXCUBE(_SEGICube);
-//UNITY_DECLARE_TEXCUBE(_SEGIReflectCube);
+UNITY_DECLARE_TEXCUBE(_SEGICubeX2);
 half4 _SEGICube_HDR;
-//half4 _SEGIReflectCube_HDR;
+half4 _SEGICubeX2_HDR;
 
 
 float4x4 WorldToCamera;

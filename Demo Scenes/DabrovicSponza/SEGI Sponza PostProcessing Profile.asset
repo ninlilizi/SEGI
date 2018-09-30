@@ -350,7 +350,7 @@ MonoBehaviour:
     value: 70
   updateVoxelsAfterX:
     overrideState: 1
-    value: 0
+    value: 1
   updateVoxelsAfterXInterval:
     overrideState: 1
     value: 1
@@ -371,7 +371,7 @@ MonoBehaviour:
     value: 2
   doReflections:
     overrideState: 1
-    value: 0
+    value: 1
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -380,16 +380,16 @@ MonoBehaviour:
     value: 1
   GIResolution:
     overrideState: 1
-    value: 1
+    value: 2
   stochasticSampling:
     overrideState: 1
-    value: 0
+    value: 1
   updateGI:
     overrideState: 1
     value: 1
   cones:
     overrideState: 1
-    value: 12
+    value: 8
   coneTraceSteps:
     overrideState: 1
     value: 10
@@ -398,7 +398,7 @@ MonoBehaviour:
     value: 1
   coneWidth:
     overrideState: 1
-    value: 6
+    value: 12
   coneTraceBias:
     overrideState: 1
     value: 0.63
@@ -422,10 +422,10 @@ MonoBehaviour:
     value: 1
   reflectionSteps:
     overrideState: 1
-    value: 32
+    value: 24
   reflectionOcclusionPower:
     overrideState: 1
-    value: 4
+    value: 2
   skyReflectionIntensity:
     overrideState: 1
     value: 1

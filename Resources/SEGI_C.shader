@@ -285,8 +285,8 @@
 						{
 							float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 							float4 worldViewVector = mul(CameraToWorld, float4(viewSpacePosition.xyz, 0.0));
-							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, worldViewVector.xyz, 0);
-							albedoTex = float4(DecodeHDR(probeData, _SEGICube_HDR), probeData.a);
+							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICubeX2, worldViewVector.xyz, 0);
+							albedoTex = float4(DecodeHDR(probeData, _SEGICubeX2_HDR), probeData.a);
 							albedo = albedoTex.rgb;
 							//smoothness = probeData.a * 0.5;
 						}
@@ -314,10 +314,10 @@
 
 							if (ForwardPath)
 							{
-								half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
-								half3 probeColor = DecodeHDR(probeData, _SEGICube_HDR);
-								specularColor = probeColor.rgb;
-								smoothness = 1 - probeData.a * 0.5 - 0.25;
+								//half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
+								//half3 probeColor = DecodeHDR(probeData, _SEGICube_HDR);
+								specularColor = albedoTex.rgb;
+								smoothness = 1 - albedoTex.a * 0.5 - 0.25;
 							}
 							else
 							{
@@ -489,9 +489,9 @@
 
 							//float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 							//float4 worldViewVector = mul(CameraToWorld, float4(viewSpacePosition.xyz, 0.0));
-							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
-							specularColor = DecodeHDR(probeData, _SEGICube_HDR);
-							smoothness = 1 - probeData.a * 0.5;
+							//half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICubeX2, reflectionKernel, 0);
+							specularColor = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(_SEGICubeX2, reflectionKernel, 0), _SEGICube_HDR);
+							smoothness = 1 - UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0).a * 0.5 - 0.25;
 						}
 						else
 						{
