@@ -490,7 +490,7 @@
 							//float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
 							//float4 worldViewVector = mul(CameraToWorld, float4(viewSpacePosition.xyz, 0.0));
 							//half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICubeX2, reflectionKernel, 0);
-							specularColor = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(_SEGICubeX2, reflectionKernel, 0), _SEGICube_HDR);
+							specularColor = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(_SEGICubeX2, reflectionKernel, 0), _SEGICubeX2_HDR);
 							smoothness = 1 - UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0).a * 0.5 - 0.25;
 						}
 						else

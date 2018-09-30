@@ -1405,10 +1405,10 @@ namespace UnityEngine.Rendering.PostProcessing
             else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
             RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
             RT_Albedo.dimension = TextureDimension.Cube;
-            RT_Albedo.filterMode = FilterMode.Point;
+            RT_Albedo.filterMode = FilterMode.Bilinear;
             RT_Albedo.isPowerOfTwo = true;
             RT_Albedo.Create();
-            RT_AlbedoX2 = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
+            RT_AlbedoX2 = new RenderTexture(RT_AlbedoResolution * 2, RT_AlbedoResolution * 2, 16, renderTextureFormat);
             RT_AlbedoX2.dimension = TextureDimension.Cube;
             RT_AlbedoX2.filterMode = FilterMode.Point;
             RT_AlbedoX2.isPowerOfTwo = true;
