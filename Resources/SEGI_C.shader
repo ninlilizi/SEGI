@@ -317,7 +317,7 @@
 								half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
 								half3 probeColor = DecodeHDR(probeData, _SEGICube_HDR);
 								specularColor = probeColor.rgb;
-								smoothness = 1 - probeData.a * 0.5;
+								smoothness = 1 - probeData.a * 0.5 - 0.25;
 							}
 							else
 							{
