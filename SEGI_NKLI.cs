@@ -467,7 +467,7 @@ namespace UnityEngine.Rendering.PostProcessing
             //Force reinitialization to make sure that everything is working properly if one of the cameras was unexpectedly destroyed
             //if (!voxelCamera || !false;
 
-            if (context.camera.renderingPath == RenderingPath.Forward && settings.useReflectionProbes)
+            if (context.camera.renderingPath == RenderingPath.Forward)
             {
                 //reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
                 //reflectionProbe.intensity = settings.reflectionProbeIntensity.value;
@@ -1405,7 +1405,7 @@ namespace UnityEngine.Rendering.PostProcessing
             else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
             RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
             RT_Albedo.dimension = TextureDimension.Cube;
-            RT_Albedo.filterMode = FilterMode.Bilinear;
+            RT_Albedo.filterMode = FilterMode.Trilinear;
             RT_Albedo.isPowerOfTwo = true;
             RT_Albedo.Create();
             RT_AlbedoX2 = new RenderTexture(RT_AlbedoResolution * 2, RT_AlbedoResolution * 2, 16, renderTextureFormat);

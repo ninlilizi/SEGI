@@ -350,7 +350,7 @@ MonoBehaviour:
     value: 70
   updateVoxelsAfterX:
     overrideState: 1
-    value: 1
+    value: 0
   updateVoxelsAfterXInterval:
     overrideState: 1
     value: 1
@@ -383,7 +383,7 @@ MonoBehaviour:
     value: 2
   stochasticSampling:
     overrideState: 1
-    value: 1
+    value: 0
   updateGI:
     overrideState: 1
     value: 1
