@@ -68,9 +68,9 @@ TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTextur
 TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
 
 UNITY_DECLARE_TEXCUBE(_SEGICube);
-UNITY_DECLARE_TEXCUBE(_SEGICubeX2);
+//UNITY_DECLARE_TEXCUBE(_SEGICubeX2);
 half4 _SEGICube_HDR;
-half4 _SEGICubeX2_HDR;
+//half4 _SEGICubeX2_HDR;
 
 
 float4x4 WorldToCamera;
@@ -174,7 +174,12 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
 
+	//float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r);
+	//depth *= length(TraceLength * lengthMult + 0.001);
 
+	int earlyExit = 0;
+
+	[loop]
 	for (int i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i) / numSteps;
@@ -219,6 +224,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 			sample = float4(1, 1, 1, 0);
 		}
 
+		// Nin - Bombing out early gives 2% performance boost
+		if (sample.r > 0.01 || sample.g > 0.01 || sample.b > 0.01) earlyExit = 1;
+
 		float occlusion = skyVisibility * skyVisibility;
 		float falloffFix = PositivePow(fi, 1.0) * 4.0 + NearLightGain;
 
@@ -226,6 +234,8 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		gi.rgb += sample.rgb * (coneSize * 1.0 + 1.0) * occlusion * falloffFix;
 
 		skyVisibility *= PositivePow(saturate(1.0 - (sample.a) * (coneSize * 0.2 * FarOcclusionStrength + 1.0 + coneSize * coneSize * 0.05 * FarthestOcclusionStrength) * OcclusionStrength), lerp(0.014, 1.5 * OcclusionPower, min(1.0, coneSize / 5.0)));
+
+		if (earlyExit == 1) break;
 	}
 
 	float NdotL = PositivePow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
@@ -273,6 +283,8 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
+	float4 lastSample = float4(0, 0, 0, 0);
+
 	[loop]
 	for (int i = 0; i < numSamples; i++)
 	{
@@ -289,31 +301,31 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
-			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 1)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
-			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 2)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
-			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 3)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
-			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 4)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
-			sample = lerp(sample, SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 5)
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
+			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, frac(coneSize)));
 		else
 			sample = float4(0, 0, 0, 0);
 
@@ -321,6 +333,10 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		{
 			sample.a = smoothness;
 		}
+
+		//Nin -	Lerping against the previous sample rather than miplevel both improves performance and gives a smoother result that allows for much less
+		//		samples while still retaining an acceptable look.
+		lastSample = sample;
 
 		float occlusion = skyVisibility;
 

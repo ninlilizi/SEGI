@@ -347,10 +347,10 @@ MonoBehaviour:
     value: 256
   voxelSpaceSize:
     overrideState: 1
-    value: 70
+    value: 50
   updateVoxelsAfterX:
     overrideState: 1
-    value: 0
+    value: 1
   updateVoxelsAfterXInterval:
     overrideState: 1
     value: 1
@@ -380,7 +380,7 @@ MonoBehaviour:
     value: 1
   GIResolution:
     overrideState: 1
-    value: 2
+    value: 1
   stochasticSampling:
     overrideState: 1
     value: 0
@@ -389,19 +389,19 @@ MonoBehaviour:
     value: 1
   cones:
     overrideState: 1
-    value: 8
+    value: 3
   coneTraceSteps:
     overrideState: 1
-    value: 10
+    value: 5
   coneLength:
     overrideState: 1
-    value: 1
+    value: 0.5
   coneWidth:
     overrideState: 1
     value: 12
   coneTraceBias:
     overrideState: 1
-    value: 0.63
+    value: 1
   occlusionStrength:
     overrideState: 1
     value: 1
@@ -422,10 +422,10 @@ MonoBehaviour:
     value: 1
   reflectionSteps:
     overrideState: 1
-    value: 24
+    value: 6
   reflectionOcclusionPower:
     overrideState: 1
-    value: 2
+    value: 0.5
   skyReflectionIntensity:
     overrideState: 1
     value: 1
@@ -440,7 +440,7 @@ MonoBehaviour:
     value: 1
   secondaryCones:
     overrideState: 1
-    value: 6
+    value: 3
   secondaryOcclusionStrength:
     overrideState: 1
     value: 1
@@ -460,15 +460,15 @@ MonoBehaviour:
     overrideState: 1
     value:
       serializedVersion: 2
-      m_Bits: 2147483647
+      m_Bits: 311
   reflectionProbeLayerMask:
     overrideState: 1
     value:
       serializedVersion: 2
-      m_Bits: 4294967295
+      m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 16
+    value: 1
   skyColor:
     overrideState: 1
     value: {r: 1, g: 0, b: 0.90713406, a: 1}

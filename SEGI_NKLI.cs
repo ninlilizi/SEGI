@@ -838,9 +838,9 @@ namespace UnityEngine.Rendering.PostProcessing
             if (context.camera.renderingPath == RenderingPath.Forward)
             {
                 //context.command.Blit(context.source, RT_Albedo, ColorCorrection_Material, 0);
-                context.command.Blit(RT_Albedo, RT_AlbedoX2, material, Pass.BilateralUpsample);
+                //context.command.Blit(RT_Albedo, RT_AlbedoX2, material, Pass.BilateralUpsample);
                 context.command.SetGlobalTexture("_SEGICube", RT_Albedo);
-                context.command.SetGlobalTexture("_SEGICubeX2", RT_AlbedoX2);
+                //context.command.SetGlobalTexture("_SEGICubeX2", RT_AlbedoX2);
                 //context.command.SetGlobalTexture("_SEGIReflectCube", reflectionProbe.texture);
                 context.command.SetGlobalInt("ForwardPath", 1);
             }
@@ -880,13 +880,10 @@ namespace UnityEngine.Rendering.PostProcessing
 
                 //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
 
-                //material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                //SEGIBuffer.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
-                //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                //SEGIBuffer.Blit(RT_blur0, RT_gi3, material, Pass.BilateralBlur);
-
-                context.command.Blit(RT_gi3, RT_blur0, Gaussian_Material);
-                context.command.Blit(RT_blur0, RT_gi3, Gaussian_Material);
+                material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                context.command.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
+                material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                context.command.Blit(RT_blur0, RT_gi3, material, Pass.BilateralBlur);
                 context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
                 //Perform temporal reprojection and blending
@@ -900,13 +897,13 @@ namespace UnityEngine.Rendering.PostProcessing
 
                 if (settings.GIResolution.value >= 3)
                 {
-                    //material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
-                    //SEGIBuffer.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
-                    //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                    //SEGIBuffer.Blit(RT_gi4, RT_gi3, material, Pass.BilateralBlur);
+                    material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                    context.command.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
+                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                    context.command.Blit(RT_gi4, RT_gi3, material, Pass.BilateralBlur);
 
-                    context.command.Blit(RT_gi3, RT_gi4, Gaussian_Material);
-                    context.command.Blit(RT_gi4, RT_gi3, Gaussian_Material);
+                    //context.command.Blit(RT_gi3, RT_gi4, Gaussian_Material);
+                    //context.command.Blit(RT_gi4, RT_gi3, Gaussian_Material);
                 }
 
                 //Set the result to be accessed in the shader
