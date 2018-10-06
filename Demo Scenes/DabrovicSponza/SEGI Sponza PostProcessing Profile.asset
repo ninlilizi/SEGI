@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: SEGI Sponza PostProcessing Profile
   m_EditorClassIdentifier: 
   settings:
-  - {fileID: 114226602439495838}
+  - {fileID: 114443377178551320}
 --- !u!114 &114063555157306854
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -327,7 +327,7 @@ MonoBehaviour:
   NVIDIAVRWorksEnable:
     overrideState: 0
     value: 0
---- !u!114 &114226602439495838
+--- !u!114 &114443377178551320
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -350,7 +350,7 @@ MonoBehaviour:
     value: 50
   updateVoxelsAfterX:
     overrideState: 1
-    value: 1
+    value: 0
   updateVoxelsAfterXInterval:
     overrideState: 1
     value: 1
@@ -359,7 +359,7 @@ MonoBehaviour:
     value: 1
   innerOcclusionLayers:
     overrideState: 1
-    value: 1
+    value: 0
   infiniteBounces:
     overrideState: 1
     value: 1
@@ -368,7 +368,7 @@ MonoBehaviour:
     value: 1
   reflectionProbeIntensity:
     overrideState: 1
-    value: 2
+    value: 0.5
   doReflections:
     overrideState: 1
     value: 1
@@ -383,25 +383,25 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 0
+    value: 1
   updateGI:
     overrideState: 1
     value: 1
   cones:
     overrideState: 1
-    value: 3
+    value: 13
   coneTraceSteps:
     overrideState: 1
-    value: 5
+    value: 8
   coneLength:
     overrideState: 1
-    value: 0.5
+    value: 1
   coneWidth:
     overrideState: 1
-    value: 12
+    value: 6
   coneTraceBias:
     overrideState: 1
-    value: 1
+    value: 0.63
   occlusionStrength:
     overrideState: 1
     value: 1
@@ -422,16 +422,16 @@ MonoBehaviour:
     value: 1
   reflectionSteps:
     overrideState: 1
-    value: 6
+    value: 32
   reflectionOcclusionPower:
     overrideState: 1
-    value: 0.5
+    value: 4
   skyReflectionIntensity:
     overrideState: 1
     value: 1
   gaussianMipFilter:
     overrideState: 1
-    value: 1
+    value: 0
   farOcclusionStrength:
     overrideState: 1
     value: 1
@@ -440,7 +440,7 @@ MonoBehaviour:
     value: 1
   secondaryCones:
     overrideState: 1
-    value: 3
+    value: 6
   secondaryOcclusionStrength:
     overrideState: 1
     value: 1
@@ -468,16 +468,16 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 1
+    value: 0
   skyColor:
     overrideState: 1
-    value: {r: 1, g: 0, b: 0.90713406, a: 1}
+    value: {r: 0, g: 0, b: 0, a: 1}
   MatchAmbiantColor:
     overrideState: 1
     value: 1
   skyIntensity:
     overrideState: 1
-    value: 8
+    value: 1
   sphericalSkylight:
     overrideState: 1
     value: 0

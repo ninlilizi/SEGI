@@ -482,7 +482,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
                 //SEGI_NKLI.Sun.shadows = LightShadows.None;
                 RenderSettings.ambientMode = AmbientMode.Flat;
-                RenderSettings.ambientLight = Color.white;
+                RenderSettings.ambientLight = Color.white;//SEGI_NKLI.Sun == null ? Color.black : new Color(Mathf.Pow(SEGI_NKLI.Sun.color.r, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.color.g, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.color.b, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.intensity, 2.2f));
                 RenderSettings.ambientIntensity = 1;
                 SEGI_NKLI.Sun.intensity = 1;
 
@@ -526,7 +526,13 @@ namespace UnityEngine.Rendering.PostProcessing
 
             Shader.SetGlobalInt("SEGIVoxelAA", settings.voxelAA.value ? 1 : 0);
 
-
+            //Temporarily disable rendering of shadows on the directional light during voxelization pass. Cache the result to set it back to what it was after voxelization is done
+            LightShadows prevSunShadowSetting = LightShadows.None;
+            if (SEGI_NKLI.Sun != null)
+            {
+                prevSunShadowSetting = SEGI_NKLI.Sun.shadows;
+                SEGI_NKLI.Sun.shadows = LightShadows.None;
+            }
 
             if (!settings.updateVoxelsAfterX.value) updateVoxelsAfterXDoUpdate = true;
             if (attachedCamera.transform.position.x - updateVoxelsAfterXPrevX >= settings.updateVoxelsAfterXInterval.value) updateVoxelsAfterXDoUpdate = true;
@@ -756,6 +762,12 @@ namespace UnityEngine.Rendering.PostProcessing
 
             Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
             Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
+
+            //Set the sun's shadow setting back to what it was before voxelization
+            if (SEGI_NKLI.Sun != null)
+            {
+                SEGI_NKLI.Sun.shadows = prevSunShadowSetting;
+            }
 
             //Fix stereo rendering matrix
             if (attachedCamera.stereoEnabled)
@@ -1427,7 +1439,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 sunDepthTexture.Release();
                 //DestroyImmediate(sunDepthTexture);
             }
-            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
+            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
             if (UnityEngine.XR.XRSettings.enabled) sunDepthTexture.vrUsage = VRTextureUsage.TwoEyes;
             sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture.filterMode = FilterMode.Point;
