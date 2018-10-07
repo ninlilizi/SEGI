@@ -238,7 +238,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
         {
             EditorGUI.indentLevel++;
             EditorGUILayout.BeginVertical();
-            //PropertyField(VoxelResolution, new GUIContent("Voxel Resolution", "The resolution of the voxel texture used to calculate GI."));
+            PropertyField(VoxelResolution, new GUIContent("Voxel Resolution", "The resolution of the voxel texture used to calculate GI."));
             PropertyField(voxelAA, new GUIContent("Voxel AA", "Enables anti-aliasing during voxelization for higher precision voxels."));
             PropertyField(innerOcclusionLayers, new GUIContent("Inner Occlusion Layers", "Enables the writing of additional black occlusion voxel layers on the back face of geometry. Can help with light leaking but may cause artifacts with small objects."));
             PropertyField(gaussianMipFilter, new GUIContent("Gaussian Mip Filter", "Enables gaussian filtering during mipmap generation. This can improve visual smoothness and consistency, particularly with large moving objects."));

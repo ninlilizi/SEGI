@@ -26,7 +26,9 @@ namespace UnityEngine.Rendering.PostProcessing
     {
         Low = 64,
         Medium = 128,
-        High = 256
+        High = 256//,
+        //VeryHigh = 512,
+        //Extreme = 756
     }
 
     [Serializable]
@@ -42,8 +44,8 @@ namespace UnityEngine.Rendering.PostProcessing
     {
 
 
-        public IntParameter voxelResolution = new IntParameter { value = 256 }; // VoxelResolutionEnum.High };
-        public FloatParameter voxelSpaceSize = new FloatParameter { value = 50.0f };
+        public VoxelResolution voxelResolution = new VoxelResolution { value = VoxelResolutionEnum.High };
+        public FloatParameter voxelSpaceSize = new FloatParameter { value = 25.0f };
         public BoolParameter updateVoxelsAfterX = new BoolParameter { value = false };
         public IntParameter updateVoxelsAfterXInterval = new IntParameter { value = 1 };
         public BoolParameter voxelAA = new BoolParameter { value = false };
@@ -273,7 +275,6 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public static RenderTexture sunDepthTexture;
         public static RenderTexture previousGIResult;
-        public static RenderTexture previousResult;
         public static RenderTexture previousDepth;
 
         public bool notReadyToRender = false;
@@ -296,7 +297,7 @@ namespace UnityEngine.Rendering.PostProcessing
         {
             get
             {
-                return (float)(int)settings.voxelResolution.value / 256.0f;
+                return (float)settings.voxelResolution.value / 256.0f;
             }
         }
 
@@ -472,6 +473,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 //reflectionProbe.refreshMode = ReflectionProbeRefreshMode.EveryFrame;
                 //reflectionProbe.intensity = settings.reflectionProbeIntensity.value;
                 reflectionCamera.cullingMask = settings.reflectionProbeLayerMask.GetValue<LayerMask>();
+                reflectionCamera.farClipPlane = context.camera.farClipPlane;
 
                 //Cache Shadow State
                 LightShadows ShadowStateCache = SEGI_NKLI.Sun.shadows;
@@ -552,7 +554,7 @@ namespace UnityEngine.Rendering.PostProcessing
                     activeVolume = voxelFlipFlop == 0 ? volumeTextures[0] : volumeTextureB;             //Flip-flopping volume textures to avoid simultaneous read and write errors in shaders
                     previousActiveVolume = voxelFlipFlop == 0 ? volumeTextureB : volumeTextures[0];
 
-                    //float voxelTexel = (1.0f * voxelSpaceSize) / (int)voxelResolution * 0.5f;			//Calculate the size of a voxel texel in world-space units
+                    //float voxelTexel = (1.0f * settings.voxelSpaceSize) / (int)settings.voxelResolution * 0.5f;			//Calculate the size of a voxel texel in world-space units
 
 
 
@@ -599,7 +601,7 @@ namespace UnityEngine.Rendering.PostProcessing
                     topViewPoint.transform.rotation = rotationTop;
 
                     //Set matrices needed for voxelization
-                    Shader.SetGlobalMatrix("WorldToCamera", attachedCamera.worldToCameraMatrix);
+                    Shader.SetGlobalMatrix("WorldToCamera", context.camera.worldToCameraMatrix);
                     Shader.SetGlobalMatrix("SEGIVoxelViewFront", TransformViewMatrix(voxelCamera.transform.worldToLocalMatrix));
                     Shader.SetGlobalMatrix("SEGIVoxelViewLeft", TransformViewMatrix(leftViewPoint.transform.worldToLocalMatrix));
                     Shader.SetGlobalMatrix("SEGIVoxelViewTop", TransformViewMatrix(topViewPoint.transform.worldToLocalMatrix));
@@ -615,12 +617,12 @@ namespace UnityEngine.Rendering.PostProcessing
 
                     //Set paramteters
                     Shader.SetGlobalColor("GISunColor", SEGI_NKLI.Sun == null ? Color.black : new Color(Mathf.Pow(SEGI_NKLI.Sun.color.r, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.color.g, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.color.b, 2.2f), Mathf.Pow(SEGI_NKLI.Sun.intensity, 2.2f)));
-                    Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(settings.skyColor.value.r * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.g * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.b * settings.skyIntensity.value * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.a, 2.2f)));
-                    Shader.SetGlobalFloat("GIGain", settings.giGain.value);
-                    Shader.SetGlobalFloat("SEGISecondaryBounceGain", settings.infiniteBounces.value ? settings.secondaryBounceGain.value : 0.0f);
-                    Shader.SetGlobalFloat("SEGISoftSunlight", settings.softSunlight.value);
-                    Shader.SetGlobalInt("SEGISphericalSkylight", settings.sphericalSkylight.value ? 1 : 0);
-                    Shader.SetGlobalInt("SEGIInnerOcclusionLayers", settings.innerOcclusionLayers.value);
+                    Shader.SetGlobalColor("SEGISkyColor", new Color(Mathf.Pow(settings.skyColor.value.r * settings.skyIntensity * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.g * settings.skyIntensity * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.b * settings.skyIntensity * 0.5f, 2.2f), Mathf.Pow(settings.skyColor.value.a, 2.2f)));
+                    Shader.SetGlobalFloat("GIGain", settings.giGain);
+                    Shader.SetGlobalFloat("SEGISecondaryBounceGain", settings.infiniteBounces ? settings.secondaryBounceGain : 0.0f);
+                    Shader.SetGlobalFloat("SEGISoftSunlight", settings.softSunlight);
+                    Shader.SetGlobalInt("SEGISphericalSkylight", settings.sphericalSkylight ? 1 : 0);
+                    Shader.SetGlobalInt("SEGIInnerOcclusionLayers", settings.innerOcclusionLayers);
 
 
                     //Render the depth texture from the sun's perspective in order to inject sunlight with shadows during voxelization
@@ -675,7 +677,7 @@ namespace UnityEngine.Rendering.PostProcessing
                     transferIntsCompute.SetTexture(0, "Result", activeVolume);
                     transferIntsCompute.SetTexture(0, "PrevResult", previousActiveVolume);
                     transferIntsCompute.SetTexture(0, "RG0", integerVolume);
-                    transferIntsCompute.SetInt("VoxelAA", settings.voxelAA.value ? 1 : 0);
+                    transferIntsCompute.SetInt("VoxelAA", settings.voxelAA ? 1 : 0);
                     transferIntsCompute.SetInt("Resolution", (int)settings.voxelResolution.value);
                     transferIntsCompute.SetVector("VoxelOriginDelta", (voxelSpaceOriginDelta / settings.voxelSpaceSize.value) * (int)settings.voxelResolution.value);
                     transferIntsCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
@@ -740,12 +742,12 @@ namespace UnityEngine.Rendering.PostProcessing
                     //SEGI_NKLI.Sun.shadows = ShadowStateCache;
 
                     //Transfer the data from the volume integer texture to the irradiance volume texture. This result is added to the next main voxelization pass to create a feedback loop for infinite bounces
-                    transferIntsCompute.SetTexture(1, "Result", secondaryIrradianceVolume);
-                    transferIntsCompute.SetTexture(1, "RG0", integerVolume);
-                    transferIntsCompute.SetInt("Resolution", (int)settings.voxelResolution.value);
-                    transferIntsCompute.Dispatch(1, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
-
-                    Shader.SetGlobalTexture("SEGIVolumeTexture1", secondaryIrradianceVolume);
+                    context.command.SetComputeTextureParam(transferIntsCompute, 1, "Result", secondaryIrradianceVolume);
+                    context.command.SetComputeTextureParam(transferIntsCompute, 1, "RG0", integerVolume);
+                    context.command.SetComputeIntParam(transferIntsCompute, "Resolution", (int)settings.voxelResolution.value);
+                    context.command.DispatchCompute(transferIntsCompute, 1, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
+                    
+                    context.command.SetGlobalTexture("SEGIVolumeTexture1", secondaryIrradianceVolume);
 
                     renderState = RenderState.Voxelize;
 
@@ -761,7 +763,7 @@ namespace UnityEngine.Rendering.PostProcessing
             //voxelCamera.rect = new Rect(0.0f, 0f, 1.0f, 1.0f);
 
             Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
-            Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
+            context.command.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
 
             //Set the sun's shadow setting back to what it was before voxelization
             if (SEGI_NKLI.Sun != null)
@@ -775,8 +777,8 @@ namespace UnityEngine.Rendering.PostProcessing
                 // Left and Right Eye inverse View Matrices
                 Matrix4x4 leftToWorld = attachedCamera.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse;
                 Matrix4x4 rightToWorld = attachedCamera.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse;
-                material.SetMatrix("_LeftEyeToWorld", leftToWorld);
-                material.SetMatrix("_RightEyeToWorld", rightToWorld);
+                context.command.SetGlobalMatrix("_LeftEyeToWorld", leftToWorld);
+                context.command.SetGlobalMatrix("_RightEyeToWorld", rightToWorld);
 
                 Matrix4x4 leftEye = attachedCamera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
                 Matrix4x4 rightEye = attachedCamera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
@@ -788,8 +790,8 @@ namespace UnityEngine.Rendering.PostProcessing
                 leftEye[1, 1] *= -1;
                 rightEye[1, 1] *= -1;
 
-                material.SetMatrix("_LeftEyeProjection", leftEye);
-                material.SetMatrix("_RightEyeProjection", rightEye);
+                context.command.SetGlobalMatrix("_LeftEyeProjection", leftEye);
+                context.command.SetGlobalMatrix("_RightEyeProjection", rightEye);
             }
             //Fix stereo rendering matrix/
 
@@ -808,41 +810,41 @@ namespace UnityEngine.Rendering.PostProcessing
                 return;
             }
 
-            Shader.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);
+            context.command.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);
 
-            material.SetMatrix("CameraToWorld", context.camera.cameraToWorldMatrix);
-            material.SetMatrix("WorldToCamera", context.camera.worldToCameraMatrix);
-            material.SetMatrix("ProjectionMatrixInverse", context.camera.projectionMatrix.inverse);
-            material.SetMatrix("ProjectionMatrix", context.camera.projectionMatrix);
-            material.SetInt("FrameSwitch", frameSwitch);
-            Shader.SetGlobalInt("SEGIFrameSwitch", frameSwitch);
-            material.SetVector("CameraPosition", context.camera.transform.position);
-            material.SetFloat("DeltaTime", Time.deltaTime);
+            context.command.SetGlobalMatrix("CameraToWorld", context.camera.cameraToWorldMatrix);
+            context.command.SetGlobalMatrix("WorldToCamera", context.camera.worldToCameraMatrix);
+            context.command.SetGlobalMatrix("ProjectionMatrixInverse", context.camera.projectionMatrix.inverse);
+            context.command.SetGlobalMatrix("ProjectionMatrix", context.camera.projectionMatrix);
+            context.command.SetGlobalInt("FrameSwitch", frameSwitch);
+            context.command.SetGlobalInt("SEGIFrameSwitch", frameSwitch);
+            context.command.SetGlobalVector("CameraPosition", context.camera.transform.position);
+            context.command.SetGlobalFloat("DeltaTime", Time.deltaTime);
 
-            material.SetInt("StochasticSampling", settings.stochasticSampling.value ? 1 : 0);
-            material.SetInt("TraceDirections", settings.cones.value);
-            material.SetInt("TraceSteps", settings.coneTraceSteps.value);
-            material.SetFloat("TraceLength", settings.coneLength.value);
-            material.SetFloat("ConeSize", settings.coneWidth.value);
-            material.SetFloat("OcclusionStrength", settings.occlusionStrength.value);
-            material.SetFloat("OcclusionPower", settings.occlusionPower.value);
-            material.SetFloat("ConeTraceBias", settings.coneTraceBias.value);
-            material.SetFloat("GIGain", settings.giGain.value);
-            material.SetFloat("NearLightGain", settings.nearLightGain.value);
-            material.SetFloat("NearOcclusionStrength", settings.nearOcclusionStrength.value);
-            material.SetInt("DoReflections", settings.doReflections.value ? 1 : 0);
-            material.SetInt("GIResolution", settings.GIResolution.value);
-            material.SetInt("ReflectionSteps", settings.reflectionSteps.value);
-            material.SetFloat("ReflectionOcclusionPower", settings.reflectionOcclusionPower.value);
-            material.SetFloat("SkyReflectionIntensity", settings.skyReflectionIntensity.value);
-            material.SetFloat("FarOcclusionStrength", settings.farOcclusionStrength.value);
-            material.SetFloat("FarthestOcclusionStrength", settings.farthestOcclusionStrength.value);
-            material.SetTexture("NoiseTexture", blueNoise[frameSwitch % 64]);
-            material.SetFloat("BlendWeight", settings.temporalBlendWeight.value);
-            material.SetInt("useReflectionProbes", settings.useReflectionProbes.value ? 1 : 0);
-            material.SetFloat("reflectionProbeIntensity", settings.reflectionProbeIntensity.value);
+            context.command.SetGlobalInt("StochasticSampling", settings.stochasticSampling.value ? 1 : 0);
+            context.command.SetGlobalInt("TraceDirections", settings.cones);
+            context.command.SetGlobalInt("TraceSteps", settings.coneTraceSteps);
+            context.command.SetGlobalFloat("TraceLength", settings.coneLength);
+            context.command.SetGlobalFloat("ConeSize", settings.coneWidth);
+            context.command.SetGlobalFloat("OcclusionStrength", settings.occlusionStrength);
+            context.command.SetGlobalFloat("OcclusionPower", settings.occlusionPower);
+            context.command.SetGlobalFloat("ConeTraceBias", settings.coneTraceBias);
+            context.command.SetGlobalFloat("GIGain", settings.giGain);
+            context.command.SetGlobalFloat("NearLightGain", settings.nearLightGain);
+            context.command.SetGlobalFloat("NearOcclusionStrength", settings.nearOcclusionStrength);
+            context.command.SetGlobalInt("DoReflections", settings.doReflections ? 1 : 0);
+            context.command.SetGlobalInt("GIResolution", settings.GIResolution);
+            context.command.SetGlobalInt("ReflectionSteps", settings.reflectionSteps);
+            context.command.SetGlobalFloat("ReflectionOcclusionPower", settings.reflectionOcclusionPower);
+            context.command.SetGlobalFloat("SkyReflectionIntensity", settings.skyReflectionIntensity);
+            context.command.SetGlobalFloat("FarOcclusionStrength", settings.farOcclusionStrength);
+            context.command.SetGlobalFloat("FarthestOcclusionStrength", settings.farthestOcclusionStrength);
+            context.command.SetGlobalTexture("NoiseTexture", blueNoise[frameSwitch % 64]);
+            context.command.SetGlobalFloat("BlendWeight", settings.temporalBlendWeight);
+            context.command.SetGlobalInt("useReflectionProbes", settings.useReflectionProbes ? 1 : 0);
+            context.command.SetGlobalFloat("reflectionProbeIntensity", settings.reflectionProbeIntensity);
             //material.SetFloat("reflectionProbeAttribution", settings.reflectionProbeAttribution.value);
-            material.SetInt("StereoEnabled", context.stereoActive ? 1 : 0);
+            context.command.SetGlobalInt("StereoEnabled", context.stereoActive ? 1 : 0);
 
             //Blit once to downsample if required
             context.command.Blit(context.source, RT_gi1);
@@ -866,7 +868,7 @@ namespace UnityEngine.Rendering.PostProcessing
             }
 
             //Set the previous GI result and camera depth textures to access them in the shader
-            context.command.SetGlobalTexture("PreviousGITexture", previousResult);
+            context.command.SetGlobalTexture("PreviousGITexture", previousGIResult);
             context.command.SetGlobalTexture("PreviousDepth", previousDepth);
 
             //Render diffuse GI tracing result
@@ -892,9 +894,9 @@ namespace UnityEngine.Rendering.PostProcessing
 
                 //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
 
-                material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
                 context.command.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
-                material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
                 context.command.Blit(RT_blur0, RT_gi3, material, Pass.BilateralBlur);
                 context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
@@ -903,15 +905,15 @@ namespace UnityEngine.Rendering.PostProcessing
                 {
                     context.command.Blit(RT_gi3, RT_gi4, material, Pass.TemporalBlend);
                     //SEGIBuffer.Blit(RT_gi4, RT_gi3, material, Pass.TemporalBlend);
-                    context.command.Blit(RT_gi4, previousResult);
+                    context.command.Blit(RT_gi4, previousGIResult);
                     context.command.Blit(RT_gi1, previousDepth, material, Pass.GetCameraDepthTexture);
                 }
 
                 if (settings.GIResolution.value >= 3)
                 {
-                    material.SetVector("Kernel", new Vector2(0.0f, 1.0f));
+                    context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
                     context.command.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
-                    material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                    context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
                     context.command.Blit(RT_gi4, RT_gi3, material, Pass.BilateralBlur);
 
                     //context.command.Blit(RT_gi3, RT_gi4, Gaussian_Material);
@@ -941,7 +943,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
                     //Perform temporal reprojection and blending
                     context.command.Blit(RT_gi2, RT_gi1, material, Pass.TemporalBlend);
-                    context.command.Blit(RT_gi1, previousResult);
+                    context.command.Blit(RT_gi1, previousGIResult);
                     context.command.Blit(RT_gi1, previousDepth, material, Pass.GetCameraDepthTexture);
                 }
 
@@ -956,22 +958,16 @@ namespace UnityEngine.Rendering.PostProcessing
             }
             else context.command.Blit(RT_FXAART, context.destination);
 
-            //ENDCommandBuffer
+            //ENDCommandBuffer         
 
+            context.command.SetGlobalMatrix("ProjectionPrev", context.camera.projectionMatrix);
+            context.command.SetGlobalMatrix("ProjectionPrevInverse", context.camera.projectionMatrix.inverse);
+            context.command.SetGlobalMatrix("WorldToCameraPrev", context.camera.worldToCameraMatrix);
+            context.command.SetGlobalMatrix("CameraToWorldPrev", context.camera.cameraToWorldMatrix);
+            context.command.SetGlobalVector("CameraPositionPrev", context.camera.transform.position);
 
             //Advance the frame counter
             frameSwitch = (frameSwitch + 1) % (64);
-
-
-
-            material.SetMatrix("ProjectionPrev", context.camera.projectionMatrix);
-            material.SetMatrix("ProjectionPrevInverse", context.camera.projectionMatrix.inverse);
-            material.SetMatrix("WorldToCameraPrev", context.camera.worldToCameraMatrix);
-            material.SetMatrix("CameraToWorldPrev", context.camera.cameraToWorldMatrix);
-            material.SetVector("CameraPositionPrev", context.camera.transform.position);
-
-            frameSwitch = (frameSwitch + 1) % (128);
-            //material.ref
         }
 
         public override void Init()
@@ -1301,6 +1297,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
         Matrix4x4 TransformViewMatrix(Matrix4x4 mat)
         {
+            //Since the third column of the view matrix needs to be reversed if using reversed z-buffer, do so here
 #if UNITY_5_5_OR_NEWER
             if (SystemInfo.usesReversedZBuffer)
             {
@@ -1308,7 +1305,6 @@ namespace UnityEngine.Rendering.PostProcessing
                 mat[2, 1] = -mat[2, 1];
                 mat[2, 2] = -mat[2, 2];
                 mat[2, 3] = -mat[2, 3];
-                // mat[3, 2] += 0.0f;
             }
 #endif
             return mat;
@@ -1321,9 +1317,6 @@ namespace UnityEngine.Rendering.PostProcessing
 
             if (SEGIRenderWidth == 0) SEGIRenderWidth = attachedCamera.scaledPixelWidth;
             if (SEGIRenderHeight == 0) SEGIRenderHeight = attachedCamera.scaledPixelHeight;
-
-            RenderTextureDescriptor RT_Disc0 = new RenderTextureDescriptor(SEGIRenderWidth, SEGIRenderHeight, renderTextureFormat, 32);
-            RenderTextureDescriptor RT_Disc1 = new RenderTextureDescriptor(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, renderTextureFormat, 32);
 
             //SEGIRenderWidth = attachedCamera.scaledPixelWidth == 0 ? 2 : attachedCamera.scaledPixelWidth;
             //SEGIRenderHeight = attachedCamera.scaledPixelHeight == 0 ? 2 : attachedCamera.scaledPixelHeight;
@@ -1341,77 +1334,68 @@ namespace UnityEngine.Rendering.PostProcessing
             previousGIResult.Create();
             previousGIResult.hideFlags = HideFlags.HideAndDontSave;
 
-            if (previousResult) previousResult.Release();
-            previousResult = new RenderTexture(RT_Disc0);
-            previousResult.wrapMode = TextureWrapMode.Clamp;
-            previousResult.filterMode = FilterMode.Bilinear;
-            previousResult.useMipMap = true;
-            previousResult.autoGenerateMips = true;
-            previousResult.Create();
-            previousResult.hideFlags = HideFlags.HideAndDontSave;
-
             if (previousDepth)
             {
                 //previousDepth.DiscardContents();
                 previousDepth.Release();
                 //DestroyImmediate(previousDepth);
             }
-            previousDepth = new RenderTexture(RT_Disc0);
+            previousDepth = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.RFloat, RenderTextureReadWrite.Linear);
             previousDepth.wrapMode = TextureWrapMode.Clamp;
             previousDepth.filterMode = FilterMode.Bilinear;
             previousDepth.Create();
             previousDepth.hideFlags = HideFlags.HideAndDontSave;
 
             if (RT_FXAART) RT_FXAART.Release();
-            RT_FXAART = new RenderTexture(RT_Disc0);
+            RT_FXAART = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             if (UnityEngine.XR.XRSettings.enabled) RT_FXAART.vrUsage = VRTextureUsage.TwoEyes;
             RT_FXAART.Create();
 
             if (RT_gi1) RT_gi1.Release();
-            RT_gi1 = new RenderTexture(RT_Disc1);
+            RT_gi1 = new RenderTexture(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi1.vrUsage = VRTextureUsage.TwoEyes;
             RT_gi1.Create();
 
             if (RT_gi2) RT_gi2.Release();
-            RT_gi2 = new RenderTexture(RT_Disc1);
+            RT_gi2 = new RenderTexture(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi2.vrUsage = VRTextureUsage.TwoEyes;
             RT_gi2.Create();
 
             if (RT_reflections) RT_reflections.Release();
-            RT_reflections = new RenderTexture(RT_Disc1);
+            RT_reflections = new RenderTexture(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             if (UnityEngine.XR.XRSettings.enabled) RT_reflections.vrUsage = VRTextureUsage.TwoEyes;
             RT_reflections.Create();
 
             if (RT_gi3) RT_gi3.Release();
-            RT_gi3 = new RenderTexture(RT_Disc0);
+            RT_gi3 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi3.vrUsage = VRTextureUsage.TwoEyes;
             RT_gi3.Create();
 
             if (RT_gi4) RT_gi4.Release();
-            RT_gi4 = new RenderTexture(RT_Disc0);
+            RT_gi4 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi4.vrUsage = VRTextureUsage.TwoEyes;
             RT_gi4.Create();
 
             if (RT_blur0) RT_blur0.Release();
-            RT_blur0 = new RenderTexture(RT_Disc0);
+            RT_blur0 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             if (UnityEngine.XR.XRSettings.enabled) RT_blur0.vrUsage = VRTextureUsage.TwoEyes;
             RT_blur0.Create();
 
             if (RT_blur1) RT_blur1.Release();
-            RT_blur1 = new RenderTexture(RT_Disc0);
+            RT_blur1 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             if (UnityEngine.XR.XRSettings.enabled) RT_blur1.vrUsage = VRTextureUsage.TwoEyes;
             RT_blur1.Create();
 
             if (RT_FXAARTluminance) RT_FXAARTluminance.Release();
-            RT_FXAARTluminance = new RenderTexture(RT_Disc0);
+            RT_FXAARTluminance = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             if (UnityEngine.XR.XRSettings.enabled) RT_FXAARTluminance.vrUsage = VRTextureUsage.TwoEyes;
             RT_FXAARTluminance.Create();
 
             int RT_AlbedoResolution;
             if (RT_Albedo) RT_Albedo.Release();
             if (RT_AlbedoX2) RT_Albedo.Release();
-            if (XR.XRSettings.enabled) RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 8);
-            else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
+            if (XR.XRSettings.enabled) RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
+            else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 2);
             RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
             RT_Albedo.dimension = TextureDimension.Cube;
             RT_Albedo.filterMode = FilterMode.Trilinear;
@@ -1439,7 +1423,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 sunDepthTexture.Release();
                 //DestroyImmediate(sunDepthTexture);
             }
-            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
+            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
             if (UnityEngine.XR.XRSettings.enabled) sunDepthTexture.vrUsage = VRTextureUsage.TwoEyes;
             sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture.filterMode = FilterMode.Point;

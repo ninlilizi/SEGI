@@ -23,7 +23,7 @@ public class SEGI_Helper_Debug : MonoBehaviour {
     public RenderTexture RT_Albedo;
 
     public RenderTexture sunDepthTexture;
-    public RenderTexture previousResult;
+    public RenderTexture previousGIResult;
     public RenderTexture previousDepth;
     //public RenderTexture intTex1;
     //public RenderTexture[] volumeTextures;
@@ -57,7 +57,7 @@ public class SEGI_Helper_Debug : MonoBehaviour {
             RT_Albedo = SEGIRenderer.RT_Albedo;
             RT_FXAARTluminance = SEGIRenderer.RT_FXAARTluminance;
             sunDepthTexture = SEGIRenderer.sunDepthTexture;
-            previousResult = SEGIRenderer.previousResult;
+            previousGIResult = SEGIRenderer.previousGIResult;
             previousDepth = SEGIRenderer.previousDepth;
             //intTex1 = SEGIRenderer.intTex1;
             //volumeTexture1 = SEGIRenderer.volumeTexture1;

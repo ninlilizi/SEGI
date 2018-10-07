@@ -4,6 +4,7 @@
 	}
 
 	HLSLINCLUDE
+	#include "HLSLSupport.cginc"
 	#include "PostProcessing/Shaders/StdLib.hlsl"
 	#include "SEGI_HLSL_Helpers.cginc"
 	#include "SEGI_C.cginc"
@@ -107,7 +108,8 @@
 
 						//Get view space position and view vector
 						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
-						float3 viewVector = normalize(viewSpacePosition.xyz);
+						//float3 viewVector = normalize(viewSpacePosition.xyz);
+						//float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
 						//Get voxel space position
 						float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
@@ -120,7 +122,7 @@
 
 						float3 worldNormal;
 						if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
-						else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, uv).rgb * 2.0 - 1.0);
+						else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
 
 						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
 
@@ -150,7 +152,7 @@
 
 							kernel = normalize(kernel + worldNormal.xyz * 1.0);
 
-							traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, dither.y, TraceSteps, ConeSize, 1.0, 1.0, viewVector);
+							traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, dither.y, TraceSteps, ConeSize, 1.0, 1.0);
 						}
 
 						traceResult /= numSamples;
@@ -163,7 +165,7 @@
 
 						gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
 
-						gi *= 0.75;// +(float)GIResolution * 0.25;
+						gi *= 0.75 + (float)GIResolution * 0.25;
 
 
 						return float4(gi, 1.0);
@@ -208,9 +210,9 @@
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
 						#if defined (VRWORKS)				
-							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy).x);
+							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy).x);
 						#else
-							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, coord).x);
+							float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, coord).x);
 						#endif
 						half3 normal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
 						float thresh = 0.26;
@@ -225,9 +227,9 @@
 						{
 							float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy * 1.0;
 							#if defined (VRWORKS)
-								float sampleDepth = LinearEyeDepth(SAMPLE_TEXTURE2D_LOD(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy + offs.xy * 1, 0).x);
+								float sampleDepth = LinearEyeDepth(tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy + offs.xy * 1, 0).x);
 							#else
-								float sampleDepth = LinearEyeDepth(SAMPLE_TEXTURE2D_LOD(_CameraDepthTexture, sampler_CameraDepthTexture, coord + offs.xy * 1, 0).x);
+								float sampleDepth = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.texcoord.xy + offs.xy * 1, 0, 0)).x);
 							#endif
 							half3 sampleNormal = normalize(SAMPLE_TEXTURE2D_LOD(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord + offs.xy * 1, 0).rgb * 2.0 - 1.0);
 
@@ -291,7 +293,7 @@
 							half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, worldViewVector.xyz, 0);
 							albedoTex = float4(DecodeHDR(probeData, _SEGICube_HDR), probeData.a);
 							albedo = albedoTex.rgb;
-							//smoothness = probeData.a * 0.5;
+							//smoothness = 1 - probeData.a;
 						}
 						else
 						{
@@ -320,7 +322,7 @@
 								//half4 probeData = UNITY_SAMPLE_TEXCUBE_LOD(_SEGICube, reflectionKernel, 0);
 								//half3 probeColor = DecodeHDR(probeData, _SEGICube_HDR);
 								specularColor = albedoTex.rgb;
-								smoothness = 1 - albedoTex.a * 0.5 - 0.25;
+								smoothness = 1 - albedoTex.a;
 							}
 							else
 							{
@@ -536,9 +538,9 @@
 					float4 Frag(VaryingsSEGI input) : COLOR0
 					{
 						#if defined (VRWORKS)
-							float4 tex = SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy);
+							float4 tex = tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy);
 						#else
-							float4 tex = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, input.texcoord.xy);
+							float4 tex = tex2D(_CameraDepthTexture, input.texcoord.xy);
 						#endif
 						return tex;
 					}
@@ -589,8 +591,8 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						float4 albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, input.texcoord.xy);
-						float3 albedo = albedoTex.rgb;
+						//float4 albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, input.texcoord.xy);
+						//float3 albedo = albedoTex.rgb;
 						float3 gi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, input.texcoord.xy).rgb;
 						return float4(gi, 1.0);
 					}
@@ -641,7 +643,7 @@
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						return float4(SAMPLE_TEXTURE3D(SEGIVolumeTexture1, samplerSEGIVolumeTexture1, float3(input.texcoord.xy, LayerToVisualize)).rgb, 1.0);
+						return float4(tex3D(SEGIVolumeTexture1, float3(input.texcoord.xy, LayerToVisualize)).rgb, 1.0);
 					}
 
 				ENDHLSL
@@ -730,10 +732,10 @@
 						float4 blurredDumb = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
 						#if defined(VRWORKS)
-							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(input.texcoord).xy).x);
+							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy).x);
 							half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(input.texcoord).xy));
 						#else
-							float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, coord).x);
+							float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, coord).x);
 							half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, coord));
 						#endif												
 						float thresh = 0.26;

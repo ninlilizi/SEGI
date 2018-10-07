@@ -20,15 +20,15 @@ float FarthestOcclusionStrength;
 
 half4 GISunColor;
 
-TEXTURE3D_SAMPLER3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0);
-TEXTURE3D_SAMPLER3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1);
-TEXTURE3D_SAMPLER3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2);
-TEXTURE3D_SAMPLER3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3);
-TEXTURE3D_SAMPLER3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4);
-TEXTURE3D_SAMPLER3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5);
-//SAMPLER3D(SEGIVolumeLevel6);
-//SAMPLER3D(SEGIVolumeLevel7);
-TEXTURE3D_SAMPLER3D(SEGIVolumeTexture1, samplerSEGIVolumeTexture1);
+sampler3D SEGIVolumeLevel0;
+sampler3D SEGIVolumeLevel1;
+sampler3D SEGIVolumeLevel2;
+sampler3D SEGIVolumeLevel3;
+sampler3D SEGIVolumeLevel4;
+sampler3D SEGIVolumeLevel5;
+sampler3D SEGIVolumeLevel6;
+sampler3D SEGIVolumeLevel7;
+sampler3D SEGIVolumeTexture1;
 //TEXTURE3D_SAMPLER3D(VolumeTexture2, samplerVolumeTexture2);
 //TEXTURE3D_SAMPLER3D(VolumeTexture3, samplerVolumeTexture3);
 
@@ -65,7 +65,7 @@ TEXTURE2D_SAMPLER2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1);
 TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
 TEXTURE2D_SAMPLER2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture);
 TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture);
-TEXTURE2D_SAMPLER2D(_CameraDepthTexture, sampler_CameraDepthTexture);
+sampler2D _CameraDepthTexture;
 
 UNITY_DECLARE_TEXCUBE(_SEGICube);
 //UNITY_DECLARE_TEXCUBE(_SEGICubeX2);
@@ -89,26 +89,22 @@ float GetDepthTexture(float2 coord)
 {
 #if defined(UNITY_REVERSED_Z)
 	#if defined(VRWORKS)
-		return 1.0 - SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(float2(coord.x, coord.y))).x;
+		return 1.0 - tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float2(coord.x, coord.y))).x;
 	#else
-		return 1.0 - SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
+		return 1.0 - tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
 	#endif
 #else
 	#if defined(VRWORKS)
-		return SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(float4(coord.x, coord.y, 0.0, 0.0))).x;
+		return tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float4(coord.x, coord.y, 0.0, 0.0))).x;
 	#else
-		return SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+		return tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
 	#endif
 #endif
 }
 
 float4 GetViewSpacePosition(float2 coord, float2 uv)
 {
-	#if defined(VRWORKS)
-		float depth = SAMPLE_TEXTURE2D(VRWorksGetDepthSampler(), sampler_CameraDepthTexture, VRWorksRemapUV(uv).xy).x;
-	#else
-		float depth = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, float2(coord.x, coord.y)).x;
-	#endif
+	float depth = GetDepthTexture(coord);
 
 	if (StereoEnabled)
 	{
@@ -164,7 +160,7 @@ float2 rand(float2 coord)
 	return float2(noiseX, noiseY);
 }
 
-float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float noise, int steps, float width, float lengthMult, float skyMult, float3 viewDir)
+float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float noise, int steps, float width, float lengthMult, float skyMult)
 {
 	float skyVisibility = 1.0;
 
@@ -174,18 +170,13 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
 
-	//float depth = LinearEyeDepth(SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, uv).r);
-	//depth *= length(TraceLength * lengthMult + 0.001);
-
-	int earlyExit = 0;
-
 	[loop]
 	for (int i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i) / numSteps;
 		fi = lerp(fi, 1.0, 0.01);
 
-		float coneDistance = (exp2(fi * 4.0) - 0.9) / 8.0;
+		float coneDistance = (exp2(fi * 4.0) - 0.9) / 8;
 
 		coneDistance -= 0.00;
 
@@ -197,35 +188,32 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 1)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 2)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 3)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 4)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else if (mipLevel == 5)
 		{
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
 		}
 		else
 		{
 			sample = float4(1, 1, 1, 0);
 		}
-
-		// Nin - Bombing out early gives 2% performance boost
-		if (sample.r > 0.01 || sample.g > 0.01 || sample.b > 0.01) earlyExit = 1;
 
 		float occlusion = skyVisibility * skyVisibility;
 		float falloffFix = PositivePow(fi, 1.0) * 4.0 + NearLightGain;
@@ -235,7 +223,8 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 		skyVisibility *= PositivePow(saturate(1.0 - (sample.a) * (coneSize * 0.2 * FarOcclusionStrength + 1.0 + coneSize * coneSize * 0.05 * FarthestOcclusionStrength) * OcclusionStrength), lerp(0.014, 1.5 * OcclusionPower, min(1.0, coneSize / 5.0)));
 
-		if (earlyExit == 1) break;
+		// Nin - Bombing out early gives 2% performance boost
+		//if (sample.r > 0.25 || sample.g > 0.25 || sample.b > 0.25) break;
 	}
 
 	float NdotL = PositivePow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
@@ -283,7 +272,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
-	float4 lastSample = float4(0, 0, 0, 0);
+	//float4 lastSample = float4(0, 0, 0, 0);
 
 	[loop]
 	for (int i = 0; i < numSamples; i++)
@@ -301,31 +290,31 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		int mipLevel = floor(coneSize);
 		if (mipLevel == 0)
 		{
-			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, frac(coneSize)));
-			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(sample, tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 1)
 		{
-			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel1, samplerSEGIVolumeLevel1, float4(voxelCheckCoord.xyz, frac(coneSize)));
-			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(sample, tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 2)
 		{
-			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel2, samplerSEGIVolumeLevel2, float4(voxelCheckCoord.xyz, frac(coneSize)));
-			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(sample, tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 3)
 		{
-			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel3, samplerSEGIVolumeLevel3, float4(voxelCheckCoord.xyz, frac(coneSize)));
-			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(sample, tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 4)
 		{
-			//sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel4, samplerSEGIVolumeLevel4, float4(voxelCheckCoord.xyz, frac(coneSize)));
-			sample = lerp(lastSample, SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
+			sample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = lerp(sample, tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize + 1.0)), frac(coneSize));
 		}
 		else if (mipLevel == 5)
-			sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel5, samplerSEGIVolumeLevel5, float4(voxelCheckCoord.xyz, frac(coneSize)));
+			sample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, frac(coneSize)));
 		else
 			sample = float4(0, 0, 0, 0);
 
@@ -336,7 +325,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 		//Nin -	Lerping against the previous sample rather than miplevel both improves performance and gives a smoother result that allows for much less
 		//		samples while still retaining an acceptable look.
-		lastSample = sample;
+		//lastSample = sample;
 
 		float occlusion = skyVisibility;
 
@@ -392,7 +381,7 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel)
 
 		float4 sample = float4(0.0, 0.0, 0.0, 0.0);
 
-		sample = SAMPLE_TEXTURE3D(SEGIVolumeLevel0, samplerSEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
+		sample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
 
 		float occlusion = skyVisibility;
 
