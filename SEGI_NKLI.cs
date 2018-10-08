@@ -509,11 +509,11 @@ namespace UnityEngine.Rendering.PostProcessing
             }*/
 
             // only use main camera for voxel simulations
-            if (attachedCamera != Camera.main)
+            /*if (attachedCamera != Camera.main)
             {
                 Debug.Log("<SEGI> Instance not attached to Main Camera. Please ensure the attached camera has the 'MainCamera' tag.");
                 return;
-            }
+            }*/
 
             //Update SkyColor
             if (settings.MatchAmbiantColor)
