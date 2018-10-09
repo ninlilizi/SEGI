@@ -234,12 +234,13 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 gi = float3(0, 0, 0);
 
+	//float depth = GetDepthTexture(uv);
+	float depth = 1 - (GetDepthTexture(uv) * 0.5 + 0.5);
 	int numSteps = (int)(steps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
 
 	float dist = length(voxelOrigin * 2.0 - 1.0);
-
 
 	int startMipLevel = 0;
 
@@ -247,12 +248,11 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	for (int i = 0; i < numSteps; i++)
 	{
-		float fi = ((float)i) / numSteps;
+		float fi = ((float)i + dither) / numSteps;
 		fi = lerp(fi, 1.0, 0.01);
 
 		float coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
 
-		//float coneSize = coneDistance * width * 10.3;
 		float coneSize = fi * width * lerp(SEGIVoxelScaleFactor, 1.0, 0.5);
 
 		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.001);
@@ -260,11 +260,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 		float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
-		//int mipLevel = floor(coneSize);
 		//if (mipLevel == 0)
 		//{
 		//	giSample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		//}
 		if (mipLevel == 1 || mipLevel == 0)
 		{
 			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
@@ -300,6 +298,10 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		gi.rgb += giSample.rgb * occlusion * (coneDistance + NearLightGain) * 80.0 * (1.0 - fi * fi);
 
 		skyVisibility *= pow(saturate(1.0 - giSample.a * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
+
+		//Nin -	Bomb out early if pathtrace depth is deeper than pixel depth
+		//		This gives ~10% performance boost
+		if (coneDistance / 256 > depth) break;
 	}
 	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
 

@@ -214,7 +214,7 @@ MonoBehaviour:
     value: 0.5
   doReflections:
     overrideState: 1
-    value: 0
+    value: 1
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -226,13 +226,13 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 0
+    value: 1
   updateGI:
     overrideState: 1
     value: 0
   cones:
     overrideState: 1
-    value: 3
+    value: 2
   coneTraceSteps:
     overrideState: 1
     value: 10
@@ -268,13 +268,13 @@ MonoBehaviour:
     value: 12
   reflectionOcclusionPower:
     overrideState: 1
-    value: 0.001
+    value: 4
   skyReflectionIntensity:
     overrideState: 1
     value: 1
   gaussianMipFilter:
     overrideState: 1
-    value: 0
+    value: 1
   farOcclusionStrength:
     overrideState: 1
     value: 4

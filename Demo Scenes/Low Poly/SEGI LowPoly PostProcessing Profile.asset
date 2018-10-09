@@ -75,16 +75,16 @@ MonoBehaviour:
     value: 1
   cones:
     overrideState: 1
-    value: 13
+    value: 16
   coneTraceSteps:
     overrideState: 1
-    value: 9
+    value: 5
   coneLength:
     overrideState: 1
     value: 1
   coneWidth:
     overrideState: 1
-    value: 6
+    value: 3.59
   coneTraceBias:
     overrideState: 1
     value: 0.63
@@ -132,7 +132,7 @@ MonoBehaviour:
     value: 1
   useFXAA:
     overrideState: 1
-    value: 1
+    value: 0
   visualizeGI:
     overrideState: 1
     value: 0

@@ -91,6 +91,8 @@
 
 				//SAMPLER3D(SEGIVolumeTexture1);
 
+				//TEXTURE2D_SAMPLER2D(GITexture, samplerGITexture);
+
 				sampler2D NoiseTexture;
 
 				float4 Frag(VaryingsSEGI input) : SV_Target
@@ -127,7 +129,9 @@
 						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
 
 						float3 gi = float3(0.0, 0.0, 0.0);
-						float4 traceResult = float4(0,0,0,0);
+						float4 traceResult = float4(0, 0, 0, 0);
+						float4 thisTrace = float4(0, 0, 0, 0);
+						float4 lastTrace = float4(0, 0, 0, 0);
 
 						const float phi = 1.618033988;
 						const float gAngle = phi * PI * 1.0;
@@ -136,17 +140,38 @@
 						float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 						float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
 
+						//float depth = GetDepthTexture(uv);
+						//blueNoise *=  (depth * 0.5);
+						//blueNoise = 0;
+
+						//float4 prevGi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, coord - .1);
+
 						//Trace GI cones
 						int numSamples = TraceDirections;
+						//int maxSamples = TraceDirections;
+						float latitude;
+						float longitude;
 						for (int i = 0; i < numSamples; i++)
 						{
-							float fi = (float)i + blueNoise.x * StochasticSampling;
-							//float fi = (float)i * StochasticSampling;
-							float fiN = fi / numSamples;
-							float longitude = gAngle * fi;
-							float latitude = (fiN * 2.0 - 1.0);
-							//latitude += (blueNoise.y * 2.0 - 1.0) * 0.25;
-							latitude = asin(latitude);
+							if (i > 1) {
+								float fi = (float)i + blueNoise.x * StochasticSampling;
+								//float fi = (float)i * StochasticSampling;
+								float fiN = fi / numSamples;
+								longitude = gAngle * fi;
+								latitude = (fiN * 2.0 - 1.0);
+								latitude += (blueNoise.y * 2.0 - 1.0) * 0.25;
+								latitude = asin(latitude);
+							}
+							else
+							{
+								//float fi = (float)i + blueNoise.x * StochasticSampling;
+								float fi = (float)i * StochasticSampling;
+								float fiN = fi / numSamples;
+								longitude = gAngle * fi;
+								latitude = asin(fiN * 2.0 - 1.0);
+								//latitude += (blueNoise.y * 2.0 - 1.0) * 0.25;
+								//latitude = asin(latitude);
+							}
 
 							float3 kernel;
 							kernel.x = cos(latitude) * cos(longitude);
@@ -156,7 +181,28 @@
 							kernel = normalize(kernel + worldNormal.xyz * 1.0);
 
 
-							traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0);
+							//traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, blueNoise.z, TraceSteps, ConeSize, 1.0, 1.0);
+							thisTrace = ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0);
+							traceResult = max(thisTrace, traceResult + thisTrace);
+							//lastTrace = thisTrace;
+							//if (thisTrace.r < 0.25 && thisTrace.g < 0.25 && thisTrace.b < 0.25) numSamples--;
+							//else break;
+							
+							//lastTrace = thisTrace;
+
+							// Emergency stop if safe sample size is reached
+							/*if (numSamples > maxSamples)
+							{
+								fi = (float)i * StochasticSampling;
+								latitude = asin(fiN * 2.0 - 1.0);
+								kernel.x = cos(latitude) * cos(longitude);
+								kernel.z = cos(latitude) * sin(longitude);
+								kernel.y = sin(latitude);
+
+								kernel = normalize(kernel + worldNormal.xyz * 1.0);
+								traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0);
+								break;
+							}*/
 						}
 
 						traceResult /= numSamples;
@@ -196,7 +242,6 @@
 					TEXTURE2D_SAMPLER2D(DepthNormalsLow, samplerDepthNormalsLow);
 					TEXTURE2D_SAMPLER2D(DepthLow, samplerDepthLow);
 					int SourceScale;
-
 
 					float4 Frag(VaryingsSEGI input) : COLOR0
 					{
