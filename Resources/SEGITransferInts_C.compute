@@ -13,6 +13,8 @@ int VoxelAA;
 
 float4 VoxelOriginDelta;
 
+float4 ClipmapOverlap;
+
 float2 IntToFloats(uint intval)
 {
 	float value1 = f16tof32(intval);
@@ -66,10 +68,30 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 			blockerValue = max(0.0, result.a - 20.0);
 		}
 
-		result.a = min(result.a, 2.0) * 1.25;
+		result.a = min(result.a, 2.0) * 1.0;
 		result.a += blockerValue;
 
-        Result[uint3(id.xy, i)] = result;
+		/*
+		uint3 writeCoord = uint3(id.xy, i);
+
+		float3 fcoord = float3((float)id.x / Resolution, (float)id.y / Resolution, (float)i / Resolution);
+		float3 refcoord = fcoord * 0.5 + 0.25;
+		refcoord += ClipmapOverlap.xyz * 1.0;
+		float minCoord = 0.0;
+		float maxCoord = 1.0;
+
+		//if (refcoord.x > maxCoord || refcoord.x < minCoord || refcoord.y > maxCoord || refcoord.y < minCoord || refcoord.z > maxCoord || refcoord.z < minCoord)
+		*/
+		
+		/*
+		if (id.x == 0 || id.x == Resolution - 1 || id.y == 0 || id.y == Resolution - 1 || i == 0 || i == Resolution - 1)
+		{
+			//result = float4(0.0, 0.0, 0.0, 0.0);
+		}
+		*/
+		
+		Result[uint3(id.xy, i)] = result;
+
     }
 }
 

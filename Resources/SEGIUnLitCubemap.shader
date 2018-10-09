@@ -114,7 +114,7 @@ Shader "Hidden/SEGIUnLitCubemap"
 				col.rgb *= _Color;
 				col.a *= 1 - _Glossiness;
 				col *= 1 - (nl * 0.5);
-				//col.a *= 1 - nl;
+				//col.a = 1 - col.a;
 
 				//fixed4 finalcol = col;
 

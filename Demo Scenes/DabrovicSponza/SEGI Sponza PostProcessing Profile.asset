@@ -190,7 +190,7 @@ MonoBehaviour:
     value: 256
   voxelSpaceSize:
     overrideState: 1
-    value: 75
+    value: 100
   updateVoxelsAfterX:
     overrideState: 1
     value: 0
@@ -229,13 +229,13 @@ MonoBehaviour:
     value: 0
   updateGI:
     overrideState: 1
-    value: 1
+    value: 0
   cones:
     overrideState: 1
-    value: 13
+    value: 3
   coneTraceSteps:
     overrideState: 1
-    value: 6
+    value: 10
   coneLength:
     overrideState: 1
     value: 1
@@ -271,10 +271,10 @@ MonoBehaviour:
     value: 0.001
   skyReflectionIntensity:
     overrideState: 1
-    value: 0.25
+    value: 1
   gaussianMipFilter:
     overrideState: 1
-    value: 1
+    value: 0
   farOcclusionStrength:
     overrideState: 1
     value: 4
@@ -311,7 +311,7 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 1
+    value: 2.5
   skyColor:
     overrideState: 1
     value: {r: 0.40784314, g: 0.5254902, b: 0.7490196, a: 1}

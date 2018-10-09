@@ -9,17 +9,29 @@ SamplerState _PointClamp;
 
 int destinationRes;
 
+float4 ClipmapOverlap;
+
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    for (int i = 0; i < destinationRes; i++)
+    for (uint i = 0; i < (uint)destinationRes / 2u; i++)
     {
         float3 fcoord = float3((float)id.x / destinationRes, (float)id.y / destinationRes, (float)i / destinationRes);
+		fcoord *= 2.0;
         float texel = 1.0 / destinationRes;
 
-        float4 tex = Source.SampleLevel(_LinearClamp, fcoord + texel * 0.5, 0.0f);
+		float3 sampleCoord = (fcoord) * 1.0 - 0.0 + ClipmapOverlap.xyz * 0.0;
 
-        Destination[uint3(id.xy, i)] = tex;
+        float4 tex = Source.SampleLevel(_LinearClamp, sampleCoord + texel * 1.0, 0.0);
+		tex.rgba *= 2.0;
+
+		float3 writeCoord = fcoord;
+		writeCoord = writeCoord * 0.5 + 0.25;
+		writeCoord += ClipmapOverlap.xyz * 1.0;
+		writeCoord *= destinationRes;
+		uint3 writeCoordi = uint3(writeCoord.x, writeCoord.y, writeCoord.z);
+
+        Destination[writeCoordi] = tex;
     }
 }
 

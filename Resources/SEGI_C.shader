@@ -91,7 +91,7 @@
 
 				//SAMPLER3D(SEGIVolumeTexture1);
 
-				TEXTURE2D_SAMPLER2D(NoiseTexture, samplerNoiseTexture);
+				sampler2D NoiseTexture;
 
 				float4 Frag(VaryingsSEGI input) : SV_Target
 				{
@@ -113,12 +113,12 @@
 
 						//Get voxel space position
 						float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
-						voxelSpacePosition = mul(SEGIWorldToVoxel, voxelSpacePosition);
-						voxelSpacePosition = mul(SEGIVoxelProjection, voxelSpacePosition);
+						voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
+						voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
 						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
 
 						//Prepare for cone trace
-						float2 dither = rand(coord + (float)FrameSwitch * 0.011734);
+						//float2 dither = rand(coord + (float)FrameSwitch * 0.011734);
 
 						float3 worldNormal;
 						if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
@@ -134,16 +134,19 @@
 
 						//Get blue noise
 						float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-						float3 blueNoise = SAMPLE_TEXTURE2D_LOD(NoiseTexture, samplerNoiseTexture, noiseCoord, 0);
+						float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
 
 						//Trace GI cones
 						int numSamples = TraceDirections;
 						for (int i = 0; i < numSamples; i++)
 						{
-							float fi = (float)i + blueNoise * StochasticSampling;
+							float fi = (float)i + blueNoise.x * StochasticSampling;
+							//float fi = (float)i * StochasticSampling;
 							float fiN = fi / numSamples;
 							float longitude = gAngle * fi;
-							float latitude = asin(fiN * 2.0 - 1.0);
+							float latitude = (fiN * 2.0 - 1.0);
+							//latitude += (blueNoise.y * 2.0 - 1.0) * 0.25;
+							latitude = asin(latitude);
 
 							float3 kernel;
 							kernel.x = cos(latitude) * cos(longitude);
@@ -152,20 +155,21 @@
 
 							kernel = normalize(kernel + worldNormal.xyz * 1.0);
 
-							traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, dither.y, TraceSteps, ConeSize, 1.0, 1.0);
+
+							traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0);
 						}
 
 						traceResult /= numSamples;
-						gi = traceResult.rgb * 20.0;
+						gi = traceResult.rgb * 1.18;
 
 
-						float fadeout = saturate((distance(voxelSpacePosition.xyz, float3(0.5, 0.5, 0.5)) - 0.5f) * 5.0);
+						//float fadeout = saturate((distance(voxelSpacePosition.xyz, float3(0.5, 0.5, 0.5)) - 0.5f) * 5.0);
 
-						float3 fakeGI = saturate(dot(worldNormal, float3(0, 1, 0)) * 0.5 + 0.5) * SEGISkyColor.rgb * 5.0;
+						//float3 fakeGI = saturate(dot(worldNormal, float3(0, 1, 0)) * 0.5 + 0.5) * SEGISkyColor.rgb * 5.0;
 
-						gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
+						//gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
 
-						gi *= 0.75 + (float)GIResolution * 0.25;
+						//gi *= 0.75 + (float)GIResolution * 0.25;
 
 
 						return float4(gi, 1.0);
@@ -284,6 +288,8 @@
 						float3 scene = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, coord).rgb;
 						float3 reflections = SAMPLE_TEXTURE2D(Reflections, samplerReflections, coord).rgb;
 
+						gi *= 0.75 + (float)GIResolution * 0.25;
+
 						float3 result;
 						float smoothness;
 						if (ForwardPath)
@@ -294,15 +300,19 @@
 							albedoTex = float4(DecodeHDR(probeData, _SEGICube_HDR), probeData.a);
 							albedo = albedoTex.rgb;
 							//smoothness = 1 - probeData.a;
+
+
+							result = scene + gi.rgb *  albedoTex.a * albedoTex.rgb;
+							//result += min(lerp(albedoTex.rgb, gi.rgb, albedoTex.a * 0.5 + 0.5), result) * 2;
 						}
 						else
 						{
 							albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
 							albedo = albedoTex.rgb;
+
+							result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
 						}
 
-						result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
-						//result += min(lerp(albedoTex.rgb, gi.rgb, albedoTex.a * 0.5 + 0.5), result) * 2;
 
 						if (DoReflections > 0)
 						{
@@ -471,8 +481,9 @@
 
 						float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
 						float3 worldPosition = voxelSpacePosition.xyz;
-						voxelSpacePosition = mul(SEGIWorldToVoxel, voxelSpacePosition);
-						voxelSpacePosition = mul(SEGIVoxelProjection, voxelSpacePosition);
+						//Get voxel space position
+						voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
+						voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
 						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
 
 						float3 worldNormal;
@@ -481,7 +492,7 @@
 
 						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.006 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
 
-						float2 dither = rand(coord + (float)FrameSwitch * 0.11734);
+						//float2 dither = rand(coord + (float)FrameSwitch * 0.11734);
 
 						float3 reflectionKernel = reflect(worldViewVector.xyz, worldNormal);
 
@@ -512,7 +523,7 @@
 						fresnel = lerp(fresnel, (1.0).xxx, specularColor.rgb);
 
 						voxelOrigin += worldNormal.xyz * 0.002 * 1.25 / SEGIVoxelScaleFactor;
-						reflection = SpecularConeTrace(voxelOrigin.xyz, reflectionKernel.xyz, worldNormal.xyz, smoothness, coord, dither.x, viewVector);
+						reflection = SpecularConeTrace(voxelOrigin.xyz, reflectionKernel.xyz, worldNormal.xyz, smoothness, coord, 0);
 
 						float3 skyReflection = (reflection.a * 1.0 * SEGISkyColor);
 
@@ -650,48 +661,73 @@
 			}
 
 
-			Pass //10 Visualize voxels (trace through GI volumes)
+	Pass //10 Visualize voxels (trace through GI volumes)
+	{
+ZTest Always
+	
+		HLSLPROGRAM
+			#pragma vertex VertSEGI
+			#pragma fragment Frag
+			
+			//float4x4 CameraToWorld;
+			
+			//sampler2D _CameraGBufferTexture2;
+			
+			float4 CameraPosition;
+			
+			float4 Frag(VaryingsSEGI input) : SV_Target
 			{
-		ZTest Always
+				float2 coord = input.texcoord.xy;
+				float2 uv = input.texcoord;
+				
+				float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
+				float3 viewVector = normalize(viewSpacePosition.xyz);
+				float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-				HLSLPROGRAM
-					#pragma vertex VertSEGI
-					#pragma fragment Frag
-					#pragma multi_compile_instancing
-					#if defined (VRWORKS)
-						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
-					#endif
+				float4 voxelCameraPosition0 = mul(SEGIWorldToVoxel0, float4(CameraPosition.xyz, 1.0));
+					   voxelCameraPosition0 = mul(SEGIVoxelProjection0, voxelCameraPosition0);
+					   voxelCameraPosition0.xyz = voxelCameraPosition0.xyz * 0.5 + 0.5;
 
-					float4 CameraPosition;
+				float3 voxelCameraPosition1 = TransformClipSpace1(voxelCameraPosition0);
+				float3 voxelCameraPosition2 = TransformClipSpace2(voxelCameraPosition0);
+				float3 voxelCameraPosition3 = TransformClipSpace3(voxelCameraPosition0);
+				float3 voxelCameraPosition4 = TransformClipSpace4(voxelCameraPosition0);
+				float3 voxelCameraPosition5 = TransformClipSpace5(voxelCameraPosition0);
 
-					float4 Frag(VaryingsSEGI input) : SV_Target
-					{
-						//UNITY_SETUP_INSTANCE_ID(input);
-						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						/*#if UNITY_UV_STARTS_AT_TOP
-							float2 coord = input.uv2.xy;
-							float2 uv = input.texcoord;
-						#else*/
-							float2 coord = input.texcoord.xy;
-							float2 uv = input.texcoord;
-						//#endif
+				float4 result = float4(0,0,0,1);
+				float4 trace;
 
-						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
-						float3 viewVector = normalize(viewSpacePosition.xyz);
-						float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
-						float4 voxelCameraPosition = mul(SEGIWorldToVoxel, float4(CameraPosition.xyz, 1.0));
-							   voxelCameraPosition = mul(SEGIVoxelProjection, voxelCameraPosition);
-							   voxelCameraPosition.xyz = voxelCameraPosition.xyz * 0.5 + 0.5;
+				trace = VisualConeTrace(voxelCameraPosition0.xyz, worldViewVector.xyz, 1.0, 0);
+				result.rgb += trace.rgb;
+				result.a *= trace.a;
 
-						float4 result = VisualConeTrace(voxelCameraPosition.xyz, worldViewVector.xyz);
+				trace = VisualConeTrace(voxelCameraPosition1.xyz, worldViewVector.xyz, result.a, 1);
+				result.rgb += trace.rgb;
+				result.a *= trace.a;
 
-						return float4(result.rgb, 1.0);
-					}
+				trace = VisualConeTrace(voxelCameraPosition2.xyz, worldViewVector.xyz, result.a, 2);
+				result.rgb += trace.rgb;
+				result.a *= trace.a;	
 
-				ENDHLSL
+				trace = VisualConeTrace(voxelCameraPosition3.xyz, worldViewVector.xyz, result.a, 3);
+				result.rgb += trace.rgb;
+				result.a *= trace.a;
+
+				trace = VisualConeTrace(voxelCameraPosition4.xyz, worldViewVector.xyz, result.a, 4);
+				result.rgb += trace.rgb;
+				result.a *= trace.a;
+
+				trace = VisualConeTrace(voxelCameraPosition5.xyz, worldViewVector.xyz, result.a, 5);
+				result.rgb += trace.rgb;  
+				result.a *= trace.a;
+				
+				return float4(result.rgb, 1.0);
 			}
+			
+		ENDHLSL
+	}
 
 			Pass //11 Bilateral upsample
 			{

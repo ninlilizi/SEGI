@@ -78,7 +78,7 @@ MonoBehaviour:
     value: 13
   coneTraceSteps:
     overrideState: 1
-    value: 8
+    value: 9
   coneLength:
     overrideState: 1
     value: 1
