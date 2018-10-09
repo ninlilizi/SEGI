@@ -228,14 +228,13 @@ float GISampleWeight(float3 pos)
 	return weight;
 }
 
-float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult)
+float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float depth)
 {
 	float skyVisibility = 1.0;
 
 	float3 gi = float3(0, 0, 0);
 
-	//float depth = GetDepthTexture(uv);
-	float depth = 1 - (GetDepthTexture(uv) * 0.5 + 0.5);
+	depth = 1 - (depth * 0.5 + 0.5);
 	int numSteps = (int)(steps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);

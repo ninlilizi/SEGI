@@ -45,7 +45,7 @@ MonoBehaviour:
     value: 1
   innerOcclusionLayers:
     overrideState: 1
-    value: 1
+    value: 0
   infiniteBounces:
     overrideState: 1
     value: 1
@@ -117,7 +117,7 @@ MonoBehaviour:
     value: 1
   gaussianMipFilter:
     overrideState: 1
-    value: 1
+    value: 0
   farOcclusionStrength:
     overrideState: 1
     value: 1
@@ -132,7 +132,7 @@ MonoBehaviour:
     value: 1
   useFXAA:
     overrideState: 1
-    value: 0
+    value: 1
   visualizeGI:
     overrideState: 1
     value: 0
