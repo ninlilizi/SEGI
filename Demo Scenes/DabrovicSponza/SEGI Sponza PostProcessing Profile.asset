@@ -232,10 +232,10 @@ MonoBehaviour:
     value: 1
   cones:
     overrideState: 1
-    value: 6
+    value: 12
   coneTraceSteps:
     overrideState: 1
-    value: 10
+    value: 8
   coneLength:
     overrideState: 1
     value: 1

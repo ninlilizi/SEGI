@@ -79,118 +79,87 @@
 		Pass //0
 		{
 			HLSLPROGRAM
-				#pragma vertex VertSEGI
-				#pragma fragment Frag
-				#pragma fragmentoption ARB_precision_hint_fastest
-				#pragma multi_compile_instancing
-				#if defined (VRWORKS)
-					#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
-				#endif
+			#pragma vertex VertSEGI
+			#pragma fragment Frag
+			#pragma fragmentoption ARB_precision_hint_fastest
+			#pragma multi_compile_instancing
+			#if defined (VRWORKS)
+				#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
+			#endif
 
-				int FrameSwitch;
+			int FrameSwitch;
 
-				//SAMPLER3D(SEGIVolumeTexture1);
 
-				//TEXTURE2D_SAMPLER2D(GITexture, samplerGITexture);
+			sampler2D NoiseTexture;
 
-				sampler2D NoiseTexture;
+			float4 Frag(VaryingsSEGI input) : SV_Target
+			{
+				float2 coord = input.texcoord.xy;
+				float2 uv = input.texcoord;
 
-				float4 Frag(VaryingsSEGI input) : SV_Target
+
+				//Get view space position and view vector
+				float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
+
+				//Get voxel space position
+				float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
+				voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
+				voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
+				voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
+
+				//Prepare for cone trace
+
+				float3 worldNormal;
+				if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
+				else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
+
+				float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
+
+				float3 gi = float3(0.0, 0.0, 0.0);
+				float4 traceResult = float4(0, 0, 0, 0);
+
+				const float phi = 1.618033988;
+				const float gAngle = phi * PI * 1.0;
+
+				//Get blue noise
+				float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
+				float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
+
+				float depth = GetDepthTextureTraceCache(uv);
+				blueNoise *= (1 - GetDepthTexture(uv)) * 50;
+
+				//Trace GI cones
+				int numSamples = TraceDirections;
+				float latitude;
+				float longitude;
+				[allow_uav_condition]
+				for (int i = 0; i < numSamples; i++)
 				{
-					//UNITY_SETUP_INSTANCE_ID(input);
-					//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+					float fi;
+					if (i > 1) fi = (float)i + blueNoise.x * StochasticSampling;
+					else fi = (float)i * StochasticSampling;
+					float fiN = fi / numSamples;
+					longitude = gAngle * fi;
+					latitude = asin(fiN * 2.0 - 1.0);
 
-					/*#if UNITY_UV_STARTS_AT_TOP
-						float2 coord = input.uv2.xy;
-						float2 uv = input.uv2;
-					#else*/
-						float2 coord = input.texcoord.xy;
-						float2 uv = input.texcoord;
-					//#endif
+					float3 kernel;
+					kernel.x = cos(latitude) * cos(longitude);
+					kernel.z = cos(latitude) * sin(longitude);
+					kernel.y = sin(latitude);
 
-						//Get view space position and view vector
-						float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
-						//float3 viewVector = normalize(viewSpacePosition.xyz);
-						//float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
+					kernel = normalize(kernel + worldNormal.xyz * 1.0);
 
-						//Get voxel space position
-						float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
-						voxelSpacePosition = mul(SEGIWorldToVoxel0, voxelSpacePosition);
-						voxelSpacePosition = mul(SEGIVoxelProjection0, voxelSpacePosition);
-						voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
+					traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0, depth);
+				}
 
-						//Prepare for cone trace
-						//float2 dither = rand(coord + (float)FrameSwitch * 0.011734);
+				traceResult /= numSamples;
 
-						float3 worldNormal;
-						if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
-						else worldNormal = normalize(SAMPLE_TEXTURE2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2, coord).rgb * 2.0 - 1.0);
+				gi = traceResult.rgb * 1.18;
 
-						float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
-
-						float3 gi = float3(0.0, 0.0, 0.0);
-						float4 traceResult = float4(0, 0, 0, 0);
-						float4 thisTrace = float4(0, 0, 0, 0);
-						float4 lastTrace = float4(0, 0, 0, 0);
-
-						const float phi = 1.618033988;
-						const float gAngle = phi * PI * 1.0;
-
-						//Get blue noise
-						float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-						float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
-
-						float depth = GetDepthTexture(coord);
-						blueNoise *=  (1 - depth) * 50;
-						//blueNoise = 0;
-
-						//float4 prevGi = SAMPLE_TEXTURE2D(GITexture, samplerGITexture, coord - .1);
-
-						//float depth = 1 - (GetDepthTexture(coord) * 0.5 + 0.5);
-
-						//Trace GI cones
-						int numSamples = TraceDirections;
-						//int maxSamples = TraceDirections;
-						float latitude;
-						float longitude;
-						for (int i = 0; i < numSamples; i++)
-						{
-							float fi;
-							if (i > 1) fi = (float)i + blueNoise.x * StochasticSampling;
-							else fi = (float)i * StochasticSampling;
-							float fiN = fi / numSamples;
-							longitude = gAngle * fi;
-							latitude = asin(fiN * 2.0 - 1.0);
-
-							float3 kernel;
-							kernel.x = cos(latitude) * cos(longitude);
-							kernel.z = cos(latitude) * sin(longitude);
-							kernel.y = sin(latitude);
-
-							kernel = normalize(kernel + worldNormal.xyz * 1.0);
-							
-							thisTrace = ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0, depth);
-							traceResult = max(thisTrace, traceResult + thisTrace);
-						}
-
-						traceResult /= numSamples;
-						gi = traceResult.rgb * 1.18;
-
-
-						//float fadeout = saturate((distance(voxelSpacePosition.xyz, float3(0.5, 0.5, 0.5)) - 0.5f) * 5.0);
-
-						//float3 fakeGI = saturate(dot(worldNormal, float3(0, 1, 0)) * 0.5 + 0.5) * SEGISkyColor.rgb * 5.0;
-
-						//gi.rgb = lerp(gi.rgb, fakeGI, fadeout);
-
-						//gi *= 0.75 + (float)GIResolution * 0.25;
-
-
-						return float4(gi, 1.0);
-					}
-
-				ENDHLSL
+				return float4(gi, 1.0);
 			}
+			ENDHLSL
+		}
 
 			Pass //1 Bilateral Blur
 			{

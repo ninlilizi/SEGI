@@ -279,6 +279,9 @@ namespace UnityEngine.Rendering.PostProcessing
         ///<summary>The secondary clipmaps that hold irradiance data for infinite bounces</summary>
         Clipmap[] irradianceClipmaps;
 
+        public static RenderTexture tracedTexture0;
+        public static RenderTexture tracedTexture1;
+
         public static RenderTexture sunDepthTexture;
         public static RenderTexture previousGIResult;
         public static RenderTexture previousDepth;
@@ -402,13 +405,13 @@ namespace UnityEngine.Rendering.PostProcessing
             if (previousGIResult == null)
             {
                 Debug.Log("<SEGI> PreviousGIResult == null. Resizing Render Textures.");
-                ResizeRenderTextures();
+                ResizeAllTextures();
             }
 
             if (previousGIResult.width != context.width || previousGIResult.height != context.height)
             {
                 Debug.Log("<SEGI> previousGIResult != Expected Dimensions. Resizing Render Textures");
-                ResizeRenderTextures();
+                ResizeAllTextures();
             }
 
             if ((int)sunShadowResolution != prevSunShadowResolution)
@@ -724,7 +727,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
                         Graphics.SetRenderTarget(sunDepthTexture);
-                        shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
+                        //shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
 
                         shadowCam.RenderWithShader(sunDepthShader, "");
 
@@ -931,6 +934,8 @@ namespace UnityEngine.Rendering.PostProcessing
             //context.command.SetGlobalFloat("reflectionProbeIntensity", settings.reflectionProbeIntensity);
             //material.SetFloat("reflectionProbeAttribution", settings.reflectionProbeAttribution.value);
             context.command.SetGlobalInt("StereoEnabled", context.stereoActive ? 1 : 0);
+            context.command.SetGlobalInt("SEGIRenderWidth", SEGIRenderWidth);
+            context.command.SetGlobalInt("SEGIRenderHeight", SEGIRenderHeight);
 
             //Blit once to downsample if required
             context.command.Blit(context.source, RT_gi1);
@@ -958,6 +963,8 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalTexture("PreviousDepth", previousDepth);
 
             //Render diffuse GI tracing result
+            context.command.SetRandomWriteTarget(1, tracedTexture0);
+            context.command.SetRandomWriteTarget(2, tracedTexture1);
             context.command.Blit(RT_gi1, RT_gi2, material, Pass.DiffuseTrace);
 
             //Render GI reflections result
@@ -1190,6 +1197,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 //DestroyImmediate(sunDepthTexture);
             }
             sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 32, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
+            sunDepthTexture.vrUsage = VRTextureUsage.None;
             sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture.filterMode = FilterMode.Point;
             sunDepthTexture.Create();
@@ -1251,19 +1259,12 @@ namespace UnityEngine.Rendering.PostProcessing
                 topViewPoint.hideFlags = HideFlags.HideAndDontSave;
             }
 
-            CreateVolumeTextures();
-            BuildClipmaps();
-            ResizeRenderTextures();
+            //CreateVolumeTextures();
+            //BuildClipmaps();
+            ResizeAllTextures();
 
             initChecker = true;
 
-        }
-
-        void ResizeAllTextures()
-        {
-            CreateVolumeTextures();
-            ResizeRenderTextures();
-            ResizeDummyTexture();
         }
 
         void CreateVolumeTextures()
@@ -1286,17 +1287,58 @@ namespace UnityEngine.Rendering.PostProcessing
             integerVolume.Create();
             integerVolume.hideFlags = HideFlags.HideAndDontSave;
 
+            CleanupTexture(ref tracedTexture0);
+            tracedTexture0 = new RenderTexture((int)settings.voxelResolution.value, (int)settings.voxelResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            tracedTexture0.wrapMode = TextureWrapMode.Clamp;
+            #if UNITY_5_4_OR_NEWER
+                tracedTexture0.dimension = TextureDimension.Tex3D;
+            #else
+	            tracedTexture0.isVolume = true;
+            #endif
+            tracedTexture0.volumeDepth = (int)settings.voxelResolution.value;
+            tracedTexture0.enableRandomWrite = true;
+            tracedTexture0.filterMode = FilterMode.Point;
+            #if UNITY_5_4_OR_NEWER
+                tracedTexture0.autoGenerateMips = false;
+            #else
+	            tracedTexture0.generateMips = false;
+            #endif
+            tracedTexture0.useMipMap = false;
+            tracedTexture0.Create();
+            tracedTexture0.hideFlags = HideFlags.HideAndDontSave;
+
+            CleanupTexture(ref tracedTexture1);
+            tracedTexture1 = new RenderTexture((int)settings.voxelResolution.value, (int)settings.voxelResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            tracedTexture1.wrapMode = TextureWrapMode.Clamp;
+            #if UNITY_5_4_OR_NEWER
+            tracedTexture1.dimension = TextureDimension.Tex3D;
+            #else
+	            tracedTexture1.isVolume = true;
+            #endif
+            tracedTexture1.volumeDepth = (int)settings.voxelResolution.value;
+            tracedTexture1.enableRandomWrite = true;
+            tracedTexture1.filterMode = FilterMode.Point;
+            #if UNITY_5_4_OR_NEWER
+                tracedTexture1.autoGenerateMips = false;
+            #else
+	            tracedTexture1.generateMips = false;
+            #endif
+            tracedTexture1.useMipMap = false;
+            tracedTexture1.Create();
+            tracedTexture1.hideFlags = HideFlags.HideAndDontSave;
+
+
             ResizeDummyTexture();
         }
 
         void ResizeDummyTexture()
         {
-            if (dummyVoxelTextureAAScaled) dummyVoxelTextureAAScaled.Release();
+            CleanupTexture(ref dummyVoxelTextureAAScaled);
             dummyVoxelTextureAAScaled = new RenderTexture(DummyVoxelResolution, DummyVoxelResolution, 0, RenderTextureFormat.R8);
             dummyVoxelTextureAAScaled.Create();
             dummyVoxelTextureAAScaled.hideFlags = HideFlags.HideAndDontSave;
 
-            if (dummyVoxelTextureFixed) dummyVoxelTextureFixed.Release();
+            CleanupTexture(ref dummyVoxelTextureFixed);
             dummyVoxelTextureFixed = new RenderTexture((int)settings.voxelResolution.value, (int)settings.voxelResolution.value, 0, RenderTextureFormat.R8);
             dummyVoxelTextureFixed.Create();
             dummyVoxelTextureFixed.hideFlags = HideFlags.HideAndDontSave;
@@ -1374,8 +1416,13 @@ namespace UnityEngine.Rendering.PostProcessing
             return mat;
         }
 
-        public void ResizeRenderTextures()
+        public void ResizeAllTextures()
         {
+            CleanupTextures();
+
+            BuildClipmaps();
+            CreateVolumeTextures();
+            ResizeSunShadowBuffer();
 
             //StopCoroutine(updateVoxels());
 
@@ -1488,7 +1535,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 //DestroyImmediate(sunDepthTexture);
             }
             sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
-            if (UnityEngine.XR.XRSettings.enabled) sunDepthTexture.vrUsage = VRTextureUsage.TwoEyes;
+            sunDepthTexture.vrUsage = VRTextureUsage.None;
             sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture.filterMode = FilterMode.Point;
             sunDepthTexture.Create();
@@ -1499,18 +1546,42 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public override void Release()
         {
+            CleanupTextures();
+        }
+
+        void CleanupTextures()
+        {
             CleanupTexture(ref sunDepthTexture);
             CleanupTexture(ref previousGIResult);
-            //CleanupTexture(ref previousCameraDepth);
+            CleanupTexture(ref previousDepth);
             CleanupTexture(ref integerVolume);
-            /*for (int i = 0; i < volumeTextures.Length; i++)
-            {
-                CleanupTexture(ref volumeTextures[i]);
-            }
-            CleanupTexture(ref secondaryIrradianceVolume);
-            CleanupTexture(ref volumeTextureB);*/
             CleanupTexture(ref dummyVoxelTextureAAScaled);
             CleanupTexture(ref dummyVoxelTextureFixed);
+
+            if (clipmaps != null)
+            {
+                for (int i = 0; i < numClipmaps; i++)
+                {
+                    if (clipmaps[i] != null)
+                    {
+                        clipmaps[i].CleanupTextures();
+                    }
+                }
+            }
+
+            if (irradianceClipmaps != null)
+            {
+                for (int i = 0; i < numClipmaps; i++)
+                {
+                    if (irradianceClipmaps[i] != null)
+                    {
+                        irradianceClipmaps[i].CleanupTextures();
+                    }
+                }
+            }
+
+            CleanupTexture(ref tracedTexture0);
+            CleanupTexture(ref tracedTexture1);
 
             if (RT_FXAART) RT_FXAART.Release();
             if (RT_gi1) RT_gi1.Release();
@@ -1570,7 +1641,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 volumeTexture0.Release();
                 //DestroyImmediate(volumeTexture0);
             }
-            volumeTexture0 = new RenderTexture(resolution, resolution, 0, renderTextureFormat, RenderTextureReadWrite.Linear);
+            volumeTexture0 = new RenderTexture(resolution, resolution, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             volumeTexture0.wrapMode = TextureWrapMode.Clamp;
 #if UNITY_5_4_OR_NEWER
             volumeTexture0.dimension = TextureDimension.Tex3D;

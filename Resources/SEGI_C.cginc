@@ -32,6 +32,9 @@ sampler3D SEGIVolumeTexture1;
 //TEXTURE3D_SAMPLER3D(VolumeTexture2, samplerVolumeTexture2);
 //TEXTURE3D_SAMPLER3D(VolumeTexture3, samplerVolumeTexture3);
 
+RWTexture3D<float4> tracedTexture0;
+RWTexture3D<float4> tracedTexture1;
+
 float4x4 SEGIVoxelProjection;
 float4x4 SEGIVoxelProjection0;
 float4x4 SEGIVoxelProjection1;
@@ -73,6 +76,11 @@ int StereoEnabled;
 int GIResolution;
 int ForwardPath;
 
+
+int SEGIRenderWidth;
+int SEGIRenderHeight;
+
+
 uniform half4 _MainTex_TexelSize;
 
 float4x4 ProjectionMatrixInverse;
@@ -107,17 +115,34 @@ float4x4 _RightEyeToWorld;
 float GetDepthTexture(float2 coord)
 {
 #if defined(UNITY_REVERSED_Z)
-	#if defined(VRWORKS)
-		return 1.0 - tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float2(coord.x, coord.y))).x;
-	#else
-		return 1.0 - tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
-	#endif
+#if defined(VRWORKS)
+	return 1.0 - tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float2(coord.x, coord.y))).x;
 #else
-	#if defined(VRWORKS)
-		return tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float4(coord.x, coord.y, 0.0, 0.0))).x;
-	#else
-		return tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
-	#endif
+	return 1.0 - tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+#endif
+#else
+#if defined(VRWORKS)
+	return tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float4(coord.x, coord.y, 0.0, 0.0))).x;
+#else
+	return tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+#endif
+#endif
+}
+
+float GetDepthTextureTraceCache(float2 coord)
+{
+#if defined(UNITY_REVERSED_Z)
+#if defined(VRWORKS)
+	return 1.0 - Linear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
+#else
+	return 1.0 - Linear01Depth(tex2D(_CameraDepthTexture, coord).x);
+#endif
+#else
+#if defined(VRWORKS)
+	return Linear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
+#else
+	return Linear01Depth(tex2D(_CameraDepthTexture, coord).x);
+#endif
 #endif
 }
 
@@ -234,7 +259,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 gi = float3(0, 0, 0);
 
-	depth = 1 - (depth * 0.5 + 0.5);
 	int numSteps = (int)(steps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
@@ -245,6 +269,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	voxelOrigin.xyz += worldNormal.xyz * 0.016 * (exp2(startMipLevel) - 1);
 
+	float3 voxelCheckCoord1 = float3 (0, 0, 0);
+
+	//[allow_uav_condition]
 	for (int i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i + dither) / numSteps;
@@ -254,54 +281,48 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 		float coneSize = fi * width * lerp(SEGIVoxelScaleFactor, 1.0, 0.5);
 
-		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.001);
-
+		voxelCheckCoord1 = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.001);
 
 		float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
-		//if (mipLevel == 0)
-		//{
-		//	giSample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		if (mipLevel == 1 || mipLevel == 0)
+		if (coneDistance < depth)
 		{
-			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		}
-		else if (mipLevel == 2)
-		{
-			voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		}
-		else if (mipLevel == 3)
-		{
-			voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		}
-		else if (mipLevel == 4)
-		{
-			voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
-		}
-		else
-		{
-			voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			if (mipLevel == 1 || mipLevel == 0)
+			{
+				voxelCheckCoord1 = TransformClipSpace1(voxelCheckCoord1);
+				giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord1.xyz, coneSize)) * GISampleWeight(voxelCheckCoord1);
+			}
+			else if (mipLevel == 2)
+			{
+				voxelCheckCoord1 = TransformClipSpace2(voxelCheckCoord1);
+				giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord1.xyz, coneSize)) * GISampleWeight(voxelCheckCoord1);
+			}
+			else if (mipLevel == 3)
+			{
+				voxelCheckCoord1 = TransformClipSpace3(voxelCheckCoord1);
+				giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord1.xyz, coneSize)) * GISampleWeight(voxelCheckCoord1);
+			}
+			else if (mipLevel == 4)
+			{
+				voxelCheckCoord1 = TransformClipSpace4(voxelCheckCoord1);
+				giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord1.xyz, coneSize)) * GISampleWeight(voxelCheckCoord1);
+			}
+			else
+			{
+				voxelCheckCoord1 = TransformClipSpace5(voxelCheckCoord1);
+				giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord1.xyz, coneSize)) * GISampleWeight(voxelCheckCoord1);
+			}
 		}
 
-		float occlusion = skyVisibility;
-
-		float falloffFix = pow(fi, 1.0) * 4.0 + NearLightGain;
+		float occlusion = skyVisibility * skyVisibility;
 
 		giSample.a *= lerp(saturate(coneSize / 1.0), 1.0, NearOcclusionStrength);
 		giSample.a *= (0.8 / (fi * fi * 2.0 + 0.15));
 		gi.rgb += giSample.rgb * occlusion * (coneDistance + NearLightGain) * 80.0 * (1.0 - fi * fi);
 
 		skyVisibility *= pow(saturate(1.0 - giSample.a * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
-
-		//Nin -	Bomb out early if pathtrace depth is deeper than pixel depth
-		//		This gives ~10% performance boost
-		if (coneDistance / 256 > depth) break;
 	}
+
 	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
 
 	gi *= NdotL;
@@ -323,7 +344,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
 	gi.rgb *= GIGain * 0.15;
-
 	gi += skyColor * skyVisibility * skyMult * 10.0;
 
 	return float4(gi.rgb * 0.8, 0.0f);
