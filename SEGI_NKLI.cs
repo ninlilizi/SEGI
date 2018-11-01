@@ -548,12 +548,12 @@ namespace UnityEngine.Rendering.PostProcessing
             Shader.SetGlobalInt("SEGIVoxelAA", settings.voxelAA.value ? 1 : 0);
 
             //Temporarily disable rendering of shadows on the directional light during voxelization pass. Cache the result to set it back to what it was after voxelization is done
-            LightShadows prevSunShadowSetting = LightShadows.None;
+            /*LightShadows prevSunShadowSetting = LightShadows.None;
             if (SEGI_NKLI.Sun != null)
             {
                 prevSunShadowSetting = SEGI_NKLI.Sun.shadows;
                 SEGI_NKLI.Sun.shadows = LightShadows.None;
-            }
+            }*/
 
             if (!settings.updateVoxelsAfterX.value) updateVoxelsAfterXDoUpdate = true;
             if (attachedCamera.transform.position.x - updateVoxelsAfterXPrevX >= settings.updateVoxelsAfterXInterval.value) updateVoxelsAfterXDoUpdate = true;
@@ -853,7 +853,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 //Set the sun's shadow setting back to what it was before voxelization
                 if (SEGI_NKLI.Sun != null)
             {
-                SEGI_NKLI.Sun.shadows = prevSunShadowSetting;
+                //SEGI_NKLI.Sun.shadows = prevSunShadowSetting;
             }
 
             //Fix stereo rendering matrix
@@ -900,6 +900,12 @@ namespace UnityEngine.Rendering.PostProcessing
                 context.command.SetComputeIntParam(clearCompute, "Resolution", 1);
                 context.command.SetComputeTextureParam(clearCompute, 0, "RG0", tracedTextureA0);
                 context.command.DispatchCompute(clearCompute, 0, SEGIRenderWidth / 16, SEGIRenderHeight / 16, 1);
+
+                context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
+                context.command.Blit(tracedTexture0, RT_blur0, material, Pass.BilateralBlur);
+                context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
+                context.command.Blit(RT_blur0, tracedTexture0, material, Pass.BilateralBlur);
+
             }
             else if (tracedTexture1UpdateCount > 128)
             {
@@ -1007,14 +1013,6 @@ namespace UnityEngine.Rendering.PostProcessing
                 context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
                 context.command.Blit(RT_gi2, RT_gi3, material, Pass.BilateralUpsample);
                 context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
-
-                //Perform a bilateral blur to be applied in newly revealed areas that are still noisy due to not having previous data blended with it
-
-                context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
-                context.command.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
-                context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
-                context.command.Blit(RT_blur0, RT_gi3, material, Pass.BilateralBlur);
-                context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
                 //Perform temporal reprojection and blending
                 if (settings.temporalBlendWeight.value < 1.0f)

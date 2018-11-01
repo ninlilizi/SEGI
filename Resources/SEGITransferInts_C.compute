@@ -63,6 +63,23 @@ inline float4 EncodeFloatRGBA(float v)
 	return enc;
 }
 
+// 9-tap Gaussian filter with linear sampling
+// http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+inline half4 gaussian_filter(float2 stride, uint3 coord)
+{
+	float4 s = RG1[uint3(coord)] * 0.227027027;
+
+	float2 d1 = stride * 1.3846153846;
+	s += RG1[uint3(coord)] * 0.3162162162;
+	s += RG1[uint3(coord)] * 0.3162162162;
+
+	float2 d2 = stride * 3.2307692308;
+	s += RG1[uint3(coord)] * 0.0702702703;
+	s += RG1[uint3(coord)] * 0.0702702703;
+
+	return s;
+}
+
 // 0
 [numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
@@ -149,6 +166,6 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 	for (uint i = 0; i < slice; i++)
 	{
 		currentZ = zStagger * slice - Resolution + i;
-		Result[uint3(id.xy, currentZ)] = RG1[uint3(id.xy, currentZ)];
+		Result[uint3(id.xy, currentZ)] = gaussian_filter(16, float3(id.xy, currentZ));
 	}
 }

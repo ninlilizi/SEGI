@@ -516,3 +516,20 @@ float3 GetWorldNormal(float2 screenspaceUV)
 
 	return worldN;
 }
+
+// 9-tap Gaussian filter with linear sampling
+// http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+/*half4 gaussian_filter(float2 stride, uint3 coord)
+{
+	float4 s = RG1[uint3(coord)] * 0.227027027;
+
+	float2 d1 = stride * 1.3846153846;
+	s += RG1[uint3(coord)] * 0.3162162162;
+	s += RG1[uint3(coord)] * 0.3162162162;
+
+	float2 d2 = stride * 3.2307692308;
+	s += RG1[uint3(coord)] * 0.0702702703;
+	s += RG1[uint3(coord)] * 0.0702702703;
+
+	return s;
+}*/
