@@ -220,7 +220,7 @@ MonoBehaviour:
     value: 0.5
   doReflections:
     overrideState: 1
-    value: 0
+    value: 1
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -232,7 +232,7 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 1
+    value: 0
   updateGI:
     overrideState: 1
     value: 1
@@ -317,7 +317,7 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 16
+    value: 1
   skyColor:
     overrideState: 1
     value: {r: 0.40784314, g: 0.5254902, b: 0.7490196, a: 1}

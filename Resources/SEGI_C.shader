@@ -307,7 +307,7 @@
 							albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
 							albedo = albedoTex.rgb;
 
-							result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
+							result = scene + (gi.rgb * 4) * albedoTex.a * albedoTex.rgb;
 						}
 
 

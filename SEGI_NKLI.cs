@@ -1556,18 +1556,21 @@ namespace UnityEngine.Rendering.PostProcessing
             int RT_AlbedoResolution;
             if (RT_Albedo) RT_Albedo.Release();
             if (RT_AlbedoX2) RT_Albedo.Release();
-            if (XR.XRSettings.enabled) RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
-            else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 2);
-            RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
-            RT_Albedo.dimension = TextureDimension.Cube;
-            RT_Albedo.filterMode = FilterMode.Trilinear;
-            RT_Albedo.isPowerOfTwo = true;
-            RT_Albedo.Create();
-            RT_AlbedoX2 = new RenderTexture(RT_AlbedoResolution * 2, RT_AlbedoResolution * 2, 16, renderTextureFormat);
-            RT_AlbedoX2.dimension = TextureDimension.Cube;
-            RT_AlbedoX2.filterMode = FilterMode.Point;
-            RT_AlbedoX2.isPowerOfTwo = true;
-            RT_AlbedoX2.Create();
+            if (attachedCamera != null) if (attachedCamera.renderingPath == RenderingPath.Forward)
+            {
+                if (XR.XRSettings.enabled) RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 4);
+                else RT_AlbedoResolution = Mathf.NextPowerOfTwo((SEGIRenderWidth + SEGIRenderHeight) / 2);
+                RT_Albedo = new RenderTexture(RT_AlbedoResolution, RT_AlbedoResolution, 16, renderTextureFormat);
+                RT_Albedo.dimension = TextureDimension.Cube;
+                RT_Albedo.filterMode = FilterMode.Trilinear;
+                RT_Albedo.isPowerOfTwo = true;
+                RT_Albedo.Create();
+                RT_AlbedoX2 = new RenderTexture(RT_AlbedoResolution * 2, RT_AlbedoResolution * 2, 16, renderTextureFormat);
+                RT_AlbedoX2.dimension = TextureDimension.Cube;
+                RT_AlbedoX2.filterMode = FilterMode.Point;
+                RT_AlbedoX2.isPowerOfTwo = true;
+                RT_AlbedoX2.Create();
+            }
 
             Debug.Log("<SEGI> Render Textures resized");
 
