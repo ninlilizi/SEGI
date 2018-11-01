@@ -22,13 +22,23 @@ namespace UnityEngine.Rendering.PostProcessing
     public sealed class VoxelResolution : ParameterOverride<VoxelResolutionEnum> { }
 
     [Serializable]
+    public sealed class TraceCacheResolution : ParameterOverride<TraceCacheResolutionEnum> { }
+
+    [Serializable]
     public enum VoxelResolutionEnum
     {
+        Medium = 128,
+        High = 256
+    }
+
+    [Serializable]
+    public enum TraceCacheResolutionEnum
+    {
+        VeryLow = 32,
         Low = 64,
         Medium = 128,
-        High = 256//,
-        //VeryHigh = 512,
-        //Extreme = 756
+        High = 256,
+        VeryHigh = 512
     }
 
     [Serializable]
@@ -45,6 +55,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
         public VoxelResolution voxelResolution = new VoxelResolution { value = VoxelResolutionEnum.High };
+        public TraceCacheResolution traceCacheResolution = new TraceCacheResolution { value = TraceCacheResolutionEnum.High };
         public FloatParameter voxelSpaceSize = new FloatParameter { value = 25.0f };
         public BoolParameter updateVoxelsAfterX = new BoolParameter { value = false };
         public IntParameter updateVoxelsAfterXInterval = new IntParameter { value = 1 };
@@ -252,21 +263,6 @@ namespace UnityEngine.Rendering.PostProcessing
         ///<summary>This is a volume texture that is immediately written to in the voxelization shader. The RInt format enables atomic writes to avoid issues where multiple fragments are trying to write to the same voxel in the volume.</summary>
         RenderTexture integerVolume;
 
-        ///<summary>An array of volume textures where each element is a mip/LOD level. Each volume is half the resolution of the previous volume. Separate textures for each mip level are required for manual mip-mapping of the main GI volume texture.</summary>
-        //RenderTexture[] volumeTextures;
-
-        ///<summary>The secondary volume texture that holds irradiance calculated during the in-volume GI tracing that occurs when Infinite Bounces is enabled. </summary>
-        //RenderTexture secondaryIrradianceVolume;
-
-        ///<summary>The alternate mip level 0 main volume texture needed to avoid simultaneous read/write errors while performing temporal stabilization on the main voxel volume.</summary>
-        //RenderTexture volumeTextureB;
-
-        ///<summary>The current active volume texture that holds GI information to be read during GI tracing.</summary>
-        //RenderTexture activeVolume;
-
-        ///<summary>The volume texture that holds GI information to be read during GI tracing that was used in the previous frame.</summary>
-        //RenderTexture previousActiveVolume;
-
         ///<summary>A 2D texture with the size of [voxel resolution, voxel resolution] that must be used as the active render texture when rendering the scene for voxelization. This texture scales depending on whether Voxel AA is enabled to ensure correct voxelization.</summary>
         RenderTexture dummyVoxelTextureAAScaled;
 
@@ -318,6 +314,16 @@ namespace UnityEngine.Rendering.PostProcessing
                 return (float)settings.voxelResolution.value / 256.0f;
             }
         }
+
+        float traceCacheScaleFactor
+        {
+            get
+            {
+                return (float)settings.traceCacheResolution.value / 256.0f;
+            }
+        }
+
+        public int prevTraceCacheResolution = 0;
 
         public Vector3 voxelSpaceOrigin;
         public Vector3 previousVoxelSpaceOrigin;
@@ -391,6 +397,13 @@ namespace UnityEngine.Rendering.PostProcessing
                 SEGIRenderHeight = context.height;
 
                 ResizeAllTextures();
+            }
+
+            if (prevTraceCacheResolution != (int)settings.traceCacheResolution.value)
+            {
+                Debug.Log("<SEGI> Path trace cache resolution changed. Resizing volumes");
+                prevTraceCacheResolution = (int)settings.traceCacheResolution.value;
+                CreateVolumeTextures();
             }
 
             if (SEGI_NKLI.Sun == null)
@@ -732,7 +745,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
                         Graphics.SetRenderTarget(sunDepthTexture);
-                        //shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
+                        shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
 
                         shadowCam.RenderWithShader(sunDepthShader, "");
 
@@ -900,25 +913,19 @@ namespace UnityEngine.Rendering.PostProcessing
                 context.command.SetComputeIntParam(clearCompute, "Resolution", 1);
                 context.command.SetComputeTextureParam(clearCompute, 0, "RG0", tracedTextureA0);
                 context.command.DispatchCompute(clearCompute, 0, SEGIRenderWidth / 16, SEGIRenderHeight / 16, 1);
-
-                context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
-                context.command.Blit(tracedTexture0, RT_blur0, material, Pass.BilateralBlur);
-                context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
-                context.command.Blit(RT_blur0, tracedTexture0, material, Pass.BilateralBlur);
-
             }
             else if (tracedTexture1UpdateCount > 128)
             {
                 context.command.SetComputeTextureParam(transferIntsCompute, 3, "Result", tracedTexture0);
                 context.command.SetComputeTextureParam(transferIntsCompute, 3, "RG1", tracedTexture1);
                 context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 128);
-                context.command.SetComputeIntParam(transferIntsCompute, "Resolution", 256);
-                context.command.DispatchCompute(transferIntsCompute, 3, 512 / 16, 512 / 16, 1);
+                context.command.SetComputeIntParam(transferIntsCompute, "Resolution", (int)settings.traceCacheResolution.value);
+                context.command.DispatchCompute(transferIntsCompute, 3, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
 
-                context.command.SetComputeIntParam(clearComputeCache, "Resolution", 256);
+                context.command.SetComputeIntParam(clearComputeCache, "Resolution", (int)settings.traceCacheResolution.value);
                 context.command.SetComputeTextureParam(clearComputeCache, 1, "RG1", tracedTexture1);
                 context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 128);
-                context.command.DispatchCompute(clearComputeCache, 1, 512 / 16, 512 / 16, 1);
+                context.command.DispatchCompute(clearComputeCache, 1, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
             }
             tracedTexture1UpdateCount = (tracedTexture1UpdateCount + 1) % (161);
 
@@ -926,6 +933,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
             context.command.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);
+            context.command.SetGlobalFloat("SEGITraceCacheScaleFactor", traceCacheScaleFactor);
 
             context.command.SetGlobalMatrix("CameraToWorld", context.camera.cameraToWorldMatrix);
             context.command.SetGlobalMatrix("WorldToCamera", context.camera.worldToCameraMatrix);
@@ -1203,6 +1211,7 @@ namespace UnityEngine.Rendering.PostProcessing
             shadowCam.enabled = false;
             shadowCam.depth = attachedCamera.depth - 1;
             shadowCam.orthographic = true;
+            shadowCam.stereoTargetEye = StereoTargetEyeMask.None;
             shadowCam.orthographicSize = shadowSpaceSize;
             shadowCam.clearFlags = CameraClearFlags.SolidColor;
             shadowCam.backgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
@@ -1310,14 +1319,14 @@ namespace UnityEngine.Rendering.PostProcessing
             integerVolume.hideFlags = HideFlags.HideAndDontSave;
 
             CleanupTexture(ref tracedTexture0);
-            tracedTexture0 = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            tracedTexture0 = new RenderTexture((int)settings.traceCacheResolution.value, (int)settings.traceCacheResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             tracedTexture0.wrapMode = TextureWrapMode.Clamp;
             #if UNITY_5_4_OR_NEWER
                 tracedTexture0.dimension = TextureDimension.Tex3D;
             #else
 	            tracedTexture0.isVolume = true;
             #endif
-            tracedTexture0.volumeDepth = 256;
+            tracedTexture0.volumeDepth = (int)settings.traceCacheResolution.value;
             tracedTexture0.enableRandomWrite = true;
             tracedTexture0.filterMode = FilterMode.Bilinear;
             #if UNITY_5_4_OR_NEWER
@@ -1330,14 +1339,14 @@ namespace UnityEngine.Rendering.PostProcessing
             tracedTexture0.hideFlags = HideFlags.HideAndDontSave;
 
             CleanupTexture(ref tracedTexture1);
-            tracedTexture1 = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            tracedTexture1 = new RenderTexture((int)settings.traceCacheResolution.value, (int)settings.traceCacheResolution.value, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             tracedTexture1.wrapMode = TextureWrapMode.Clamp;
             #if UNITY_5_4_OR_NEWER
             tracedTexture1.dimension = TextureDimension.Tex3D;
             #else
 	            tracedTexture1.isVolume = true;
             #endif
-            tracedTexture1.volumeDepth = 256;
+            tracedTexture1.volumeDepth = (int)settings.traceCacheResolution.value;
             tracedTexture1.enableRandomWrite = true;
             tracedTexture1.filterMode = FilterMode.Bilinear;
             #if UNITY_5_4_OR_NEWER

@@ -1,6 +1,7 @@
 #pragma warning (disable : 3206)
 
 float SEGIVoxelScaleFactor;
+float SEGITraceCacheScaleFactor;
 
 int StochasticSampling;
 int TraceDirections;
@@ -33,7 +34,7 @@ sampler3D SEGIVolumeTexture1;
 //TEXTURE3D_SAMPLER3D(VolumeTexture2, samplerVolumeTexture2);
 //TEXTURE3D_SAMPLER3D(VolumeTexture3, samplerVolumeTexture3);
 
-RWTexture3D<float4> tracedTexture0;
+RWTexture3D<half4> tracedTexture0;
 RWTexture3D<float4> tracedTexture1;
 RWTexture3D<float> tracedTextureA0;
 
@@ -306,7 +307,7 @@ float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
 		if (coneDistance < depth)
 		{
-			voxelDepth = 256 / numSteps * i;
+			voxelDepth = 256 / numSteps * i * SEGITraceCacheScaleFactor;
 			if (mipLevel == 1 || mipLevel == 0)
 			{
 				voxelCheckCoord1 = TransformClipSpace1(voxelCheckCoord1);

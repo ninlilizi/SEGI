@@ -154,19 +154,19 @@
 
 					traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
 
-					voxelCoord = float3(voxelOrigin.x + kernel.x * 2 + (blueNoise.x * 32), voxelOrigin.y + kernel.y * 2 + (blueNoise.y * 32), depth * voxelDepth + (blueNoise.z * 32) - 16);
+					voxelCoord = float3(voxelOrigin.x + kernel.x  * SEGITraceCacheScaleFactor + (blueNoise.x * 32), voxelOrigin.y + kernel.y * SEGITraceCacheScaleFactor + (blueNoise.y * 32), depth * voxelDepth + (blueNoise.z * 32));
 				}
 
 				traceResult /= numSamples;
 
-				if (tracedCount <= 128)
+				if (tracedCount < 128)
 				{
 					tracedTexture1[uint3(voxelCoord)] += float4(traceResult.rgb, 0);// *0.004;
 					tracedTextureA0[uint3(input.screenPos.x, input.screenPos.y, 1)]++;
 				}
 				
-				traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb / 256 / 64 + traceResult.rgb) * 0.5;
-				//traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb) / 128 / 64;
+				traceResult.rgb = lerp(DecodeRGBAuint(tracedTexture0[uint3(voxelCoord)]).rgb, traceResult.rgb, 0.125);
+				//traceResult.rgb = tracedTexture0[uint3(voxelCoord)].rgb;
 				//traceResult.rgb = tracedTexture1[uint3(voxelCoord)].rgb / 64;
 
 				gi = traceResult.rgb * 1.18;
@@ -307,7 +307,7 @@
 							albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
 							albedo = albedoTex.rgb;
 
-							result = scene + (gi.rgb * 2) * albedoTex.a * albedoTex.rgb;
+							result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
 						}
 
 

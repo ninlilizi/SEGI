@@ -3,7 +3,7 @@
 #pragma kernel CSMain3 // 2 - PathTracer cache decoder
 #pragma kernel CSMain4 // 3 - PathTracer cache decoder
 
-RWTexture3D<float4> Result;
+RWTexture3D<half4> Result;
 Texture3D<float4> PrevResult;
 
 Texture3D<uint> RG0;
@@ -20,11 +20,16 @@ float4 VoxelOriginDelta;
 
 float4 ClipmapOverlap;
 
-float2 IntToFloats(uint intval)
+float3 rgb2hsv(float3 c)
 {
-	float value1 = f16tof32(intval);
-	float value2 = f16tof32(intval / 0x0000FFFF);
-	return float2(value1, value2);
+	float4 k = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+	float4 p = lerp(float4(c.bg, k.wz), float4(c.gb, k.xy), step(c.b, c.g));
+	float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+
+	float d = q.x - min(q.w, q.y);
+	float e = 1.0e-10;
+
+	return float3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
 
 float3 hsv2rgb(float3 c)
@@ -53,14 +58,25 @@ float4 DecodeRGBAuint(uint value)
 	return float4(color.rgb, a);
 }
 
-inline float4 EncodeFloatRGBA(float v)
+uint EncodeRGBAuint(float4 color)
 {
-	float4 kEncodeMul = float4(1.0, 255.0, 65025.0, 160581375.0);
-	float kEncodeBit = 1.0 / 255.0;
-	float4 enc = kEncodeMul * v;
-	enc = frac(enc);
-	enc -= enc.yzww * kEncodeBit;
-	return enc;
+	//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
+	float3 hsv = rgb2hsv(color.rgb);
+	hsv.z = pow(hsv.z, 1.0 / 3.0);
+
+	uint result = 0;
+
+	uint a = min(127, uint(color.a / 2.0));
+	uint v = min(2047, uint((hsv.z / 10.0) * 2047));
+	uint s = uint(hsv.y * 127);
+	uint h = uint(hsv.x * 127);
+
+	result += a;
+	result += v * 0x00000080; // << 7
+	result += s * 0x00040000; // << 18
+	result += h * 0x02000000; // << 25
+
+	return result;
 }
 
 // 9-tap Gaussian filter with linear sampling
@@ -166,6 +182,6 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 	for (uint i = 0; i < slice; i++)
 	{
 		currentZ = zStagger * slice - Resolution + i;
-		Result[uint3(id.xy, currentZ)] = gaussian_filter(16, float3(id.xy, currentZ));
+		Result[uint3(id.xy, currentZ)] = gaussian_filter(16, float3(id.xy, currentZ)) / 16384;
 	}
 }
