@@ -165,7 +165,7 @@
 					tracedTextureA0[uint3(input.screenPos.x, input.screenPos.y, 1)]++;
 				}
 				
-				traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb / 128 / 64 + traceResult.rgb) * 0.5;
+				traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb / 256 / 64 + traceResult.rgb) * 0.5;
 				//traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb) / 128 / 64;
 				//traceResult.rgb = tracedTexture1[uint3(voxelCoord)].rgb / 64;
 
