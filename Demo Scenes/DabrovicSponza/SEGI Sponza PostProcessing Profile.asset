@@ -205,7 +205,7 @@ MonoBehaviour:
     value: 0
   infiniteBounces:
     overrideState: 1
-    value: 1
+    value: 0
   useReflectionProbes:
     overrideState: 1
     value: 1
@@ -214,7 +214,7 @@ MonoBehaviour:
     value: 0.5
   doReflections:
     overrideState: 1
-    value: 1
+    value: 0
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -232,16 +232,16 @@ MonoBehaviour:
     value: 1
   cones:
     overrideState: 1
-    value: 12
+    value: 4
   coneTraceSteps:
     overrideState: 1
     value: 8
   coneLength:
     overrideState: 1
-    value: 1
+    value: 0.5
   coneWidth:
     overrideState: 1
-    value: 6
+    value: 7.5
   coneTraceBias:
     overrideState: 1
     value: 0.63
@@ -289,10 +289,10 @@ MonoBehaviour:
     value: 1
   useFXAA:
     overrideState: 1
-    value: 1
+    value: 0
   visualizeGI:
     overrideState: 1
-    value: 0
+    value: 1
   visualizeVoxels:
     overrideState: 1
     value: 0
@@ -311,7 +311,7 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 2.5
+    value: 16
   skyColor:
     overrideState: 1
     value: {r: 0.40784314, g: 0.5254902, b: 0.7490196, a: 1}

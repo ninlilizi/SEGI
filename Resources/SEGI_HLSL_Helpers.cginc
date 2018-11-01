@@ -1,10 +1,10 @@
 //UNITY_SHADER_NO_UPGRADE
 
+static float4x4 unity_MatrixMVP = mul(unity_MatrixVP, unity_ObjectToWorld);
+#define UNITY_MATRIX_MVP    unity_MatrixMVP
 #define UNITY_MATRIX_P glstate_matrix_projection
 #define UNITY_MATRIX_M unity_ObjectToWorld
 #define UNITY_MATRIX_VP unity_MatrixVP
-
-
 
 CBUFFER_START(UnityPerDraw)
     float4x4 unity_WorldToObject;
@@ -96,6 +96,20 @@ inline half3 DecodeHDR(half4 data, half4 decodeInstructions)
 }
 //ENDUnityCG.cginc - Decode Cubemaps
 
+inline float4 ComputeNonStereoScreenPos(float4 pos) {
+	float4 o = pos * 0.5f;
+	o.xy = float2(o.x, o.y*_ProjectionParams.x) + o.w;
+	o.zw = pos.zw;
+	return o;
+}
+
+inline float4 ComputeScreenPos(float4 pos) {
+	float4 o = ComputeNonStereoScreenPos(pos);
+#if defined(UNITY_SINGLE_PASS_STEREO)
+	o.xy = TransformStereoScreenSpaceTex(o.xy, pos.w);
+#endif
+	return o;
+}
 
 // Tranforms position from object to homogenous space -- CG Includes added for SRP conversion
 inline float4 UnityObjectToClipPos(in float3 pos)
@@ -129,6 +143,22 @@ half LinearRgbToLuminance(half3 linearRgb)
 //Colospace conversion
 float Epsilon = 1e-10;
 
+// Encoding/decoding [0..1) floats into 8 bit/channel RGBA. Note that 1.0 will not be encoded properly.
+inline float4 EncodeFloatRGBA(float v)
+{
+	float4 kEncodeMul = float4(1.0, 255.0, 65025.0, 160581375.0);
+	float kEncodeBit = 1.0 / 255.0;
+	float4 enc = kEncodeMul * v;
+	enc = frac(enc);
+	enc -= enc.yzww * kEncodeBit;
+	return enc;
+}
+inline float DecodeFloatRGBA(float4 enc)
+{
+	float4 kDecodeDot = float4(1.0, 1 / 255.0, 1 / 65025.0, 1 / 160581375.0);
+	return dot(enc, kDecodeDot);
+}
+
 float3 rgb2hsv(float3 c)
 {
 	float4 k = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -147,29 +177,98 @@ float3 hsv2rgb(float3 c)
 	float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
 	return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
 }
-
-float3 rgb2hcv(in float3 RGB)
-{
-	// Based on work by Sam Hocevar and Emil Persson
-	float4 P = lerp(float4(RGB.bg, -1.0, 2.0 / 3.0), float4(RGB.gb, 0.0, -1.0 / 3.0), step(RGB.b, RGB.g));
-	float4 Q = lerp(float4(P.xyw, RGB.r), float4(RGB.r, P.yzx), step(P.x, RGB.r));
-	float C = Q.x - min(Q.w, Q.y);
-	float H = abs((Q.w - Q.y) / (6 * C + Epsilon) + Q.z);
-	return float3(H, C, Q.x);
-}
-
-float3 rgb2hsl(in float3 RGB)
-{
-	float3 HCV = rgb2hcv(RGB);
-	float L = HCV.z - HCV.y * 0.5;
-	float S = HCV.y / (1 - abs(L * 2 - 1) + Epsilon);
-	return float3(HCV.x, S, L);
-}
-
-float3 hsl2rgb(float3 c)
-{
-	c = float3(frac(c.x), clamp(c.yz, 0.0, 1.0));
-	float3 rgb = clamp(abs(fmod(c.x * 6.0 + float3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
-	return c.z + c.y * (rgb - 0.5) * (1.0 - abs(2.0 * c.z - 1.0));
-}
 //END Colospace conversion
+
+
+float4 DecodeRGBAuint(uint value)
+{
+	uint ai = value & 0x0000007F;
+	uint vi = (value / 0x00000080) & 0x000007FF;
+	uint si = (value / 0x00040000) & 0x0000007F;
+	uint hi = value / 0x02000000;
+
+	float h = float(hi) / 127.0;
+	float s = float(si) / 127.0;
+	float v = (float(vi) / 2047.0) * 10.0;
+	float a = ai * 2.0;
+
+	v = pow(v, 3.0);
+
+	float3 color = hsv2rgb(float3(h, s, v));
+
+	return float4(color.rgb, a);
+}
+
+uint EncodeRGBAuint(float4 color)
+{
+	//7[HHHHHHH] 7[SSSSSSS] 11[VVVVVVVVVVV] 7[AAAAAAAA]
+	float3 hsv = rgb2hsv(color.rgb);
+	hsv.z = pow(hsv.z, 1.0 / 3.0);
+
+	uint result = 0;
+
+	uint a = min(127, uint(color.a / 2.0));
+	uint v = min(2047, uint((hsv.z / 10.0) * 2047));
+	uint s = uint(hsv.y * 127);
+	uint h = uint(hsv.x * 127);
+
+	result += a;
+	result += v * 0x00000080; // << 7
+	result += s * 0x00040000; // << 18
+	result += h * 0x02000000; // << 25
+
+	return result;
+}
+
+void interlockedAddFloat4(RWTexture3D<uint> destination, int3 coord, float4 value)
+{
+	uint writeValue = EncodeRGBAuint(value);
+	uint compareValue = 0;
+	uint originalValue;
+
+	[allow_uav_condition]
+	while (true)
+	{
+		InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
+		if (compareValue == originalValue)
+			break;
+		compareValue = originalValue;
+		float4 originalValueFloats = DecodeRGBAuint(originalValue);
+		writeValue = EncodeRGBAuint(originalValueFloats + value);
+	}
+}
+
+void interlockedAddInt(RWTexture3D<uint> destination, int3 coord, int value)
+{
+	uint writeValue = value;
+	uint compareValue = 0;
+	uint originalValue;
+
+	[allow_uav_condition]
+	while (true)
+	{
+		InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
+		if (compareValue == originalValue)
+			break;
+		compareValue = originalValue;
+		float4 originalValueFloats = originalValue;
+		writeValue = originalValueFloats + value;
+	}
+}
+
+void interlockedSetFloat4(RWTexture3D<uint> destination, int3 coord, float4 value)
+{
+	uint writeValue = EncodeRGBAuint(value);
+	uint compareValue = 0;
+	uint originalValue;
+
+	[allow_uav_condition]
+	while (true)
+	{
+		InterlockedCompareExchange(destination[coord], compareValue, writeValue, originalValue);
+		if (compareValue == originalValue)
+			break;
+		compareValue = originalValue;
+		//writeValue = EncodeRGBAuint(value);
+	}
+}

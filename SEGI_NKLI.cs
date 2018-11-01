@@ -281,6 +281,9 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public static RenderTexture tracedTexture0;
         public static RenderTexture tracedTexture1;
+        public static RenderTexture tracedTextureA0;
+
+        public int tracedTexture1UpdateCount;
 
         public static RenderTexture sunDepthTexture;
         public static RenderTexture previousGIResult;
@@ -292,7 +295,9 @@ namespace UnityEngine.Rendering.PostProcessing
         public Shader voxelTracingShader;
 
         public ComputeShader clearCompute;
+        public ComputeShader clearComputeCache;
         public ComputeShader transferIntsCompute;
+        public ComputeShader transferIntsTraceCacheCompute;
         public ComputeShader mipFilterCompute;
 
         const int numClipmaps = 6;
@@ -734,19 +739,10 @@ namespace UnityEngine.Rendering.PostProcessing
                         Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
                     }
 
-
-
-
-
-
-
                     //Clear the volume texture that is immediately written to in the voxelization scene shader
                     clearCompute.SetTexture(0, "RG0", integerVolume);
-                    clearCompute.SetInt("Res", activeClipmap.resolution);
+                    clearCompute.SetInt("Resolution", activeClipmap.resolution);
                     clearCompute.Dispatch(0, activeClipmap.resolution / 16, activeClipmap.resolution / 16, 1);
-
-
-
 
                     //Set irradiance "secondary bounce" texture
                     Shader.SetGlobalTexture("SEGICurrentIrradianceVolume", irradianceClipmaps[currentClipmapIndex].volumeTexture0);
@@ -819,7 +815,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
                     //Clear the volume texture that is immediately written to in the voxelization scene shader
                     clearCompute.SetTexture(0, "RG0", integerVolume);
-                    clearCompute.SetInt("Res", clipmaps[currentClipmapIndex].resolution);
+                    clearCompute.SetInt("Resolution", clipmaps[currentClipmapIndex].resolution);
                     clearCompute.Dispatch(0, (int)settings.voxelResolution.value / 16, (int)settings.voxelResolution.value / 16, 1);
 
                     //Only render infinite bounces for clipmaps 0, 1, and 2
@@ -899,6 +895,30 @@ namespace UnityEngine.Rendering.PostProcessing
                 return;
             }
 
+            if (tracedTexture1UpdateCount == 160)
+            {
+                context.command.SetComputeIntParam(clearCompute, "Resolution", 1);
+                context.command.SetComputeTextureParam(clearCompute, 0, "RG0", tracedTextureA0);
+                context.command.DispatchCompute(clearCompute, 0, SEGIRenderWidth / 16, SEGIRenderHeight / 16, 1);
+            }
+            else if (tracedTexture1UpdateCount > 128)
+            {
+                context.command.SetComputeTextureParam(transferIntsCompute, 3, "Result", tracedTexture0);
+                context.command.SetComputeTextureParam(transferIntsCompute, 3, "RG1", tracedTexture1);
+                context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 128);
+                context.command.SetComputeIntParam(transferIntsCompute, "Resolution", 256);
+                context.command.DispatchCompute(transferIntsCompute, 3, 512 / 16, 512 / 16, 1);
+
+                context.command.SetComputeIntParam(clearComputeCache, "Resolution", 256);
+                context.command.SetComputeTextureParam(clearComputeCache, 1, "RG1", tracedTexture1);
+                context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 128);
+                context.command.DispatchCompute(clearComputeCache, 1, 512 / 16, 512 / 16, 1);
+            }
+            tracedTexture1UpdateCount = (tracedTexture1UpdateCount + 1) % (161);
+
+
+
+
             context.command.SetGlobalFloat("SEGIVoxelScaleFactor", voxelScaleFactor);
 
             context.command.SetGlobalMatrix("CameraToWorld", context.camera.cameraToWorldMatrix);
@@ -936,6 +956,8 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalInt("StereoEnabled", context.stereoActive ? 1 : 0);
             context.command.SetGlobalInt("SEGIRenderWidth", SEGIRenderWidth);
             context.command.SetGlobalInt("SEGIRenderHeight", SEGIRenderHeight);
+            context.command.SetGlobalFloat("voxelSpaceSize", settings.voxelSpaceSize);
+            //context.command.SetGlobalInt("tracedTexture1UpdateCount", (int)tracedTexture1.updateCount - (int)tracedTexture1UpdateCount);
 
             //Blit once to downsample if required
             context.command.Blit(context.source, RT_gi1);
@@ -965,6 +987,7 @@ namespace UnityEngine.Rendering.PostProcessing
             //Render diffuse GI tracing result
             context.command.SetRandomWriteTarget(1, tracedTexture0);
             context.command.SetRandomWriteTarget(2, tracedTexture1);
+            context.command.SetRandomWriteTarget(3, tracedTextureA0);
             context.command.Blit(RT_gi1, RT_gi2, material, Pass.DiffuseTrace);
 
             //Render GI reflections result
@@ -1090,6 +1113,7 @@ namespace UnityEngine.Rendering.PostProcessing
             //Setup shaders and materials
             sunDepthShader = Shader.Find("Hidden/SEGIRenderSunDepth_C");
             clearCompute = Resources.Load("SEGIClear_C") as ComputeShader;
+            clearComputeCache = Resources.Load("SEGIClear_Cache") as ComputeShader;
             transferIntsCompute = Resources.Load("SEGITransferInts_C") as ComputeShader;
             mipFilterCompute = Resources.Load("SEGIMipFilter_C") as ComputeShader;
             voxelizationShader = Shader.Find("Hidden/SEGIVoxelizeScene_C");
@@ -1288,16 +1312,16 @@ namespace UnityEngine.Rendering.PostProcessing
             integerVolume.hideFlags = HideFlags.HideAndDontSave;
 
             CleanupTexture(ref tracedTexture0);
-            tracedTexture0 = new RenderTexture((int)settings.voxelResolution.value, (int)settings.voxelResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            tracedTexture0 = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             tracedTexture0.wrapMode = TextureWrapMode.Clamp;
             #if UNITY_5_4_OR_NEWER
                 tracedTexture0.dimension = TextureDimension.Tex3D;
             #else
 	            tracedTexture0.isVolume = true;
             #endif
-            tracedTexture0.volumeDepth = (int)settings.voxelResolution.value;
+            tracedTexture0.volumeDepth = 256;
             tracedTexture0.enableRandomWrite = true;
-            tracedTexture0.filterMode = FilterMode.Point;
+            tracedTexture0.filterMode = FilterMode.Bilinear;
             #if UNITY_5_4_OR_NEWER
                 tracedTexture0.autoGenerateMips = false;
             #else
@@ -1308,18 +1332,18 @@ namespace UnityEngine.Rendering.PostProcessing
             tracedTexture0.hideFlags = HideFlags.HideAndDontSave;
 
             CleanupTexture(ref tracedTexture1);
-            tracedTexture1 = new RenderTexture((int)settings.voxelResolution.value, (int)settings.voxelResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            tracedTexture1 = new RenderTexture(512, 512, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             tracedTexture1.wrapMode = TextureWrapMode.Clamp;
             #if UNITY_5_4_OR_NEWER
             tracedTexture1.dimension = TextureDimension.Tex3D;
             #else
 	            tracedTexture1.isVolume = true;
             #endif
-            tracedTexture1.volumeDepth = (int)settings.voxelResolution.value;
+            tracedTexture1.volumeDepth = 256;
             tracedTexture1.enableRandomWrite = true;
-            tracedTexture1.filterMode = FilterMode.Point;
+            tracedTexture1.filterMode = FilterMode.Bilinear;
             #if UNITY_5_4_OR_NEWER
-                tracedTexture1.autoGenerateMips = false;
+            tracedTexture1.autoGenerateMips = false;
             #else
 	            tracedTexture1.generateMips = false;
             #endif
@@ -1327,6 +1351,26 @@ namespace UnityEngine.Rendering.PostProcessing
             tracedTexture1.Create();
             tracedTexture1.hideFlags = HideFlags.HideAndDontSave;
 
+
+            CleanupTexture(ref tracedTextureA0);
+            tracedTextureA0 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.R8, RenderTextureReadWrite.Linear);
+            tracedTextureA0.wrapMode = TextureWrapMode.Clamp;
+            #if UNITY_5_4_OR_NEWER
+            tracedTextureA0.dimension = TextureDimension.Tex3D;
+            #else
+	            tracedTexture1.isVolume = true;
+            #endif
+            tracedTextureA0.volumeDepth = 1;
+            tracedTextureA0.enableRandomWrite = true;
+            tracedTextureA0.filterMode = FilterMode.Point;
+            #if UNITY_5_4_OR_NEWER
+                tracedTextureA0.autoGenerateMips = false;
+            #else
+	            tracedTexture1.generateMips = false;
+            #endif
+            tracedTextureA0.useMipMap = false;
+            tracedTextureA0.Create();
+            tracedTextureA0.hideFlags = HideFlags.HideAndDontSave;
 
             ResizeDummyTexture();
         }
@@ -1582,6 +1626,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
             CleanupTexture(ref tracedTexture0);
             CleanupTexture(ref tracedTexture1);
+            CleanupTexture(ref tracedTextureA0);
 
             if (RT_FXAART) RT_FXAART.Release();
             if (RT_gi1) RT_gi1.Release();

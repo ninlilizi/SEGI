@@ -16,6 +16,7 @@ float NearOcclusionStrength;
 float SEGISoftSunlight;
 float FarOcclusionStrength;
 float FarthestOcclusionStrength;
+float voxelSpaceSize;
 
 
 half4 GISunColor;
@@ -34,6 +35,12 @@ sampler3D SEGIVolumeTexture1;
 
 RWTexture3D<float4> tracedTexture0;
 RWTexture3D<float4> tracedTexture1;
+RWTexture3D<float> tracedTextureA0;
+
+//int tracedTexture1UpdateCount;
+
+//TEXTURE3D_SAMPLER3D(tracedTexture0, samplertracedTexture0);
+//sampler3D tracedTexture0;
 
 float4x4 SEGIVoxelProjection;
 float4x4 SEGIVoxelProjection0;
@@ -77,8 +84,8 @@ int GIResolution;
 int ForwardPath;
 
 
-int SEGIRenderWidth;
-int SEGIRenderHeight;
+uint SEGIRenderWidth;
+uint SEGIRenderHeight;
 
 
 uniform half4 _MainTex_TexelSize;
@@ -129,19 +136,31 @@ float GetDepthTexture(float2 coord)
 #endif
 }
 
+inline float SEGILinear01Depth(float z)
+{
+	// Values used to linearize the Z buffer
+	// (http://www.humus.name/temp/Linearize%20depth.txt)
+	// x = 1-far/near
+	// y = far/near
+	// z = x/far
+	// w = y/far
+	int x = voxelSpaceSize / 0.01;
+	return 1.0 / (x * z + _ZBufferParams.y);
+}
+
 float GetDepthTextureTraceCache(float2 coord)
 {
 #if defined(UNITY_REVERSED_Z)
 #if defined(VRWORKS)
-	return 1.0 - Linear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
+	return 1.0 - SEGILinear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
 #else
-	return 1.0 - Linear01Depth(tex2D(_CameraDepthTexture, coord).x);
+	return 1.0 - SEGILinear01Depth(tex2D(_CameraDepthTexture, coord).x);
 #endif
 #else
 #if defined(VRWORKS)
-	return Linear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
+	return SEGILinear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
 #else
-	return Linear01Depth(tex2D(_CameraDepthTexture, coord).x);
+	return SEGILinear01Depth(tex2D(_CameraDepthTexture, coord).x);
 #endif
 #endif
 }
@@ -253,13 +272,13 @@ float GISampleWeight(float3 pos)
 	return weight;
 }
 
-float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float depth)
+float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float depth, out uint voxelDepth)
 {
 	float skyVisibility = 1.0;
 
 	float3 gi = float3(0, 0, 0);
 
-	int numSteps = (int)(steps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
+	uint numSteps = (int)(steps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
 
@@ -271,8 +290,8 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 voxelCheckCoord1 = float3 (0, 0, 0);
 
-	//[allow_uav_condition]
-	for (int i = 0; i < numSteps; i++)
+	//[unroll(32)]
+	for (uint i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i + dither) / numSteps;
 		fi = lerp(fi, 1.0, 0.01);
@@ -287,6 +306,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
 		if (coneDistance < depth)
 		{
+			voxelDepth = 256 / numSteps * i;
 			if (mipLevel == 1 || mipLevel == 0)
 			{
 				voxelCheckCoord1 = TransformClipSpace1(voxelCheckCoord1);
@@ -346,7 +366,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	gi.rgb *= GIGain * 0.15;
 	gi += skyColor * skyVisibility * skyMult * 10.0;
 
-	return float4(gi.rgb * 0.8, 0.0f);
+	return float3(gi.rgb * 0.8);
 }
 
 
@@ -369,6 +389,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
+	//[unroll(32)]
 	for (int i = 0; i < numSamples; i++)
 	{
 		float fi = ((float)i) / numSamples;

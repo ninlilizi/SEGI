@@ -1,15 +1,20 @@
-#pragma kernel CSMain
-#pragma kernel CSMain2
+#pragma kernel CSMain // 0
+#pragma kernel CSMain2 // 1
+#pragma kernel CSMain3 // 2 - PathTracer cache decoder
+#pragma kernel CSMain4 // 3 - PathTracer cache decoder
 
 RWTexture3D<float4> Result;
 Texture3D<float4> PrevResult;
 
 Texture3D<uint> RG0;
+Texture3D<float4> RG1;
 
 SamplerState _PointClamp;
 
-int Resolution;
+uint Resolution;
 int VoxelAA;
+
+int zStagger;
 
 float4 VoxelOriginDelta;
 
@@ -48,10 +53,21 @@ float4 DecodeRGBAuint(uint value)
 	return float4(color.rgb, a);
 }
 
+inline float4 EncodeFloatRGBA(float v)
+{
+	float4 kEncodeMul = float4(1.0, 255.0, 65025.0, 160581375.0);
+	float kEncodeBit = 1.0 / 255.0;
+	float4 enc = kEncodeMul * v;
+	enc = frac(enc);
+	enc -= enc.yzww * kEncodeBit;
+	return enc;
+}
+
+// 0
 [numthreads(16,16,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    for (int i = 0; i < Resolution; i++)
+    for (uint i = 0; i < Resolution; i++)
     {
     	float4 result = float4(0,0,0,0);
 
@@ -95,10 +111,12 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     }
 }
 
+
+// 1
 [numthreads(16,16,1)]
 void CSMain2 (uint3 id : SV_DispatchThreadID)
 {
-    for (int i = 0; i < Resolution; i++)
+    for (uint i = 0; i < Resolution; i++)
     {
     	float4 result = float4(0,0,0,0);
 
@@ -108,4 +126,29 @@ void CSMain2 (uint3 id : SV_DispatchThreadID)
 
         Result[uint3(id.xy, i)] = result;
     }
+}
+
+
+// 2
+[numthreads(16, 16, 1)]
+void CSMain3(uint3 id : SV_DispatchThreadID)
+{
+	for (uint i = 0; i < Resolution; i++)
+	{
+		Result[uint3(id.xy, i)] = RG1[uint3(id.x, id.y, i)];
+	}
+}
+
+// 3
+[numthreads(16, 16, 1)]
+void CSMain4(uint3 id : SV_DispatchThreadID)
+{
+	uint slice = Resolution / 16;
+	uint currentZ;
+
+	for (uint i = 0; i < slice; i++)
+	{
+		currentZ = zStagger * slice - Resolution + i;
+		Result[uint3(id.xy, currentZ)] = RG1[uint3(id.xy, currentZ)];
+	}
 }

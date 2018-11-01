@@ -12,21 +12,18 @@
 
 	struct AttributesSEGI
 	{
-		float4 vertex	: POSITION;
-		float3 normal	: NORMAL;
-		half2 texcoord  : TEXCOORD0;
-		//float2 texcoord : TEXCOORD1;
+		float4 vertex	 : POSITION;
+		float3 normal    : NORMAL;
+		half2 texcoord   : TEXCOORD0;
+		float4 screenPos : TEXCOORD1;
 	};
 
 	struct VaryingsSEGI
 	{
-		float4 vertex	: SV_POSITION;
-		float2 texcoord : TEXCOORD0;
-		half3 normal    : TEXCOORD1;
-		//float2 texcoord : TEXCOORD1;
-		//#if UNITY_UV_STARTS_AT_TOP
-		//	half4 uv2 : TEXCOORD2;
-		//#endif
+		float4 vertex	 : SV_POSITION;
+		float2 texcoord  : TEXCOORD0;
+		float4 screenPos : TEXCOORD1;
+		half3 normal     : TEXCOORD2;
 	};
 
 	VaryingsSEGI VertSEGI(AttributesSEGI v)
@@ -45,6 +42,7 @@
 			#endif
 
 			o.normal = v.normal;
+			o.screenPos = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
 
 			return o;
 		}
@@ -62,6 +60,7 @@
 			#endif
 
 			o.normal = v.normal;
+			o.screenPos = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
 
 			return o;
 		}
@@ -97,9 +96,10 @@
 				float2 coord = input.texcoord.xy;
 				float2 uv = input.texcoord;
 
-
 				//Get view space position and view vector
 				float4 viewSpacePosition = GetViewSpacePosition(coord, uv);
+				float3 viewVector = normalize(viewSpacePosition.xyz);
+				float4 worldViewVector = mul(CameraToWorld, float4(viewVector.xyz, 0.0));
 
 				//Get voxel space position
 				float4 voxelSpacePosition = mul(CameraToWorld, viewSpacePosition);
@@ -116,7 +116,7 @@
 				float3 voxelOrigin = voxelSpacePosition.xyz + worldNormal.xyz * 0.003 * ConeTraceBias * 1.25 / SEGIVoxelScaleFactor;
 
 				float3 gi = float3(0.0, 0.0, 0.0);
-				float4 traceResult = float4(0, 0, 0, 0);
+				float3 traceResult = float3(0, 0, 0);
 
 				const float phi = 1.618033988;
 				const float gAngle = phi * PI * 1.0;
@@ -127,16 +127,19 @@
 
 				float depth = GetDepthTextureTraceCache(uv);
 				blueNoise *= (1 - GetDepthTexture(uv)) * 50;
+				int tracedCount = tracedTextureA0[uint3(input.screenPos.x, input.screenPos.y, 1)];;
 
 				//Trace GI cones
 				int numSamples = TraceDirections;
+				uint3 voxelCoord = float3(0, 0, 0);
+				uint voxelDepth;
 				float latitude;
 				float longitude;
-				[allow_uav_condition]
+
 				for (int i = 0; i < numSamples; i++)
 				{
 					float fi;
-					if (i > 1) fi = (float)i + blueNoise.x * StochasticSampling;
+					if (i > 1) fi = (float)tracedCount + i + blueNoise.x * StochasticSampling;
 					else fi = (float)i * StochasticSampling;
 					float fiN = fi / numSamples;
 					longitude = gAngle * fi;
@@ -149,10 +152,22 @@
 
 					kernel = normalize(kernel + worldNormal.xyz * 1.0);
 
-					traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0, depth);
+					traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, 0, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
+
+					voxelCoord = float3(voxelOrigin.x + kernel.x * 2 + (blueNoise.x * 32), voxelOrigin.y + kernel.y * 2 + (blueNoise.y * 32), depth * voxelDepth + (blueNoise.z * 32) - 16);
 				}
 
 				traceResult /= numSamples;
+
+				if (tracedCount <= 128)
+				{
+					tracedTexture1[uint3(voxelCoord)] += float4(traceResult.rgb, 0);// *0.004;
+					tracedTextureA0[uint3(input.screenPos.x, input.screenPos.y, 1)]++;
+				}
+				
+				traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb / 128 / 64 + traceResult.rgb) * 0.5;
+				//traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb) / 128 / 64;
+				//traceResult.rgb = tracedTexture1[uint3(voxelCoord)].rgb / 64;
 
 				gi = traceResult.rgb * 1.18;
 
