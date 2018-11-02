@@ -165,7 +165,7 @@
 					tracedTextureA0[uint3(input.screenPos.x, input.screenPos.y, 1)]++;
 				}
 				
-				traceResult.rgb = lerp(DecodeRGBAuint(tracedTexture0[uint3(voxelCoord)]).rgb, traceResult.rgb, 0.125);
+				traceResult.rgb = lerp(tracedTexture0[uint3(voxelCoord)].rgb, traceResult.rgb, 0.25);
 				//traceResult.rgb = tracedTexture0[uint3(voxelCoord)].rgb;
 				//traceResult.rgb = tracedTexture1[uint3(voxelCoord)].rgb / 64;
 
@@ -285,8 +285,6 @@
 						float3 scene = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, coord).rgb;
 						float3 reflections = SAMPLE_TEXTURE2D(Reflections, samplerReflections, coord).rgb;
 
-						gi *= 0.75 + (float)GIResolution * 0.25;
-
 						float3 result;
 						float smoothness;
 						if (ForwardPath)
@@ -307,7 +305,7 @@
 							albedoTex = SAMPLE_TEXTURE2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0, coord);
 							albedo = albedoTex.rgb;
 
-							result = scene + (gi.rgb * 4) * albedoTex.a * albedoTex.rgb;
+							result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
 						}
 
 

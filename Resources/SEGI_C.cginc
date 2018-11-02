@@ -364,7 +364,7 @@ float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
-	gi.rgb *= GIGain * 0.15;
+	gi.rgb *= GIGain;// *0.15;
 	gi += skyColor * skyVisibility * skyMult * 10.0;
 
 	return float3(gi.rgb * 0.8);
