@@ -402,36 +402,24 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 0.12 * coneLength + 0.001);
 
 		float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
-		//coneSize = pow(coneSize / 5.0, 2.0) * 5.0;
+		coneSize = pow(coneSize / 5.0, 2.0) * 5.0;
 		int mipLevel = floor(coneSize);
-		if (mipLevel == 0)
+		if (mipLevel <= 2)
 		{
-			giSample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
-		}
-		else if (mipLevel == 1)
-		{
-			voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
-		}
-		else if (mipLevel == 2)
-		{
-			voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
-		}
-		else if (mipLevel == 3)
-		{
-			voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize));
-		}
-		else if (mipLevel == 4)
-		{
-			voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize));
-		}
-		else
-		{
-			voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
-			giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize));
+			if (mipLevel == 0)
+			{
+				giSample = tex3Dlod(SEGIVolumeLevel0, float4(voxelCheckCoord.xyz, coneSize));
+			}
+			else if (mipLevel <= 2)
+			{
+				voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize));
+			}
+			else if (mipLevel == 2)
+			{
+				voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize));
+			}
 		}
 
 		float occlusion = skyVisibility;
