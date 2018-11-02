@@ -99,7 +99,7 @@ TEXTURE2D_SAMPLER2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0);
 TEXTURE2D_SAMPLER2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1);
 TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
 TEXTURE2D_SAMPLER2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture);
-TEXTURE2D_SAMPLER2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture);
+sampler2D _CameraDepthNormalsTexture;
 sampler2D _CameraDepthTexture;
 
 UNITY_DECLARE_TEXCUBE(_SEGICube);
@@ -124,13 +124,13 @@ float GetDepthTexture(float2 uv)
 {
 #if defined(UNITY_REVERSED_Z)
 #if defined(VRWORKS)
-	return 1.0 - tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x;
+	return 1.0 - tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x;
 #else
 	return 1.0 - tex2Dlod(_CameraDepthTexture, float4(uv.x, uv.y, 0.0, 0.0)).x;
 #endif
 #else
 #if defined(VRWORKS)
-	return tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x;
+	return tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x;
 #else
 	return tex2Dlod(_CameraDepthTexture, float4(uv.x, uv.y, 0.0, 0.0)).x;
 #endif
@@ -496,9 +496,9 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel, float skyVisibility, i
 float3 GetWorldNormal(float2 screenspaceUV)
 {
 #if defined(VRWORKS)
-	float4 dn = SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(screenspaceUV));
+	float4 dn = tex2D(VRWorksGetDepthNormalsSampler(), VRWorksRemapUV(screenspaceUV));
 #else
-	float4 dn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, screenspaceUV);
+	float4 dn = tex2D(_CameraDepthNormalsTexture, screenspaceUV);
 #endif
 	float3 n = DecodeViewNormalStereo(dn);
 	float3 worldN = mul((float3x3)CameraToWorld, n);

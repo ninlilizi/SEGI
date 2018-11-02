@@ -211,7 +211,7 @@
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
 						#if defined (VRWORKS)				
-							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(iv).xy).x);
+							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(uv).xy).x);
 						#else
 							float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, coord).x);
 						#endif
@@ -228,7 +228,7 @@
 						{
 							float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy * 1.0;
 							#if defined (VRWORKS)
-								float sampleDepth = LinearEyeDepth(tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(iv).xy + offs.xy * 1, 0).x);
+								float sampleDepth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(uv).xy + offs.xy * 1, 0).x);
 							#else
 								float sampleDepth = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.texcoord.xy + offs.xy * 1, 0, 0)).x);
 							#endif
@@ -569,9 +569,9 @@
 					{
 						float2 coord = input.texcoord.xy;
 						#if defined(VRWORKS)
-							float4 tex = SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV((input.texcoord).xy);
+							float4 tex = tex2D(VRWorksGetDepthNormalsSampler(), VRWorksRemapUV((input.texcoord).xy);
 						#else
-							float4 tex = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, input.texcoord.xy);
+							float4 tex = tex2D(_CameraDepthNormalsTexture, input.texcoord.xy);
 						#endif
 						return tex;
 					}
@@ -764,10 +764,10 @@ ZTest Always
 						float validWeights = 0.0;
 						#if defined(VRWORKS)
 							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy).x);
-							half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(input.texcoord).xy));
+							half3 normal = DecodeViewNormalStereo(tex2D(VRWorksGetDepthNormalsSampler(), VRWorksRemapUV(input.texcoord).xy));
 						#else
 							float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, coord).x);
-							half3 normal = DecodeViewNormalStereo(SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, coord));
+							half3 normal = DecodeViewNormalStereo(tex2D(_CameraDepthNormalsTexture, coord));
 						#endif												
 						float thresh = 0.26;
 
