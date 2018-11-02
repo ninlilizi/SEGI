@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: SEGI Sponza PostProcessing Profile
   m_EditorClassIdentifier: 
   settings:
-  - {fileID: 114332546678420608}
+  - {fileID: 114065239260160224}
 --- !u!114 &114063555157306854
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -187,7 +187,7 @@ MonoBehaviour:
   active: 1
   enabled:
     overrideState: 1
-    value: 0
+    value: 1
   voxelResolution:
     overrideState: 1
     value: 256
@@ -317,7 +317,7 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 1
+    value: 0.5
   skyColor:
     overrideState: 1
     value: {r: 0.40784314, g: 0.5254902, b: 0.7490196, a: 1}
@@ -493,166 +493,6 @@ MonoBehaviour:
   NVIDIAVRWorksEnable:
     overrideState: 0
     value: 0
---- !u!114 &114332546678420608
-MonoBehaviour:
-  m_ObjectHideFlags: 3
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f6545096e58f2445a95f9ff831d18fd, type: 3}
-  m_Name: SEGI_NKLI
-  m_EditorClassIdentifier: 
-  active: 1
-  enabled:
-    overrideState: 1
-    value: 1
-  voxelResolution:
-    overrideState: 1
-    value: 256
-  traceCacheResolution:
-    overrideState: 1
-    value: 256
-  voxelSpaceSize:
-    overrideState: 1
-    value: 25
-  updateVoxelsAfterX:
-    overrideState: 1
-    value: 0
-  updateVoxelsAfterXInterval:
-    overrideState: 1
-    value: 1
-  voxelAA:
-    overrideState: 1
-    value: 0
-  innerOcclusionLayers:
-    overrideState: 1
-    value: 1
-  infiniteBounces:
-    overrideState: 1
-    value: 1
-  useReflectionProbes:
-    overrideState: 1
-    value: 1
-  reflectionProbeIntensity:
-    overrideState: 1
-    value: 0.5
-  doReflections:
-    overrideState: 1
-    value: 1
-  temporalBlendWeight:
-    overrideState: 1
-    value: 1
-  useBilateralFiltering:
-    overrideState: 1
-    value: 1
-  GIResolution:
-    overrideState: 1
-    value: 1
-  stochasticSampling:
-    overrideState: 1
-    value: 1
-  updateGI:
-    overrideState: 1
-    value: 1
-  cones:
-    overrideState: 1
-    value: 4
-  coneTraceSteps:
-    overrideState: 1
-    value: 8
-  coneLength:
-    overrideState: 1
-    value: 1
-  coneWidth:
-    overrideState: 1
-    value: 7.5
-  coneTraceBias:
-    overrideState: 1
-    value: 2.8
-  occlusionStrength:
-    overrideState: 1
-    value: 0.15
-  nearOcclusionStrength:
-    overrideState: 1
-    value: 0.5
-  occlusionPower:
-    overrideState: 1
-    value: 0.65
-  nearLightGain:
-    overrideState: 1
-    value: 0.36
-  giGain:
-    overrideState: 1
-    value: 1
-  secondaryBounceGain:
-    overrideState: 1
-    value: 0.9
-  reflectionSteps:
-    overrideState: 1
-    value: 12
-  reflectionOcclusionPower:
-    overrideState: 1
-    value: 1
-  skyReflectionIntensity:
-    overrideState: 1
-    value: 1
-  gaussianMipFilter:
-    overrideState: 1
-    value: 0
-  farOcclusionStrength:
-    overrideState: 1
-    value: 1
-  farthestOcclusionStrength:
-    overrideState: 1
-    value: 1
-  secondaryCones:
-    overrideState: 1
-    value: 6
-  secondaryOcclusionStrength:
-    overrideState: 1
-    value: 0.27
-  useFXAA:
-    overrideState: 1
-    value: 0
-  visualizeGI:
-    overrideState: 1
-    value: 0
-  visualizeVoxels:
-    overrideState: 1
-    value: 0
-  visualizeSunDepthTexture:
-    overrideState: 1
-    value: 0
-  giCullingMask:
-    overrideState: 1
-    value:
-      serializedVersion: 2
-      m_Bits: 2147483647
-  reflectionProbeLayerMask:
-    overrideState: 1
-    value:
-      serializedVersion: 2
-      m_Bits: 2147483647
-  softSunlight:
-    overrideState: 1
-    value: 1
-  skyColor:
-    overrideState: 1
-    value: {r: 0, g: 0, b: 0, a: 1}
-  MatchAmbiantColor:
-    overrideState: 1
-    value: 0
-  skyIntensity:
-    overrideState: 1
-    value: 1
-  sphericalSkylight:
-    overrideState: 1
-    value: 0
-  NVIDIAVRWorksEnable:
-    overrideState: 1
-    value: 0
 --- !u!114 &114470370058284476
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -824,40 +664,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 195d4ee8e5f057f4590c043b132f9c86, type: 3}
   m_Name: SEGICascadedPreset
   m_EditorClassIdentifier: 
-  active: 0
-  enabled:
-    overrideState: 1
-    value: 0
-  voxelResolution: 128
-  voxelAA: 0
-  innerOcclusionLayers: 1
-  infiniteBounces: 1
-  useReflectionProbes: 1
-  reflectionProbeIntensity: 0.5
-  temporalBlendWeight: 1
-  useBilateralFiltering: 1
-  GIResolution: 1
-  stochasticSampling: 1
-  noiseDistribution: 0.32
-  cones: 13
-  coneTraceSteps: 8
-  coneLength: 1
-  coneWidth: 6
-  coneTraceBias: 0.63
-  occlusionStrength: 1
-  nearOcclusionStrength: 0
-  occlusionPower: 1
-  nearLightGain: 1
-  giGain: 1
-  secondaryBounceGain: 1
-  reflectionSteps: 12
-  reflectionOcclusionPower: 1
-  skyReflectionIntensity: 1
-  gaussianMipFilter: 0
-  farOcclusionStrength: 1
-  farthestOcclusionStrength: 1
-  secondaryCones: 6
-  secondaryOcclusionStrength: 1
 --- !u!114 &114617118123473022
 MonoBehaviour:
   m_ObjectHideFlags: 3

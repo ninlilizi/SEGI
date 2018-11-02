@@ -31,9 +31,12 @@ MonoBehaviour:
   voxelResolution:
     overrideState: 1
     value: 256
+  traceCacheResolution:
+    overrideState: 1
+    value: 256
   voxelSpaceSize:
     overrideState: 1
-    value: 100
+    value: 200
   updateVoxelsAfterX:
     overrideState: 1
     value: 0
@@ -154,7 +157,7 @@ MonoBehaviour:
       m_Bits: 2147483647
   softSunlight:
     overrideState: 1
-    value: 1
+    value: 0.5
   skyColor:
     overrideState: 1
     value: {r: 0.64705884, g: 0.7882353, b: 1, a: 1}
@@ -186,6 +189,9 @@ MonoBehaviour:
     overrideState: 1
     value: 1
   voxelResolution:
+    overrideState: 0
+    value: 256
+  traceCacheResolution:
     overrideState: 0
     value: 256
   voxelSpaceSize:
@@ -345,6 +351,9 @@ MonoBehaviour:
   voxelResolution:
     overrideState: 0
     value: 256
+  traceCacheResolution:
+    overrideState: 0
+    value: 256
   voxelSpaceSize:
     overrideState: 0
     value: 50
@@ -500,6 +509,9 @@ MonoBehaviour:
     overrideState: 1
     value: 1
   voxelResolution:
+    overrideState: 0
+    value: 256
+  traceCacheResolution:
     overrideState: 0
     value: 256
   voxelSpaceSize:
@@ -704,6 +716,9 @@ MonoBehaviour:
   voxelResolution:
     overrideState: 0
     value: 256
+  traceCacheResolution:
+    overrideState: 0
+    value: 256
   voxelSpaceSize:
     overrideState: 0
     value: 50
@@ -859,6 +874,9 @@ MonoBehaviour:
     overrideState: 1
     value: 1
   voxelResolution:
+    overrideState: 0
+    value: 256
+  traceCacheResolution:
     overrideState: 0
     value: 256
   voxelSpaceSize:
