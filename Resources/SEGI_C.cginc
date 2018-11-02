@@ -120,19 +120,19 @@ float4x4 _LeftEyeToWorld;
 float4x4 _RightEyeToWorld;
 //Fix Stereo View Matrix/
 
-float GetDepthTexture(float2 coord)
+float GetDepthTexture(float2 uv)
 {
 #if defined(UNITY_REVERSED_Z)
 #if defined(VRWORKS)
-	return 1.0 - tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float2(coord.x, coord.y))).x;
+	return 1.0 - tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x;
 #else
-	return 1.0 - tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	return 1.0 - tex2Dlod(_CameraDepthTexture, float4(uv.x, uv.y, 0.0, 0.0)).x;
 #endif
 #else
 #if defined(VRWORKS)
-	return tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(float4(coord.x, coord.y, 0.0, 0.0))).x;
+	return tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x;
 #else
-	return tex2Dlod(_CameraDepthTexture, float4(coord.x, coord.y, 0.0, 0.0)).x;
+	return tex2Dlod(_CameraDepthTexture, float4(uv.x, uv.y, 0.0, 0.0)).x;
 #endif
 #endif
 }
@@ -149,19 +149,19 @@ inline float SEGILinear01Depth(float z)
 	return 1.0 / (x * z + _ZBufferParams.y);
 }
 
-float GetDepthTextureTraceCache(float2 coord)
+float GetDepthTextureTraceCache(float2 uv)
 {
 #if defined(UNITY_REVERSED_Z)
 #if defined(VRWORKS)
-	return 1.0 - SEGILinear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
+	return 1.0 - SEGILinear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x);
 #else
-	return 1.0 - SEGILinear01Depth(tex2D(_CameraDepthTexture, coord).x);
+	return 1.0 - SEGILinear01Depth(tex2D(_CameraDepthTexture, uv).x);
 #endif
 #else
 #if defined(VRWORKS)
-	return SEGILinear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(coord)).x);
+	return SEGILinear01Depth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(uv)).x);
 #else
-	return SEGILinear01Depth(tex2D(_CameraDepthTexture, coord).x);
+	return SEGILinear01Depth(tex2D(_CameraDepthTexture, uv).x);
 #endif
 #endif
 }
@@ -495,11 +495,11 @@ float4 VisualConeTrace(float3 voxelOrigin, float3 kernel, float skyVisibility, i
 
 float3 GetWorldNormal(float2 screenspaceUV)
 {
-	#if defined(VRWORKS)
-		float4 dn = SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(screenspaceUV));
-	#else
-		float4 dn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, screenspaceUV);
-	#endif
+#if defined(VRWORKS)
+	float4 dn = SAMPLE_TEXTURE2D(VRWorksGetDepthNormalsSampler(), sampler_CameraDepthNormalsTexture, VRWorksRemapUV(screenspaceUV));
+#else
+	float4 dn = SAMPLE_TEXTURE2D(_CameraDepthNormalsTexture, sampler_CameraDepthNormalsTexture, screenspaceUV);
+#endif
 	float3 n = DecodeViewNormalStereo(dn);
 	float3 worldN = mul((float3x3)CameraToWorld, n);
 

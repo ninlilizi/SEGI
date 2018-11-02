@@ -165,7 +165,7 @@
 					tracedTextureA0[uint3(input.screenPos.x, input.screenPos.y, 1)]++;
 				}
 				
-				traceResult.rgb = lerp(tracedTexture0[uint3(voxelCoord)].rgb, traceResult.rgb, 0.25);
+				traceResult.rgb = lerp(tracedTexture0[uint3(voxelCoord)].rgb, traceResult.rgb, 0.5);
 				//traceResult.rgb = tracedTexture0[uint3(voxelCoord)].rgb;
 				//traceResult.rgb = tracedTexture1[uint3(voxelCoord)].rgb / 64;
 
@@ -211,7 +211,7 @@
 						float4 blurred = float4(0.0, 0.0, 0.0, 0.0);
 						float validWeights = 0.0;
 						#if defined (VRWORKS)				
-							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy).x);
+							float depth = LinearEyeDepth(tex2D(VRWorksGetDepthSampler(), VRWorksRemapUV(iv).xy).x);
 						#else
 							float depth = LinearEyeDepth(tex2D(_CameraDepthTexture, coord).x);
 						#endif
@@ -228,7 +228,7 @@
 						{
 							float2 offs = Kernel.xy * (i)* _MainTex_TexelSize.xy * 1.0;
 							#if defined (VRWORKS)
-								float sampleDepth = LinearEyeDepth(tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(input.texcoord).xy + offs.xy * 1, 0).x);
+								float sampleDepth = LinearEyeDepth(tex2Dlod(VRWorksGetDepthSampler(), VRWorksRemapUV(iv).xy + offs.xy * 1, 0).x);
 							#else
 								float sampleDepth = LinearEyeDepth(tex2Dlod(_CameraDepthTexture, float4(input.texcoord.xy + offs.xy * 1, 0, 0)).x);
 							#endif
