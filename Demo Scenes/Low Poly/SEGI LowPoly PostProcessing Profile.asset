@@ -84,7 +84,7 @@ MonoBehaviour:
     value: 5
   coneLength:
     overrideState: 1
-    value: 1
+    value: 0.1
   coneWidth:
     overrideState: 1
     value: 6
@@ -120,7 +120,7 @@ MonoBehaviour:
     value: 1
   gaussianMipFilter:
     overrideState: 1
-    value: 0
+    value: 1
   farOcclusionStrength:
     overrideState: 1
     value: 1

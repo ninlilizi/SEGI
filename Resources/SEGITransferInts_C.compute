@@ -187,23 +187,23 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 		color = RG1[uint3(float3(id.xy, currentZ))] / 65536;
 		if (color.r > 0 && color.g > 0 && color.b > 0)
 		{
-			//Result[uint3(id.xy, currentZ)] = lerp(Result[uint3(id.xy, currentZ)], color, 0.5);
-			Result[uint3(id.xy, currentZ)] = color;
+			Result[uint3(id.xy, currentZ)] = lerp(Result[uint3(id.xy, currentZ)], color, 0.5);
+			//Result[uint3(id.xy, currentZ)] = color;
 			prevColor = color;
 		}
-		else
+		/*else
 		{
 			half4 gradiantColor = prevColor;
 			for (uint y = 0; y < 8; y++)
 			{
-				color = RG1[uint3(float3(id.xy, currentZ + y))] / 65536;
+				color = RG1[uint3(float3(id.xy, currentZ - y))] / 65536;
 				if (color.r == 0 && color.g == 0 && color.b == 0)
 				{
-					gradiantColor *= 0.125;
-					Result[uint3(id.xy, currentZ + y)] = gradiantColor;
+					//gradiantColor *= 0.125;
+					Result[uint3(id.xy, currentZ - y)] = gradiantColor;
 				}
 				else break;
 			}
-		}
+		}*/
 	}
 }

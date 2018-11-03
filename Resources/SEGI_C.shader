@@ -137,7 +137,7 @@
 				float fiN = fi / 1;
 				float longitude = gAngle * fi;
 				float latitude = (fiN * 2.0 - 1.0);
-				latitude += (1 * 2.0 - 1.0) * 0.25;
+				latitude += (1 + (blueNoise.y * 0.125) * 2.0 - 1.0) * 0.25;
 				latitude = asin(latitude);
 
 				kernel.x = cos(latitude) * cos(longitude);
@@ -146,9 +146,9 @@
 
 				kernel = normalize(kernel + worldNormal.xyz * 1.0);
 				
-				traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, blueNoise.z, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
+				traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
 
-				voxelCoord = float3(voxelOrigin.x + kernel.x + blueNoise.x * SEGITraceCacheScaleFactor, voxelOrigin.y + kernel.y + blueNoise.y * SEGITraceCacheScaleFactor, depth * voxelDepth + blueNoise.z * SEGITraceCacheScaleFactor);
+				voxelCoord = float3(voxelOrigin.x + kernel.x - blueNoise.x * SEGITraceCacheScaleFactor, voxelOrigin.y + kernel.y - blueNoise.y * SEGITraceCacheScaleFactor, depth * voxelDepth - blueNoise.z * SEGITraceCacheScaleFactor);
 				tracedTexture1[uint3(voxelCoord)].rgba += float4(traceResult.rgb, 0);
 
 				uint scaledDepth = 256 * SEGITraceCacheScaleFactor;

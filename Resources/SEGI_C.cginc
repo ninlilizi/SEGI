@@ -346,14 +346,7 @@ float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	gi *= NdotL;
 	skyVisibility *= NdotL;
-	if (StochasticSampling > 0)
-	{
-		skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
-	}
-	else
-	{
-		skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
-	}
+	skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
 
 	float3 skyColor = float3(0.0, 0.0, 0.0);
 
@@ -362,7 +355,7 @@ float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
-	gi.rgb *= GIGain;// *0.15;
+	gi.rgb *= GIGain * 0.15;
 	gi += skyColor * skyVisibility * skyMult * 10.0;
 
 	return float3(gi.rgb * 0.8);
