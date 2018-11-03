@@ -178,10 +178,32 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 {
 	uint slice = Resolution / 16;
 	uint currentZ;
+	half4 color;
+	half4 prevColor;
 
 	for (uint i = 0; i < slice; i++)
 	{
-		currentZ = zStagger * slice - Resolution + i;
-		Result[uint3(id.xy, currentZ)] = gaussian_filter(16, float3(id.xy, currentZ)) / 32768;
+		currentZ = zStagger * slice - slice + i;
+		color = RG1[uint3(float3(id.xy, currentZ))] / 65536;
+		if (color.r > 0 && color.g > 0 && color.b > 0)
+		{
+			//Result[uint3(id.xy, currentZ)] = lerp(Result[uint3(id.xy, currentZ)], color, 0.5);
+			Result[uint3(id.xy, currentZ)] = color;
+			prevColor = color;
+		}
+		else
+		{
+			half4 gradiantColor = prevColor;
+			for (uint y = 0; y < 8; y++)
+			{
+				color = RG1[uint3(float3(id.xy, currentZ + y))] / 65536;
+				if (color.r == 0 && color.g == 0 && color.b == 0)
+				{
+					gradiantColor *= 0.125;
+					Result[uint3(id.xy, currentZ + y)] = gradiantColor;
+				}
+				else break;
+			}
+		}
 	}
 }

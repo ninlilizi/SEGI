@@ -310,7 +310,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
             PropertyField(stochasticSampling, new GUIContent("Stochastic Sampling", "If enabled, uses random jitter to reduce banding and discontinuities during GI tracing."));
             PropertyField(GIResolution, new GUIContent("Subsampling Resolution", "GI tracing resolution will be subsampled at this screen resolution. Improves speed of GI tracing."));
 
-            PropertyField(cones, new GUIContent("Cones", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
+            //PropertyField(cones, new GUIContent("Cones", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
             PropertyField(coneTraceSteps, new GUIContent("Cone Trace Steps", "The number of tracing steps for each cone. Too few results in skipping thin features. Higher values result in more accuracy at the cost of performance."));
             PropertyField(coneLength, new GUIContent("Cone length", "The number of cones that will be traced in different directions for diffuse GI tracing. More cones result in a smoother result at the cost of performance."));
             PropertyField(coneWidth, new GUIContent("Cone Width", "The width of each cone. Wider cones cause a softer and smoother result but affect accuracy and incrase over-occlusion. Thinner cones result in more accurate tracing with less coherent (more noisy) results and a higher tracing cost."));

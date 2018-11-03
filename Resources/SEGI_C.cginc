@@ -4,7 +4,6 @@ float SEGIVoxelScaleFactor;
 float SEGITraceCacheScaleFactor;
 
 int StochasticSampling;
-int TraceDirections;
 int TraceSteps;
 float TraceLength;
 float ConeSize;
@@ -36,9 +35,8 @@ sampler3D SEGIVolumeTexture1;
 
 RWTexture3D<half4> tracedTexture0;
 RWTexture3D<float4> tracedTexture1;
-RWTexture3D<float> tracedTextureA0;
 
-//int tracedTexture1UpdateCount;
+int tracedTexture1UpdateCount;
 
 //TEXTURE3D_SAMPLER3D(tracedTexture0, samplertracedTexture0);
 //sampler3D tracedTexture0;

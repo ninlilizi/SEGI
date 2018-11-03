@@ -20,12 +20,12 @@ void CSMain (int3 id : SV_DispatchThreadID)
 [numthreads(16, 16, 1)]
 void CSMain2(uint3 id : SV_DispatchThreadID)
 {
-	uint slice = Resolution / 8;
+	uint slice = Resolution / 16;
 	uint currentZ;
 
 	for (uint i = 0; i < slice; i++)
 	{
-		currentZ = zStagger * slice - Resolution + i;
+		currentZ = zStagger * slice - slice + i;
 		RG1[uint3(id.xy, currentZ)] = float4(0, 0, 0, 0);
 	}
 }

@@ -277,7 +277,6 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public static RenderTexture tracedTexture0;
         public static RenderTexture tracedTexture1;
-        public static RenderTexture tracedTextureA0;
 
         public int tracedTexture1UpdateCount;
 
@@ -908,26 +907,22 @@ namespace UnityEngine.Rendering.PostProcessing
                 return;
             }
 
-            if (tracedTexture1UpdateCount == 160)
+            else if (tracedTexture1UpdateCount > 80)
             {
-                context.command.SetComputeIntParam(clearCompute, "Resolution", 1);
-                context.command.SetComputeTextureParam(clearCompute, 0, "RG0", tracedTextureA0);
-                context.command.DispatchCompute(clearCompute, 0, SEGIRenderWidth / 16, SEGIRenderHeight / 16, 1);
+                context.command.SetComputeIntParam(clearComputeCache, "Resolution", (int)settings.traceCacheResolution.value);
+                context.command.SetComputeTextureParam(clearComputeCache, 1, "RG1", tracedTexture1);
+                context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 80);
+                context.command.DispatchCompute(clearComputeCache, 1, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
             }
-            else if (tracedTexture1UpdateCount > 128)
+            else if (tracedTexture1UpdateCount > 64)
             {
                 context.command.SetComputeTextureParam(transferIntsCompute, 3, "Result", tracedTexture0);
                 context.command.SetComputeTextureParam(transferIntsCompute, 3, "RG1", tracedTexture1);
-                context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 128);
+                context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 64);
                 context.command.SetComputeIntParam(transferIntsCompute, "Resolution", (int)settings.traceCacheResolution.value);
                 context.command.DispatchCompute(transferIntsCompute, 3, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
-
-                context.command.SetComputeIntParam(clearComputeCache, "Resolution", (int)settings.traceCacheResolution.value);
-                context.command.SetComputeTextureParam(clearComputeCache, 1, "RG1", tracedTexture1);
-                context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 128);
-                context.command.DispatchCompute(clearComputeCache, 1, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
             }
-            tracedTexture1UpdateCount = (tracedTexture1UpdateCount + 1) % (161);
+            tracedTexture1UpdateCount = (tracedTexture1UpdateCount + 1) % (96);
 
 
 
@@ -945,7 +940,7 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalFloat("DeltaTime", Time.deltaTime);
 
             context.command.SetGlobalInt("StochasticSampling", settings.stochasticSampling.value ? 1 : 0);
-            context.command.SetGlobalInt("TraceDirections", settings.cones);
+            //context.command.SetGlobalInt("TraceDirections", settings.cones);
             context.command.SetGlobalInt("TraceSteps", settings.coneTraceSteps);
             context.command.SetGlobalFloat("TraceLength", settings.coneLength);
             context.command.SetGlobalFloat("ConeSize", settings.coneWidth);
@@ -971,7 +966,7 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalInt("SEGIRenderWidth", SEGIRenderWidth);
             context.command.SetGlobalInt("SEGIRenderHeight", SEGIRenderHeight);
             context.command.SetGlobalFloat("voxelSpaceSize", settings.voxelSpaceSize);
-            //context.command.SetGlobalInt("tracedTexture1UpdateCount", (int)tracedTexture1.updateCount - (int)tracedTexture1UpdateCount);
+            context.command.SetGlobalInt("tracedTexture1UpdateCount", (int)tracedTexture1.updateCount);
 
             //Blit once to downsample if required
             context.command.Blit(context.source, RT_gi1);
@@ -1001,7 +996,6 @@ namespace UnityEngine.Rendering.PostProcessing
             //Render diffuse GI tracing result
             context.command.SetRandomWriteTarget(1, tracedTexture0);
             context.command.SetRandomWriteTarget(2, tracedTexture1);
-            context.command.SetRandomWriteTarget(3, tracedTextureA0);
             context.command.Blit(RT_gi1, RT_gi2, material, Pass.DiffuseTrace);
 
             //Render GI reflections result
@@ -1358,27 +1352,6 @@ namespace UnityEngine.Rendering.PostProcessing
             tracedTexture1.Create();
             tracedTexture1.hideFlags = HideFlags.HideAndDontSave;
 
-
-            CleanupTexture(ref tracedTextureA0);
-            tracedTextureA0 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.R8, RenderTextureReadWrite.Linear);
-            tracedTextureA0.wrapMode = TextureWrapMode.Clamp;
-            #if UNITY_5_4_OR_NEWER
-            tracedTextureA0.dimension = TextureDimension.Tex3D;
-            #else
-	            tracedTexture1.isVolume = true;
-            #endif
-            tracedTextureA0.volumeDepth = 1;
-            tracedTextureA0.enableRandomWrite = true;
-            tracedTextureA0.filterMode = FilterMode.Point;
-            #if UNITY_5_4_OR_NEWER
-                tracedTextureA0.autoGenerateMips = false;
-            #else
-	            tracedTexture1.generateMips = false;
-            #endif
-            tracedTextureA0.useMipMap = false;
-            tracedTextureA0.Create();
-            tracedTextureA0.hideFlags = HideFlags.HideAndDontSave;
-
             ResizeDummyTexture();
         }
 
@@ -1636,7 +1609,6 @@ namespace UnityEngine.Rendering.PostProcessing
 
             CleanupTexture(ref tracedTexture0);
             CleanupTexture(ref tracedTexture1);
-            CleanupTexture(ref tracedTextureA0);
 
             if (RT_FXAART) RT_FXAART.Release();
             if (RT_gi1) RT_gi1.Release();
