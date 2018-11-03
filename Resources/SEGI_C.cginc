@@ -143,7 +143,7 @@ inline float SEGILinear01Depth(float z)
 	// y = far/near
 	// z = x/far
 	// w = y/far
-	int x = voxelSpaceSize / 0.01;
+	int x = voxelSpaceSize / 0.001;
 	return 1.0 / (x * z + _ZBufferParams.y);
 }
 
@@ -240,22 +240,13 @@ float4 GetViewSpacePosition(float2 coord, float2 uv)
 	}
 }
 
-/*float3 ProjectBack(float4 viewPos)
-{
-	viewPos = mul(ProjectionMatrix, float4(viewPos.xyz, 0.0));
-	viewPos.xyz /= viewPos.w;
-	viewPos.xyz = viewPos.xyz * 0.5 + 0.5;
-	return viewPos.xyz;
-}*/
-
-
-/*float2 rand(float2 coord)
+float2 rand(float2 coord)
 {
 	float noiseX = saturate(frac(sin(dot(coord, float2(12.9898, 78.223))) * 43758.5453));
 	float noiseY = saturate(frac(sin(dot(coord, float2(12.9898, 78.223)*2.0)) * 43758.5453));
 
 	return float2(noiseX, noiseY);
-}*/
+}
 
 float GISampleWeight(float3 pos)
 {
@@ -352,10 +343,11 @@ float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
 	float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
-	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
+	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb, pow(upGradient, (0.5).xxx));
 	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
 
-	gi.rgb *= GIGain * 0.15;
+	//gi.rgb *= GIGain * 0.15;
+	gi.rgb *= GIGain * 0.30;
 	gi += skyColor * skyVisibility * skyMult * 10.0;
 
 	return float3(gi.rgb * 0.8);

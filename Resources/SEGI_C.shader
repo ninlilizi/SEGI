@@ -108,6 +108,7 @@
 				voxelSpacePosition.xyz = voxelSpacePosition.xyz * 0.5 + 0.5;
 
 				//Prepare for cone trace
+				float2 dither = rand(coord + (float)FrameSwitch * 0.011734);
 
 				float3 worldNormal;
 				if (ForwardPath) worldNormal = GetWorldNormal(coord).rgb;
@@ -123,7 +124,7 @@
 
 				//Get blue noise
 				float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
-				float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0));
+				float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).x;
 
 				float depth = GetDepthTextureTraceCache(uv);
 				blueNoise *= (1 - GetDepthTexture(uv)) * voxelSpaceSize;
@@ -133,12 +134,10 @@
 				uint voxelDepth;
 				float3 kernel;
 
-				float fi = (float)blueNoise.x * tracedTexture1UpdateCount * StochasticSampling;
-				float fiN = fi / 1;
+				float fi = (float)blueNoise.x * StochasticSampling + tracedTexture1UpdateCount * StochasticSampling;
+				float fiN = fi / 92;
 				float longitude = gAngle * fi;
-				float latitude = (fiN * 2.0 - 1.0);
-				latitude += (1 + (blueNoise.y * 0.125) * 2.0 - 1.0) * 0.25;
-				latitude = asin(latitude);
+				float latitude = asin(fiN * 2.0 - 1.0);
 
 				kernel.x = cos(latitude) * cos(longitude);
 				kernel.z = cos(latitude) * sin(longitude);
@@ -146,17 +145,20 @@
 
 				kernel = normalize(kernel + worldNormal.xyz * 1.0);
 				
-				traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
+				traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125 * StochasticSampling, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
 
-				voxelCoord = float3(voxelOrigin.x + kernel.x - blueNoise.x * SEGITraceCacheScaleFactor, voxelOrigin.y + kernel.y - blueNoise.y * SEGITraceCacheScaleFactor, depth * voxelDepth - blueNoise.z * SEGITraceCacheScaleFactor);
+				voxelCoord = float3(voxelOrigin.x + kernel.x - blueNoise.x * SEGITraceCacheScaleFactor, voxelOrigin.y + kernel.y - blueNoise.y * SEGITraceCacheScaleFactor, depth* voxelDepth - blueNoise.z * SEGITraceCacheScaleFactor);
 				tracedTexture1[uint3(voxelCoord)].rgba += float4(traceResult.rgb, 0);
 
 				uint scaledDepth = 256 * SEGITraceCacheScaleFactor;
 				if (voxelCoord.x < scaledDepth && voxelCoord.y < scaledDepth && voxelCoord.z < scaledDepth);
 				{
-					if (traceResult.r > 0 || traceResult.g > 0 || traceResult.b > 0)
+					if (voxelCoord.x > 0 && voxelCoord.y > 0  && voxelCoord.z > 0);
 					{
-						traceResult.rgb = (tracedTexture0[uint3(voxelCoord)].rgb + traceResult.rgb) * 0.5;
+						if (traceResult.r > 0 || traceResult.g > 0 || traceResult.b > 0)
+						{
+							traceResult.rgb = lerp(tracedTexture0[uint3(voxelCoord)].rgb, traceResult.rgb, 0.25);
+						}
 					}
 				}
 

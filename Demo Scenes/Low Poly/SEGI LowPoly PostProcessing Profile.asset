@@ -33,7 +33,7 @@ MonoBehaviour:
     value: 256
   traceCacheResolution:
     overrideState: 1
-    value: 256
+    value: 512
   voxelSpaceSize:
     overrideState: 1
     value: 200
@@ -90,7 +90,7 @@ MonoBehaviour:
     value: 6
   coneTraceBias:
     overrideState: 1
-    value: 0.63
+    value: 4
   occlusionStrength:
     overrideState: 1
     value: 1
@@ -157,7 +157,7 @@ MonoBehaviour:
       m_Bits: 2147483647
   softSunlight:
     overrideState: 1
-    value: 0.5
+    value: 2.5
   skyColor:
     overrideState: 1
     value: {r: 0.64705884, g: 0.7882353, b: 1, a: 1}
@@ -166,7 +166,7 @@ MonoBehaviour:
     value: 0
   skyIntensity:
     overrideState: 1
-    value: 1
+    value: 2
   sphericalSkylight:
     overrideState: 1
     value: 0
