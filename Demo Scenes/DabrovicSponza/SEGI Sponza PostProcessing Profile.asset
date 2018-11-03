@@ -223,7 +223,7 @@ MonoBehaviour:
     value: 1
   temporalBlendWeight:
     overrideState: 1
-    value: 1
+    value: 0.318
   useBilateralFiltering:
     overrideState: 1
     value: 1
@@ -241,7 +241,7 @@ MonoBehaviour:
     value: 1
   coneTraceSteps:
     overrideState: 1
-    value: 8
+    value: 5
   coneLength:
     overrideState: 1
     value: 0.5
@@ -265,7 +265,7 @@ MonoBehaviour:
     value: 1
   giGain:
     overrideState: 1
-    value: 2
+    value: 1
   secondaryBounceGain:
     overrideState: 1
     value: 1

@@ -75,7 +75,7 @@ namespace UnityEngine.Rendering.PostProcessing
         [Range(0.01f, 1.0f)]
         public FloatParameter temporalBlendWeight = new FloatParameter { value = 1.0f };
         public BoolParameter useBilateralFiltering = new BoolParameter { value = true };// Actually used?
-        [Range(1, 16)]
+        [Range(1, 4)]
         public IntParameter GIResolution = new IntParameter { value = 1 };
         public BoolParameter stochasticSampling = new BoolParameter { value = true };
         public BoolParameter updateGI = new BoolParameter { value = true };
@@ -1015,26 +1015,18 @@ namespace UnityEngine.Rendering.PostProcessing
                 context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
                 context.command.Blit(RT_gi2, RT_gi3, material, Pass.BilateralUpsample);
                 context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
+                context.command.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
+                context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
                 //Perform temporal reprojection and blending
                 if (settings.temporalBlendWeight.value < 1.0f)
                 {
-                    context.command.Blit(RT_gi3, RT_gi4, material, Pass.TemporalBlend);
+                    context.command.Blit(RT_gi4, RT_gi3, material, Pass.TemporalBlend);
                     //SEGIBuffer.Blit(RT_gi4, RT_gi3, material, Pass.TemporalBlend);
-                    context.command.Blit(RT_gi4, previousGIResult);
+                    context.command.Blit(RT_gi3, previousGIResult);
                     context.command.Blit(RT_gi1, previousDepth, material, Pass.GetCameraDepthTexture);
                 }
 
-                if (settings.GIResolution.value >= 3)
-                {
-                    context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
-                    context.command.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
-                    context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
-                    context.command.Blit(RT_gi4, RT_gi3, material, Pass.BilateralBlur);
-
-                    //context.command.Blit(RT_gi3, RT_gi4, Gaussian_Material);
-                    //context.command.Blit(RT_gi4, RT_gi3, Gaussian_Material);
-                }
 
                 //Set the result to be accessed in the shader
                 context.command.SetGlobalTexture("GITexture", RT_gi3);
@@ -1053,8 +1045,9 @@ namespace UnityEngine.Rendering.PostProcessing
                     //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
                     //SEGIBuffer.Blit(RT_blur1, RT_blur0, material, Pass.BilateralBlur);
 
-                    context.command.Blit(RT_gi2, RT_blur1, Gaussian_Material);
-                    context.command.Blit(RT_blur1, RT_blur0, Gaussian_Material);
+                    //context.command.Blit(RT_gi2, RT_blur1, Gaussian_Material);
+                    //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
+                    context.command.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
                     context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
                     //Perform temporal reprojection and blending
@@ -1489,11 +1482,13 @@ namespace UnityEngine.Rendering.PostProcessing
             if (RT_gi1) RT_gi1.Release();
             RT_gi1 = new RenderTexture(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi1.vrUsage = VRTextureUsage.TwoEyes;
+            RT_gi1.filterMode = FilterMode.Bilinear;
             RT_gi1.Create();
 
             if (RT_gi2) RT_gi2.Release();
             RT_gi2 = new RenderTexture(SEGIRenderWidth / (int)settings.GIResolution.value, SEGIRenderHeight / (int)settings.GIResolution.value, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi2.vrUsage = VRTextureUsage.TwoEyes;
+            RT_gi2.filterMode = FilterMode.Bilinear;
             RT_gi2.Create();
 
             if (RT_reflections) RT_reflections.Release();
@@ -1504,11 +1499,13 @@ namespace UnityEngine.Rendering.PostProcessing
             if (RT_gi3) RT_gi3.Release();
             RT_gi3 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi3.vrUsage = VRTextureUsage.TwoEyes;
+            RT_gi3.filterMode = FilterMode.Bilinear;
             RT_gi3.Create();
 
             if (RT_gi4) RT_gi4.Release();
             RT_gi4 = new RenderTexture(SEGIRenderWidth, SEGIRenderHeight, 0, RenderTextureFormat.ARGBHalf);
             if (UnityEngine.XR.XRSettings.enabled) RT_gi4.vrUsage = VRTextureUsage.TwoEyes;
+            RT_gi4.filterMode = FilterMode.Bilinear;
             RT_gi4.Create();
 
             if (RT_blur0) RT_blur0.Release();

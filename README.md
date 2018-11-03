@@ -6,10 +6,9 @@
 
 
 # Features.
-* Deferred and Forward render paths.
 * 2D, Single Pass Rendering
-* Limited Single Pass Instanced Rendering.
-* Runs on Unity versions 2017 and 2018
+* Runs on Unity version 2018 (2017 support is coming)
+* Functions as a PostProcessing v2 effect
 
 A fully-dynamic voxel-based global illumination system for Unity. More details at http://www.sonicether.com/segi/
 
@@ -21,7 +20,11 @@ A fully-dynamic voxel-based global illumination system for Unity. More details a
 # Installation
 Check the [Releases](https://github.com/ninlilizi/SEGI/releases) section above to download a version of CKGI that is a simple .unitypackage file which is ready for you to import into your project. 
 
-You can also click the "Clone or Download" button and select "Download Zip", then extract the contents to "Assets/Plugins/CKGI" in your project to test out the latest unreleased versions of CKGI.
+You can also click the "Clone or Download" button and select "Download Zip", then extract the contents to "Assets/Plugins/SEGI" in your project to test out the latest unreleased versions of SEGI.
+
+Install Unity Post Processing v2. (https://github.com/Unity-Technologies/PostProcessing/wiki/Installation)
+
+Then add SEGI as a PP2 effect.  (https://github.com/Unity-Technologies/PostProcessing/wiki/Quick-start)
 
 Please refer to the User Guide.pdf for usage instructions.
 
@@ -30,6 +33,5 @@ If you need some help, feel free to ask any questions in the [official thread](h
 
 # Credits
 * Sonic Ether for SEGI (https://github.com/sonicether/SEGI)<br>
-* CK85 aka Nexusmaster for Unity 2017/2018 support (https://github.com/CK85/SEGI)<br>
-* Cat Like Coding for FXAA (https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/)
+* Cat Like Coding for FXAA (https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/)<br>
 * keijiro for Gaussian Blur(https://github.com/keijiro)
