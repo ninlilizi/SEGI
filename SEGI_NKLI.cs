@@ -1015,7 +1015,7 @@ namespace UnityEngine.Rendering.PostProcessing
                 context.command.SetGlobalVector("Kernel", new Vector2(1.0f, 0.0f));
                 context.command.Blit(RT_gi2, RT_gi3, material, Pass.BilateralUpsample);
                 context.command.SetGlobalVector("Kernel", new Vector2(0.0f, 1.0f));
-                context.command.Blit(RT_gi3, RT_gi4, material, Pass.BilateralBlur);
+                context.command.Blit(RT_gi3, RT_blur0, Gaussian_Material);
                 context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
                 //Perform temporal reprojection and blending
@@ -1047,7 +1047,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
                     //context.command.Blit(RT_gi2, RT_blur1, Gaussian_Material);
                     //material.SetVector("Kernel", new Vector2(1.0f, 0.0f));
-                    context.command.Blit(RT_gi3, RT_blur0, material, Pass.BilateralBlur);
+                    context.command.Blit(RT_gi3, RT_blur0, Gaussian_Material);
                     context.command.SetGlobalTexture("BlurredGI", RT_blur0);
 
                     //Perform temporal reprojection and blending
@@ -1257,6 +1257,7 @@ namespace UnityEngine.Rendering.PostProcessing
             voxelCamera.nearClipPlane = 0.0f;
             voxelCamera.farClipPlane = settings.voxelSpaceSize.value;
             voxelCamera.depth = -2;
+            voxelCamera.stereoTargetEye = StereoTargetEyeMask.None;
             voxelCamera.renderingPath = RenderingPath.Forward;
             voxelCamera.clearFlags = CameraClearFlags.Color;
             voxelCamera.backgroundColor = Color.black;

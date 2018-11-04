@@ -223,7 +223,7 @@ float4 GetViewSpacePosition(float2 coord, float2 uv)
 		}
 
 		float2 uvClip = uv * 2.0 - 1.0;
-		float4 clipPos = float4(uvClip, depth, 1.0);
+		float4 clipPos = float4(uvClip, 1 - depth, 1.0);
 		float4 viewPos = mul(proj, clipPos); // inverse projection by clip position
 		viewPos /= viewPos.w; // perspective division
 		float3 worldPos = mul(eyeToWorld, viewPos).xyz;

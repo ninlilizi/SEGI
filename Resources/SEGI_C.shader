@@ -22,7 +22,6 @@
 	{
 		float4 vertex	 : SV_POSITION;
 		float2 texcoord  : TEXCOORD0;
-		float4 screenPos : TEXCOORD1;
 		half3 normal     : TEXCOORD2;
 	};
 
@@ -42,7 +41,6 @@
 			#endif
 
 			o.normal = v.normal;
-			o.screenPos = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
 
 			return o;
 		}
@@ -60,7 +58,6 @@
 			#endif
 
 			o.normal = v.normal;
-			o.screenPos = ComputeScreenPos(mul(UNITY_MATRIX_MVP, v.vertex));
 
 			return o;
 		}
@@ -135,7 +132,7 @@
 				float3 kernel;
 
 				float fi = (float)blueNoise.x * StochasticSampling + tracedTexture1UpdateCount * StochasticSampling;
-				float fiN = fi / 92;
+				float fiN = fi / 96;
 				float longitude = gAngle * fi;
 				float latitude = asin(fiN * 2.0 - 1.0);
 

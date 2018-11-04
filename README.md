@@ -6,7 +6,7 @@
 
 
 # Features.
-* 2D, Single Pass Rendering
+* 2D, Single Pass Rendering (Single Pass Instanced support once PP2 adds SPI)
 * Runs on Unity version 2018 (2017 support is coming)
 * Functions as a PostProcessing v2 effect
 
@@ -25,6 +25,10 @@ You can also click the "Clone or Download" button and select "Download Zip", the
 Install Unity Post Processing v2. (https://github.com/Unity-Technologies/PostProcessing/wiki/Installation)
 
 Then add SEGI as a PP2 effect.  (https://github.com/Unity-Technologies/PostProcessing/wiki/Quick-start)
+
+Add 'SEGI_Sun_Light.cs' to your main directional light
+
+Add 'SEGI_Follow_Transform.cs' to your player character
 
 Please refer to the User Guide.pdf for usage instructions.
 
