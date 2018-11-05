@@ -20,6 +20,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
     SerializedParameterOverride TraceCacheResolution;
     SerializedParameterOverride visualizeSunDepthTexture;
     SerializedParameterOverride visualizeGI;
+    SerializedParameterOverride visualizeGIPathCache;
     //SerializedParameterOverride Sun;
     SerializedParameterOverride giCullingMask;
     SerializedParameterOverride shadowVolumeMask;
@@ -110,6 +111,7 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
         VoxelResolution = FindParameterOverride(x => x.voxelResolution);
         TraceCacheResolution = FindParameterOverride(x => x.traceCacheResolution);
         visualizeGI = FindParameterOverride(x => x.visualizeGI);
+        visualizeGIPathCache = FindParameterOverride(x => x.visualizeGIPathCache);
         visualizeSunDepthTexture = FindParameterOverride(x => x.visualizeSunDepthTexture);
         //Sun = FindParameterOverride(x <= x.Sun);
         giCullingMask = FindParameterOverride(x => x.giCullingMask);
@@ -380,7 +382,8 @@ public class SEGICascadedEditor : PostProcessEffectEditor<SEGI_NKLI>
             PropertyField(visualizeSunDepthTexture, new GUIContent("Visualize Sun Depth Texture", "Visualize the depth texture used to render proper shadows while injecting sunlight into voxel data."));
             PropertyField(visualizeGI, new GUIContent("Visualize GI", "Visualize GI result only (no textures)."));
             PropertyField(visualizeVoxels, new GUIContent("Visualize Voxels", "Directly view the voxels in the scene."));
-
+            EditorGUILayout.Space();
+            PropertyField(visualizeGIPathCache, new GUIContent("Trace ONLY Path Cache", "Visualize GI path tracer cache result only. (You must also select 'Visualize GI')"));
             EditorGUI.indentLevel--;
         }
 

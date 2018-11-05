@@ -139,6 +139,9 @@ MonoBehaviour:
   visualizeGI:
     overrideState: 1
     value: 0
+  visualizeGIPathCache:
+    overrideState: 0
+    value: 0
   visualizeVoxels:
     overrideState: 1
     value: 0
@@ -193,7 +196,7 @@ MonoBehaviour:
     value: 256
   traceCacheResolution:
     overrideState: 1
-    value: 256
+    value: 512
   voxelSpaceSize:
     overrideState: 1
     value: 100
@@ -220,10 +223,10 @@ MonoBehaviour:
     value: 0.5
   doReflections:
     overrideState: 1
-    value: 1
+    value: 0
   temporalBlendWeight:
     overrideState: 1
-    value: 0.318
+    value: 1
   useBilateralFiltering:
     overrideState: 1
     value: 1
@@ -241,10 +244,10 @@ MonoBehaviour:
     value: 1
   coneTraceSteps:
     overrideState: 1
-    value: 5
+    value: 14
   coneLength:
     overrideState: 1
-    value: 0.5
+    value: 0.3
   coneWidth:
     overrideState: 1
     value: 7.5
@@ -295,8 +298,11 @@ MonoBehaviour:
     value: 1
   useFXAA:
     overrideState: 1
-    value: 1
+    value: 0
   visualizeGI:
+    overrideState: 1
+    value: 1
+  visualizeGIPathCache:
     overrideState: 1
     value: 0
   visualizeVoxels:
@@ -459,6 +465,9 @@ MonoBehaviour:
   visualizeGI:
     overrideState: 0
     value: 0
+  visualizeGIPathCache:
+    overrideState: 0
+    value: 0
   visualizeVoxels:
     overrideState: 0
     value: 0
@@ -617,6 +626,9 @@ MonoBehaviour:
     overrideState: 0
     value: 0
   visualizeGI:
+    overrideState: 0
+    value: 0
+  visualizeGIPathCache:
     overrideState: 0
     value: 0
   visualizeVoxels:
@@ -790,6 +802,9 @@ MonoBehaviour:
   visualizeGI:
     overrideState: 0
     value: 0
+  visualizeGIPathCache:
+    overrideState: 0
+    value: 0
   visualizeVoxels:
     overrideState: 0
     value: 0
@@ -948,6 +963,9 @@ MonoBehaviour:
     overrideState: 0
     value: 0
   visualizeGI:
+    overrideState: 0
+    value: 0
+  visualizeGIPathCache:
     overrideState: 0
     value: 0
   visualizeVoxels:

@@ -123,6 +123,7 @@ namespace UnityEngine.Rendering.PostProcessing
         public BoolParameter useFXAA = new BoolParameter { value = false };
 
         public BoolParameter visualizeGI = new BoolParameter { value = false };
+        public BoolParameter visualizeGIPathCache = new BoolParameter { value = false };
         public BoolParameter visualizeVoxels = new BoolParameter { value = false };
         public BoolParameter visualizeSunDepthTexture = new BoolParameter { value = false };
 
@@ -401,6 +402,13 @@ namespace UnityEngine.Rendering.PostProcessing
             if (prevTraceCacheResolution != (int)settings.traceCacheResolution.value)
             {
                 Debug.Log("<SEGI> Path trace cache resolution changed. Resizing volumes");
+                prevTraceCacheResolution = (int)settings.traceCacheResolution.value;
+                CreateVolumeTextures();
+            }
+
+            if ((int)settings.traceCacheResolution.value == 0)
+            {
+                Debug.Log("<SEGI> Path trace cache zero'd. Resizing volumes");
                 prevTraceCacheResolution = (int)settings.traceCacheResolution.value;
                 CreateVolumeTextures();
             }
@@ -965,8 +973,9 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalInt("StereoEnabled", context.stereoActive ? 1 : 0);
             context.command.SetGlobalInt("SEGIRenderWidth", SEGIRenderWidth);
             context.command.SetGlobalInt("SEGIRenderHeight", SEGIRenderHeight);
-            context.command.SetGlobalFloat("voxelSpaceSize", settings.voxelSpaceSize);
+            //context.command.SetGlobalFloat("voxelSpaceSize", settings.voxelSpaceSize);
             context.command.SetGlobalInt("tracedTexture1UpdateCount", (int)tracedTexture1.updateCount);
+            context.command.SetGlobalInt("visualizeGIPathCache", settings.visualizeGIPathCache ? 1 : 0);
 
             //Blit once to downsample if required
             context.command.Blit(context.source, RT_gi1);

@@ -23,6 +23,7 @@ void CSMain2(uint3 id : SV_DispatchThreadID)
 	uint slice = Resolution / 16;
 	uint currentZ;
 
+	[unroll(32)]
 	for (uint i = 0; i < slice; i++)
 	{
 		currentZ = zStagger * slice - slice + i;

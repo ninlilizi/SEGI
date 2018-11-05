@@ -84,7 +84,7 @@
 			#endif
 
 			int FrameSwitch;
-
+			int visualizeGIPathCache;
 
 			sampler2D NoiseTexture;
 
@@ -119,47 +119,107 @@
 				const float phi = 1.618033988;
 				const float gAngle = phi * PI * 1.0;
 
+				float scaledDepth = 256 * SEGITraceCacheScaleFactor;
+
 				//Get blue noise
 				float2 noiseCoord = (input.texcoord.xy * _MainTex_TexelSize.zw) / (64.0).xx;
 				float4 blueNoise = tex2Dlod(NoiseTexture, float4(noiseCoord, 0.0, 0.0)).x;
 
-				float depth = GetDepthTextureTraceCache(uv);
-				blueNoise *= (1 - GetDepthTexture(uv)) * voxelSpaceSize;
+				float depth = GetDepthTexture(uv);
+				float depthCache = 1 - GetDepthTextureTraceCache(uv);
+				float4 blueNoiseCache = blueNoise * depthCache * voxelSpaceSize;
+				blueNoise *= (1 - depth);
+				
+				//blueNoiseCache *= 0.125;
+				//blueNoise.z *= 0.125;
+				
 
 				//Trace GI cones
-				uint3 voxelCoord = float3(0, 0, 0);
-				uint voxelDepth;
-				float3 kernel;
+				float3 voxelCoord = float3(0, 0, 0);
+				float3 kernel0;
+				float3 kernel1;
 
-				float fi = (float)blueNoise.x * StochasticSampling + tracedTexture1UpdateCount * StochasticSampling;
+				float fi = (float)blueNoise.x + tracedTexture1UpdateCount * StochasticSampling;
 				float fiN = fi / 96;
 				float longitude = gAngle * fi;
 				float latitude = asin(fiN * 2.0 - 1.0);
 
-				kernel.x = cos(latitude) * cos(longitude);
-				kernel.z = cos(latitude) * sin(longitude);
-				kernel.y = sin(latitude);
+				kernel0.x = cos(latitude) * cos(longitude);
+				kernel0.z = cos(latitude) * sin(longitude);
+				kernel0.y = sin(latitude);
 
-				kernel = normalize(kernel + worldNormal.xyz * 1.0);
+				kernel1 = normalize(kernel0 + worldNormal.xyz * ConeSize);
+				kernel0 = normalize(kernel0 + worldNormal.xyz);
+
+				float skyVisibility;
 				
-				traceResult += ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125 * StochasticSampling, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth);
+				float voxelDepth;
+				float coneDistance;
+				float alphaCache[32];
+				traceResult = ConeTrace(voxelOrigin.xyz, kernel0.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125 * StochasticSampling, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth, skyVisibility, voxelCoord, alphaCache);
 
-				voxelCoord = float3(voxelOrigin.x + kernel.x - blueNoise.x * SEGITraceCacheScaleFactor, voxelOrigin.y + kernel.y - blueNoise.y * SEGITraceCacheScaleFactor, depth* voxelDepth - blueNoise.z * SEGITraceCacheScaleFactor);
-				tracedTexture1[uint3(voxelCoord)].rgba += float4(traceResult.rgb, 0);
+				voxelCoord.z *= voxelDepth;
 
-				uint scaledDepth = 256 * SEGITraceCacheScaleFactor;
-				if (voxelCoord.x < scaledDepth && voxelCoord.y < scaledDepth && voxelCoord.z < scaledDepth);
+				tracedTexture1[uint3(voxelCoord)] += float4(traceResult, 0);
+						
+				half4 cachedResult = float4(0, 0, 0, 0);
+				if (voxelCoord.x < scaledDepth && voxelCoord.y < scaledDepth && voxelCoord.z < scaledDepth)
 				{
-					if (voxelCoord.x > 0 && voxelCoord.y > 0  && voxelCoord.z > 0);
+					if (voxelCoord.x < 256 * scaledDepth && voxelCoord.y < 256 * scaledDepth && voxelCoord.z < 256 * scaledDepth)
 					{
 						if (traceResult.r > 0 || traceResult.g > 0 || traceResult.b > 0)
 						{
-							traceResult.rgb = lerp(tracedTexture0[uint3(voxelCoord)].rgb, traceResult.rgb, 0.25);
+							cachedResult.rgba = tracedTexture0[uint3(voxelCoord)].rgba;
 						}
 					}
+					//else cachedResult.rgb = float3(voxelCoord.z, 0.01, voxelCoord.z);
 				}
+				//else cachedResult.rgb = float3(0.1, voxelCoord.z, 0.1);
 
-				//traceResult.rgb = tracedTexture0[uint3(voxelCoord)].rgb;
+				//cachedResult.rgb = traceResult.rgb;
+				cachedResult.rgb = lerp(cachedResult.rgb, traceResult, 0.25);
+
+				
+				//Nin - We simulate a bounce here to calculate ambiant and light attribution on the cached result
+				float occlusion;
+				skyVisibility = 1.0;
+				traceResult = float4(0, 0, 0, 0);
+				int numSteps = (int)(TraceSteps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
+				//[unroll(32)]
+				for (int i = 0; i < numSteps; i++)
+				{
+					fi = ((float)i - blueNoise.z * 0.125 * StochasticSampling) / numSteps;
+					fi = lerp(fi, 1.0, 0.01);
+
+					coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
+
+					float coneSize = fi * ConeSize * lerp(SEGIVoxelScaleFactor, 1.0, 0.5);
+
+					float occlusion = skyVisibility * skyVisibility;
+
+					alphaCache[i] *= lerp(saturate(coneSize / 1.0), 1.0, NearOcclusionStrength);
+					alphaCache[i] *= (0.8 / (fi * fi * 2.0 + 0.15));
+					traceResult.rgb += cachedResult.rgb * occlusion * (coneDistance + NearLightGain) * 80.0 * (1.0 - fi * fi);
+
+					skyVisibility *= pow(saturate(1.0 - alphaCache[i] * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
+				}
+				float NdotL = pow(saturate(dot(worldNormal, kernel0) * 1.0 - 0.0), 0.5);
+
+				traceResult *= NdotL;
+				skyVisibility *= NdotL;
+				skyVisibility *= lerp(saturate(dot(kernel0, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
+
+				float3 skyColor = float3(0.0, 0.0, 0.0);
+
+				float upGradient = saturate(dot(kernel0, float3(0.0, 1.0, 0.0)));
+				float sunGradient = saturate(dot(kernel0, SEGISunlightVector.xyz));
+				skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb, pow(upGradient, (0.5).xxx));
+				skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+
+				traceResult.rgb *= GIGain * 0.15;
+				traceResult += skyColor * skyVisibility * 10.0;
+
+				if (visualizeGIPathCache) traceResult.rgb = cachedResult.rgb;
 
 				gi = traceResult.rgb * 1.18;
 
