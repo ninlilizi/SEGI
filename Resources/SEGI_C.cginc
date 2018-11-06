@@ -278,7 +278,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	float3 voxelCheckCoord1 = float3(0, 0, 0);
 
 	float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
-	//float coneDistanceCache;
 	int startMipLevel = 0;
 	float voxelDepth;
 
@@ -301,8 +300,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		{
 			//voxelDepth = 256 / numSteps * i * SEGITraceCacheScaleFactor;
 			voxelCheckCoord1 = voxelCheckCoord;
-			//coneDistanceCache = coneDistance;
-			
 			if (mipLevel == 1 || mipLevel == 0)
 			{
 				voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
@@ -345,6 +342,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
+	voxelCheckCoord1.x += dither.x * StochasticSampling;
+	voxelCheckCoord1.y += dither.y * StochasticSampling;
+	voxelCheckCoord1.z += dither.z * StochasticSampling;
 	tracedTexture1[uint3(voxelCheckCoord1)].rgba = float4(tracedTexture1[uint3(voxelCheckCoord1)].rgb + gi.rgb, giSample.a);
 
 
@@ -384,7 +384,6 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		if (coneDistance < depth)
 		{
 			voxelCheckCoord1 = voxelCheckCoord;
-
 			if (mipLevel == 1 || mipLevel == 0)
 			{
 				voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
@@ -429,6 +428,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
+	voxelCheckCoord1.x += dither.x * StochasticSampling;
+	voxelCheckCoord1.y += dither.y * StochasticSampling;
+	voxelCheckCoord1.z += dither.z * StochasticSampling;
 	cachedResult.rgba = tracedTexture0[uint3(voxelCheckCoord1)].rgba;
 
 	gi.rgb = lerp(gi.rgb, cachedResult, 0.5);
