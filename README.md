@@ -9,6 +9,7 @@
 * 2D, Single Pass Rendering (Single Pass Instanced support once PP2 adds SPI)
 * Runs on Unity version 2018 (2017 support is coming)
 * Functions as a PostProcessing v2 effect
+* Samples cones across frames. Giving a 32cone result for the cost of 2 per frame.
 
 A fully-dynamic voxel-based global illumination system for Unity. More details at http://www.sonicether.com/segi/
 
