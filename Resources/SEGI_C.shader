@@ -129,30 +129,22 @@
 				float4 blueNoiseCache = blueNoise * depthCache * voxelSpaceSize;
 				blueNoise *= (1 - depth);
 				
-				//blueNoiseCache *= 0.125;
-				//blueNoise.z *= 0.125;
-				
-
 				//Trace GI cones
 				float3 voxelCoord = float3(0, 0, 0);
-				float3 kernel0;
-				float3 kernel1;
+				float3 kernel;
 
-				float fi = (float)blueNoise.x + tracedTexture1UpdateCount * StochasticSampling;
-				float fiN = fi / 96;
+				float fi = (float)tracedTexture1UpdateCount + blueNoise.x * StochasticSampling;
+				float fiN = fi / 65;
 				float longitude = gAngle * fi;
 				float latitude = asin(fiN * 2.0 - 1.0);
 
-				kernel0.x = cos(latitude) * cos(longitude);
-				kernel0.z = cos(latitude) * sin(longitude);
-				kernel0.y = sin(latitude);
+				kernel.x = cos(latitude) * cos(longitude);
+				kernel.z = cos(latitude) * sin(longitude);
+				kernel.y = sin(latitude);
 
-				kernel1 = normalize(kernel0 + worldNormal.xyz * ConeSize);
-				kernel0 = normalize(kernel0 + worldNormal.xyz);
-
-				float skyVisibility;
-				
-				traceResult = ConeTrace(voxelOrigin.xyz, kernel0.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125 * StochasticSampling, TraceSteps, ConeSize, 1.0, 1.0, depth);
+				kernel = normalize(kernel + worldNormal.xyz);
+		
+				traceResult = ConeTrace(voxelOrigin.xyz, kernel.xyz, worldNormal.xyz, coord, float3(blueNoise.xy * StochasticSampling, -blueNoise.z * 0.125 * StochasticSampling), TraceSteps, ConeSize, 1.0, 1.0, depth);
 
 				gi = traceResult.rgb * 1.18;
 

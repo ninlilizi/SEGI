@@ -323,7 +323,7 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 2.5
+    value: 1
   skyColor:
     overrideState: 1
     value: {r: 0.40784314, g: 0.5254902, b: 0.7490196, a: 1}

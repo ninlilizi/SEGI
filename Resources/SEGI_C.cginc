@@ -265,7 +265,7 @@ float GISampleWeight(float3 pos)
 	return weight;
 }
 
-float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float depth)
+float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float3 dither, int steps, float width, float lengthMult, float skyMult, float depth)
 {
 	float skyVisibility = 1.0;
 
@@ -278,6 +278,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	float3 voxelCheckCoord1 = float3(0, 0, 0);
 
 	float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
+	//float coneDistanceCache;
 	int startMipLevel = 0;
 	float voxelDepth;
 
@@ -286,7 +287,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	[unroll(32)]
 	for (uint i = 0; i < numSteps; i++)
 	{
-		float fi = ((float)i + dither) / numSteps;
+		float fi = ((float)i + dither.x) / numSteps;
 		fi = lerp(fi, 1.0, 0.0);
 
 		float coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
@@ -298,8 +299,10 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
 		if (coneDistance < depth)
 		{
-			voxelDepth = 256 / numSteps * i * SEGITraceCacheScaleFactor;
+			//voxelDepth = 256 / numSteps * i * SEGITraceCacheScaleFactor;
 			voxelCheckCoord1 = voxelCheckCoord;
+			//coneDistanceCache = coneDistance;
+			
 			if (mipLevel == 1 || mipLevel == 0)
 			{
 				voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
@@ -337,20 +340,102 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 		skyVisibility *= pow(saturate(1.0 - giSample.a * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
 	}
+
 	//Write current cone to cache
-	voxelCheckCoord1.z *= voxelDepth;
-	tracedTexture1[uint3(voxelCheckCoord1)] = float4(tracedTexture1[uint3(voxelCheckCoord1)] + gi.rgb, giSample.a);
+	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
+	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
+	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
+	tracedTexture1[uint3(voxelCheckCoord1)].rgba = float4(tracedTexture1[uint3(voxelCheckCoord1)].rgb + gi.rgb, giSample.a);
+
+
+	//Calculate static kernel and coordinates
+	const float phi = 1.618033988;
+	const float gAngle = phi * PI * 1.0;
+	float fi = 1;
+	float fiN = fi / 1;
+	float longitude = gAngle * fi;
+	float latitude = asin(fiN * 2.0 - 1.0);
+
+	kernel.x = cos(latitude) * cos(longitude);
+	kernel.z = cos(latitude) * sin(longitude);
+	kernel.y = sin(latitude);
+	kernel = normalize(kernel + worldNormal.xyz);
+
+
+	//Prepare secondary cone
+	adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
+	gi.rgb = float3(0, 0, 0);
+	skyVisibility = 1;
+
+	//Trace static cone for mixing
+	[unroll(32)]
+	for (uint y = 0; y < numSteps; y++)
+	{
+		float fi = ((float)y + dither.x) / numSteps;
+		fi = lerp(fi, 1.0, 0.0);
+
+		float coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
+
+		float coneSize = coneDistance * width * 10.3;
+
+		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.000);
+
+		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
+		if (coneDistance < depth)
+		{
+			voxelCheckCoord1 = voxelCheckCoord;
+
+			if (mipLevel == 1 || mipLevel == 0)
+			{
+				voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			}
+			else if (mipLevel == 2)
+			{
+				voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			}
+			else if (mipLevel == 3)
+			{
+				voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			}
+			else if (mipLevel == 4)
+			{
+				voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			}
+			else
+			{
+				voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
+			}
+		}
+
+		float occlusion = skyVisibility;
+
+		float falloffFix = pow(fi, 1.0) * 4.0 + NearLightGain;
+
+		giSample.a *= lerp(saturate(coneSize / 1.0), 1.0, NearOcclusionStrength);
+		giSample.a *= (0.8 / (fi * fi * 2.0 + 0.15));
+		gi.rgb += giSample.rgb * occlusion * (coneDistance + NearLightGain) * 80.0 * (1.0 - fi * fi);
+
+		skyVisibility *= pow(saturate(1.0 - giSample.a * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
+	}
+
 
 	//Read cached cones from cache
 	half4 cachedResult = float4(0, 0, 0, 0);
-	float scaledDepth = 256 * SEGITraceCacheScaleFactor;
-	cachedResult.rgb = tracedTexture0[uint3(voxelCheckCoord1)].rgba;
+	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
+	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
+	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
+	cachedResult.rgba = tracedTexture0[uint3(voxelCheckCoord1)].rgba;
 
-	gi.rgb = lerp(gi.rgb, cachedResult, 0.75);
+	gi.rgb = lerp(gi.rgb, cachedResult, 0.5);
 
 	//Output for debug option 'Trace ONLY path cache'
 	if (visualizeGIPathCache) gi.rgb = cachedResult.rgb;
-	
+
 	//Calculate lighting attribution
 	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
 

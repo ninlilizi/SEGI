@@ -37,8 +37,7 @@ namespace UnityEngine.Rendering.PostProcessing
         VeryLow = 32,
         Low = 64,
         Medium = 128,
-        High = 256,
-        VeryHigh = 512
+        High = 256
     }
 
     [Serializable]
@@ -389,22 +388,26 @@ namespace UnityEngine.Rendering.PostProcessing
             // Update
             InitCheck();
 
-            if (SEGIRenderWidth != context.width || SEGIRenderHeight != context.height || settings.GIResolution.value != GIResolutionPrev)
+            if (!context.isSceneView)
             {
-                Debug.Log("<SEGI> Context != Cached Dimensions. Resizing buffers");
-                GIResolutionPrev = settings.GIResolution.value;
-                SEGIRenderWidth = context.width;
-                SEGIRenderHeight = context.height;
+                if (SEGIRenderWidth != context.width || SEGIRenderHeight != context.height || settings.GIResolution.value != GIResolutionPrev)
+                {
+                    Debug.Log("<SEGI> Context != Cached Dimensions. Resizing buffers");
+                    GIResolutionPrev = settings.GIResolution.value;
+                    SEGIRenderWidth = context.width;
+                    SEGIRenderHeight = context.height;
 
-                ResizeAllTextures();
+                    ResizeAllTextures();
+                }
+
+                if (prevTraceCacheResolution != (int)settings.traceCacheResolution.value)
+                {
+                    Debug.Log("<SEGI> Path trace cache resolution changed. Resizing volumes");
+                    prevTraceCacheResolution = (int)settings.traceCacheResolution.value;
+                    CreateVolumeTextures();
+                }
             }
 
-            if (prevTraceCacheResolution != (int)settings.traceCacheResolution.value)
-            {
-                Debug.Log("<SEGI> Path trace cache resolution changed. Resizing volumes");
-                prevTraceCacheResolution = (int)settings.traceCacheResolution.value;
-                CreateVolumeTextures();
-            }
 
             if ((int)settings.traceCacheResolution.value == 0)
             {
@@ -427,16 +430,20 @@ namespace UnityEngine.Rendering.PostProcessing
                 return;
             }
 
-            if (previousGIResult == null)
+            if (!context.isSceneView)
             {
-                Debug.Log("<SEGI> PreviousGIResult == null. Resizing Render Textures.");
-                ResizeAllTextures();
-            }
 
-            if (previousGIResult.width != context.width || previousGIResult.height != context.height)
-            {
-                Debug.Log("<SEGI> previousGIResult != Expected Dimensions. Resizing Render Textures");
-                ResizeAllTextures();
+                if (previousGIResult == null)
+                {
+                    Debug.Log("<SEGI> PreviousGIResult == null. Resizing Render Textures.");
+                    ResizeAllTextures();
+                }
+
+                if (previousGIResult.width != context.width || previousGIResult.height != context.height)
+                {
+                    Debug.Log("<SEGI> previousGIResult != Expected Dimensions. Resizing Render Textures");
+                    ResizeAllTextures();
+                }
             }
 
             if ((int)sunShadowResolution != prevSunShadowResolution)
@@ -915,22 +922,22 @@ namespace UnityEngine.Rendering.PostProcessing
                 return;
             }
 
-            else if (tracedTexture1UpdateCount > 80)
+            else if (tracedTexture1UpdateCount > 48)
             {
                 context.command.SetComputeIntParam(clearComputeCache, "Resolution", (int)settings.traceCacheResolution.value);
                 context.command.SetComputeTextureParam(clearComputeCache, 1, "RG1", tracedTexture1);
-                context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 80);
+                context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 48);
                 context.command.DispatchCompute(clearComputeCache, 1, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
             }
-            else if (tracedTexture1UpdateCount > 64)
+            else if (tracedTexture1UpdateCount > 32)
             {
                 context.command.SetComputeTextureParam(transferIntsCompute, 3, "Result", tracedTexture0);
                 context.command.SetComputeTextureParam(transferIntsCompute, 3, "RG1", tracedTexture1);
-                context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 64);
+                context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 32);
                 context.command.SetComputeIntParam(transferIntsCompute, "Resolution", (int)settings.traceCacheResolution.value);
                 context.command.DispatchCompute(transferIntsCompute, 3, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
             }
-            tracedTexture1UpdateCount = (tracedTexture1UpdateCount + 1) % (96);
+            tracedTexture1UpdateCount = (tracedTexture1UpdateCount + 1) % (65);
 
 
 
@@ -974,7 +981,7 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalInt("SEGIRenderWidth", SEGIRenderWidth);
             context.command.SetGlobalInt("SEGIRenderHeight", SEGIRenderHeight);
             //context.command.SetGlobalFloat("voxelSpaceSize", settings.voxelSpaceSize);
-            context.command.SetGlobalInt("tracedTexture1UpdateCount", (int)tracedTexture1.updateCount);
+            context.command.SetGlobalInt("tracedTexture1UpdateCount", tracedTexture1UpdateCount);
             context.command.SetGlobalInt("visualizeGIPathCache", settings.visualizeGIPathCache ? 1 : 0);
 
             //Blit once to downsample if required

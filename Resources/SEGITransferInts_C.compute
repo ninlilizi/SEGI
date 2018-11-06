@@ -120,25 +120,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 		result.a = min(result.a, 2.0) * 1.0;
 		result.a += blockerValue;
 
-		/*
-		uint3 writeCoord = uint3(id.xy, i);
-
-		float3 fcoord = float3((float)id.x / Resolution, (float)id.y / Resolution, (float)i / Resolution);
-		float3 refcoord = fcoord * 0.5 + 0.25;
-		refcoord += ClipmapOverlap.xyz * 1.0;
-		float minCoord = 0.0;
-		float maxCoord = 1.0;
-
-		//if (refcoord.x > maxCoord || refcoord.x < minCoord || refcoord.y > maxCoord || refcoord.y < minCoord || refcoord.z > maxCoord || refcoord.z < minCoord)
-		*/
-		
-		/*
-		if (id.x == 0 || id.x == Resolution - 1 || id.y == 0 || id.y == Resolution - 1 || i == 0 || i == Resolution - 1)
-		{
-			//result = float4(0.0, 0.0, 0.0, 0.0);
-		}
-		*/
-		
 		Result[uint3(id.xy, i)] = result;
 
     }
@@ -185,10 +166,10 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 	{
 		currentZ = zStagger * slice - slice + i;
 		color = RG1[uint3(float3(id.xy, currentZ))];
-		color.rgba = float4(color.rgb / 65535, color.a);
+		color.rgba = float4(color.rgb / 65536, color.a);
 		if (color.r > 0 && color.g > 0 && color.b > 0)
 		{
-			color.rgb = (lerp(Result[uint3(id.xy, currentZ)].rgb, color.rgb, 0.5) + color.rgb) * 0.5;
+			color.rgb = lerp(Result[uint3(id.xy, currentZ)].rgb, color.rgb, 0.5);
 			Result[uint3(id.xy, currentZ)] = color;
 		}
 	}
