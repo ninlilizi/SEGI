@@ -283,6 +283,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	voxelOrigin.xyz += worldNormal.xyz * 0.016 * (exp2(startMipLevel) - 1);
 
+	[unroll(32)]
 	for (uint i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i + dither) / numSteps;
@@ -390,7 +391,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
-	//[unroll(32)]
+	[unroll(32)]
 	for (int i = 0; i < numSamples; i++)
 	{
 		float fi = ((float)i) / numSamples;
