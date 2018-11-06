@@ -196,7 +196,7 @@ MonoBehaviour:
     value: 256
   traceCacheResolution:
     overrideState: 1
-    value: 512
+    value: 256
   voxelSpaceSize:
     overrideState: 1
     value: 100
@@ -211,7 +211,7 @@ MonoBehaviour:
     value: 1
   innerOcclusionLayers:
     overrideState: 1
-    value: 0
+    value: 1
   infiniteBounces:
     overrideState: 1
     value: 1
@@ -223,7 +223,7 @@ MonoBehaviour:
     value: 0.5
   doReflections:
     overrideState: 1
-    value: 0
+    value: 1
   temporalBlendWeight:
     overrideState: 1
     value: 1
@@ -244,7 +244,7 @@ MonoBehaviour:
     value: 1
   coneTraceSteps:
     overrideState: 1
-    value: 14
+    value: 18
   coneLength:
     overrideState: 1
     value: 0.3
@@ -274,7 +274,7 @@ MonoBehaviour:
     value: 1
   reflectionSteps:
     overrideState: 1
-    value: 16
+    value: 9
   reflectionOcclusionPower:
     overrideState: 1
     value: 4
@@ -298,10 +298,10 @@ MonoBehaviour:
     value: 1
   useFXAA:
     overrideState: 1
-    value: 0
+    value: 1
   visualizeGI:
     overrideState: 1
-    value: 1
+    value: 0
   visualizeGIPathCache:
     overrideState: 1
     value: 0
@@ -323,7 +323,7 @@ MonoBehaviour:
       m_Bits: 311
   softSunlight:
     overrideState: 1
-    value: 1
+    value: 2.5
   skyColor:
     overrideState: 1
     value: {r: 0.40784314, g: 0.5254902, b: 0.7490196, a: 1}

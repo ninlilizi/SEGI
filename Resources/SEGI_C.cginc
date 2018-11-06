@@ -84,6 +84,7 @@ int StereoEnabled;
 int GIResolution;
 int ForwardPath;
 
+int visualizeGIPathCache;
 
 uint SEGIRenderWidth;
 uint SEGIRenderHeight;
@@ -264,9 +265,9 @@ float GISampleWeight(float3 pos)
 	return weight;
 }
 
-float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float depth, out float voxelDepth, out float skyVisibility, out float3 voxelCheckCoord1, out float alphaCache[32])
+float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 uv, float dither, int steps, float width, float lengthMult, float skyMult, float depth)
 {
-	skyVisibility = 1.0;
+	float skyVisibility = 1.0;
 
 	float3 gi = float3(0, 0, 0);
 
@@ -274,63 +275,99 @@ float3 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 	float3 adjustedKernel = normalize(kernel.xyz + worldNormal.xyz * 0.00 * width);
 
+	float3 voxelCheckCoord1 = float3(0, 0, 0);
+
+	float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
 	int startMipLevel = 0;
+	float voxelDepth;
 
 	voxelOrigin.xyz += worldNormal.xyz * 0.016 * (exp2(startMipLevel) - 1);
 
-	float3 voxelCheckCoord0 = float3 (0, 0, 0);
-
-	//float alphaCache[32];
-
-	//[unroll(32)]
 	for (uint i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i + dither) / numSteps;
-		fi = lerp(fi, 1.0, 0.01);
+		fi = lerp(fi, 1.0, 0.0);
 
 		float coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
 
-		float coneSize = fi * width * lerp(SEGIVoxelScaleFactor, 1.0, 0.5);
+		float coneSize = coneDistance * width * 10.3;
 
-		voxelCheckCoord0 = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.001);
+		float3 voxelCheckCoord = voxelOrigin.xyz + adjustedKernel.xyz * (coneDistance * 1.12 * TraceLength * lengthMult + 0.000);
 
-		float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
 		int mipLevel = max(startMipLevel, log2(pow(fi, 1.3) * 24.0 * width + 1.0));
 		if (coneDistance < depth)
 		{
 			voxelDepth = 256 / numSteps * i * SEGITraceCacheScaleFactor;
-			voxelCheckCoord1 = voxelCheckCoord0;
+			voxelCheckCoord1 = voxelCheckCoord;
 			if (mipLevel == 1 || mipLevel == 0)
 			{
-				voxelCheckCoord0 = TransformClipSpace1(voxelCheckCoord0);
-				giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord0.xyz, coneSize)) * GISampleWeight(voxelCheckCoord0);
+				voxelCheckCoord = TransformClipSpace1(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel1, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
 			}
 			else if (mipLevel == 2)
 			{
-				voxelCheckCoord0 = TransformClipSpace2(voxelCheckCoord0);
-				giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord0.xyz, coneSize)) * GISampleWeight(voxelCheckCoord0);
+				voxelCheckCoord = TransformClipSpace2(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel2, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
 			}
 			else if (mipLevel == 3)
 			{
-				voxelCheckCoord0 = TransformClipSpace3(voxelCheckCoord0);
-				giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord0.xyz, coneSize)) * GISampleWeight(voxelCheckCoord0);
+				voxelCheckCoord = TransformClipSpace3(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel3, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
 			}
 			else if (mipLevel == 4)
 			{
-				voxelCheckCoord0 = TransformClipSpace4(voxelCheckCoord0);
-				giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord0.xyz, coneSize)) * GISampleWeight(voxelCheckCoord0);
+				voxelCheckCoord = TransformClipSpace4(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel4, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
 			}
 			else
 			{
-				voxelCheckCoord0 = TransformClipSpace5(voxelCheckCoord0);
-				giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord0.xyz, coneSize)) * GISampleWeight(voxelCheckCoord0);
+				voxelCheckCoord = TransformClipSpace5(voxelCheckCoord);
+				giSample = tex3Dlod(SEGIVolumeLevel5, float4(voxelCheckCoord.xyz, coneSize)) * GISampleWeight(voxelCheckCoord);
 			}
 		}
-		gi.rgb += giSample.rgb;
 
-		alphaCache[i] = giSample.a;
+		float occlusion = skyVisibility;
+
+		float falloffFix = pow(fi, 1.0) * 4.0 + NearLightGain;
+
+		giSample.a *= lerp(saturate(coneSize / 1.0), 1.0, NearOcclusionStrength);
+		giSample.a *= (0.8 / (fi * fi * 2.0 + 0.15));
+		gi.rgb += giSample.rgb * occlusion * (coneDistance + NearLightGain) * 80.0 * (1.0 - fi * fi);
+
+		skyVisibility *= pow(saturate(1.0 - giSample.a * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
 	}
-	return float3(gi.rgb * 0.8);
+	//Write current cone to cache
+	voxelCheckCoord1.z *= voxelDepth;
+	tracedTexture1[uint3(voxelCheckCoord1)] = float4(tracedTexture1[uint3(voxelCheckCoord1)] + gi.rgb, giSample.a);
+
+	//Read cached cones from cache
+	half4 cachedResult = float4(0, 0, 0, 0);
+	float scaledDepth = 256 * SEGITraceCacheScaleFactor;
+	cachedResult.rgb = tracedTexture0[uint3(voxelCheckCoord1)].rgba;
+
+	gi.rgb = lerp(gi.rgb, cachedResult, 0.75);
+
+	//Output for debug option 'Trace ONLY path cache'
+	if (visualizeGIPathCache) gi.rgb = cachedResult.rgb;
+	
+	//Calculate lighting attribution
+	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
+
+	gi *= NdotL;
+	skyVisibility *= NdotL;
+	skyVisibility *= lerp(saturate(dot(kernel, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
+	float3 skyColor = float3(0.0, 0.0, 0.0);
+
+	float upGradient = saturate(dot(kernel, float3(0.0, 1.0, 0.0)));
+	float sunGradient = saturate(dot(kernel, -SEGISunlightVector.xyz));
+	skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb * 0.5, pow(upGradient, (0.5).xxx));
+	skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
+
+	gi.rgb *= GIGain * 0.15;
+
+	gi += skyColor * skyVisibility * skyMult * 10.0;
+
+	return float4(gi.rgb * 0.8, 0.0f);
 }
 
 

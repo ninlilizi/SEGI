@@ -72,7 +72,7 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 1
+    value: 0
   updateGI:
     overrideState: 1
     value: 1
@@ -87,7 +87,7 @@ MonoBehaviour:
     value: 0.1
   coneWidth:
     overrideState: 1
-    value: 6
+    value: 12
   coneTraceBias:
     overrideState: 1
     value: 4
@@ -160,7 +160,7 @@ MonoBehaviour:
       m_Bits: 2147483647
   softSunlight:
     overrideState: 1
-    value: 1
+    value: 2.5
   skyColor:
     overrideState: 1
     value: {r: 0.64705884, g: 0.7882353, b: 1, a: 1}
@@ -169,7 +169,7 @@ MonoBehaviour:
     value: 0
   skyIntensity:
     overrideState: 1
-    value: 1
+    value: 2.5
   sphericalSkylight:
     overrideState: 1
     value: 0

@@ -172,41 +172,24 @@ void CSMain3(uint3 id : SV_DispatchThreadID)
 	}
 }
 
-// 3
+// 3 - Copies contents over 16 frames
 [numthreads(16, 16, 1)]
 void CSMain4(uint3 id : SV_DispatchThreadID)
 {
 	uint slice = Resolution / 16;
 	uint currentZ;
 	half4 color = float4(0, 0, 0, 0);
-	//half4 prevColor = float4(0, 0, 0, 0);
 
 	[unroll(32)]
 	for (uint i = 0; i < slice; i++)
 	{
 		currentZ = zStagger * slice - slice + i;
-		color.rgba = RG1[uint3(float3(id.xy, currentZ))].rgba;
+		color = RG1[uint3(float3(id.xy, currentZ))];
 		color.rgba = float4(color.rgb / 65535, color.a);
 		if (color.r > 0 && color.g > 0 && color.b > 0)
 		{
-			color = (lerp(Result[uint3(id.xy, currentZ)], color, 0.5) + color) * 0.25;
-			//color = color;
+			color.rgb = (lerp(Result[uint3(id.xy, currentZ)].rgb, color.rgb, 0.5) + color.rgb) * 0.5;
 			Result[uint3(id.xy, currentZ)] = color;
-			//prevColor = color;
 		}
-		/*else
-		{
-			//[unroll(4)]
-			for (uint y = 0; y < 4; y++)
-			{
-				prevColor *= 0.75;
-				color = Result[uint3(id.xy, currentZ + y)];
-				if (color.r == 0 && color.g == 0 && color.b == 0)
-				{
-					prevColor *= 0.75;
-					Result[uint3(id.xy, currentZ +y)] = (lerp(Result[uint3(id.xy, currentZ +y)], prevColor, 0.5) + prevColor) * 0.5;;
-				}
-			}
-		}*/
 	}
 }

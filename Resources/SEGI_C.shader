@@ -84,7 +84,6 @@
 			#endif
 
 			int FrameSwitch;
-			int visualizeGIPathCache;
 
 			sampler2D NoiseTexture;
 
@@ -153,73 +152,7 @@
 
 				float skyVisibility;
 				
-				float voxelDepth;
-				float coneDistance;
-				float alphaCache[32];
-				traceResult = ConeTrace(voxelOrigin.xyz, kernel0.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125 * StochasticSampling, TraceSteps, ConeSize, 1.0, 1.0, depth, voxelDepth, skyVisibility, voxelCoord, alphaCache);
-
-				voxelCoord.z *= voxelDepth;
-
-				tracedTexture1[uint3(voxelCoord)] += float4(traceResult, 0);
-						
-				half4 cachedResult = float4(0, 0, 0, 0);
-				if (voxelCoord.x < scaledDepth && voxelCoord.y < scaledDepth && voxelCoord.z < scaledDepth)
-				{
-					if (voxelCoord.x < 256 * scaledDepth && voxelCoord.y < 256 * scaledDepth && voxelCoord.z < 256 * scaledDepth)
-					{
-						if (traceResult.r > 0 || traceResult.g > 0 || traceResult.b > 0)
-						{
-							cachedResult.rgba = tracedTexture0[uint3(voxelCoord)].rgba;
-						}
-					}
-					//else cachedResult.rgb = float3(voxelCoord.z, 0.01, voxelCoord.z);
-				}
-				//else cachedResult.rgb = float3(0.1, voxelCoord.z, 0.1);
-
-				//cachedResult.rgb = traceResult.rgb;
-				cachedResult.rgb = lerp(cachedResult.rgb, traceResult, 0.25);
-
-				
-				//Nin - We simulate a bounce here to calculate ambiant and light attribution on the cached result
-				float occlusion;
-				skyVisibility = 1.0;
-				traceResult = float4(0, 0, 0, 0);
-				int numSteps = (int)(TraceSteps * lerp(SEGIVoxelScaleFactor, 1.0, 0.5));
-				//[unroll(32)]
-				for (int i = 0; i < numSteps; i++)
-				{
-					fi = ((float)i - blueNoise.z * 0.125 * StochasticSampling) / numSteps;
-					fi = lerp(fi, 1.0, 0.01);
-
-					coneDistance = (exp2(fi * 4.0) - 0.99) / 8.0;
-
-					float coneSize = fi * ConeSize * lerp(SEGIVoxelScaleFactor, 1.0, 0.5);
-
-					float occlusion = skyVisibility * skyVisibility;
-
-					alphaCache[i] *= lerp(saturate(coneSize / 1.0), 1.0, NearOcclusionStrength);
-					alphaCache[i] *= (0.8 / (fi * fi * 2.0 + 0.15));
-					traceResult.rgb += cachedResult.rgb * occlusion * (coneDistance + NearLightGain) * 80.0 * (1.0 - fi * fi);
-
-					skyVisibility *= pow(saturate(1.0 - alphaCache[i] * OcclusionStrength * (1.0 + coneDistance * FarOcclusionStrength)), 1.0 * OcclusionPower);
-				}
-				float NdotL = pow(saturate(dot(worldNormal, kernel0) * 1.0 - 0.0), 0.5);
-
-				traceResult *= NdotL;
-				skyVisibility *= NdotL;
-				skyVisibility *= lerp(saturate(dot(kernel0, float3(0.0, 1.0, 0.0)) * 10.0 + 0.0), 1.0, SEGISphericalSkylight);
-
-				float3 skyColor = float3(0.0, 0.0, 0.0);
-
-				float upGradient = saturate(dot(kernel0, float3(0.0, 1.0, 0.0)));
-				float sunGradient = saturate(dot(kernel0, SEGISunlightVector.xyz));
-				skyColor += lerp(SEGISkyColor.rgb * 1.0, SEGISkyColor.rgb, pow(upGradient, (0.5).xxx));
-				skyColor += GISunColor.rgb * pow(sunGradient, (4.0).xxx) * SEGISoftSunlight;
-
-				traceResult.rgb *= GIGain * 0.15;
-				traceResult += skyColor * skyVisibility * 10.0;
-
-				if (visualizeGIPathCache) traceResult.rgb = cachedResult.rgb;
+				traceResult = ConeTrace(voxelOrigin.xyz, kernel0.xyz, worldNormal.xyz, coord, -blueNoise.z * 0.125 * StochasticSampling, TraceSteps, ConeSize, 1.0, 1.0, depth);
 
 				gi = traceResult.rgb * 1.18;
 
