@@ -36,7 +36,7 @@ sampler3D SEGIVolumeTexture1;
 //TEXTURE3D_SAMPLER3D(VolumeTexture3, samplerVolumeTexture3);
 
 RWTexture3D<half4> tracedTexture0;
-RWTexture3D<float4> tracedTexture1;
+RWTexture3D<half4> tracedTexture1;
 
 int tracedTexture1UpdateCount;
 
@@ -280,10 +280,11 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	float4 giSample = float4(0.0, 0.0, 0.0, 0.0);
 	int startMipLevel = 0;
 	float voxelDepth;
+	float occlusion;
 
 	voxelOrigin.xyz += worldNormal.xyz * 0.016 * (exp2(startMipLevel) - 1);
 
-	[unroll(32)]
+	//[unroll(32)]
 	for (uint i = 0; i < numSteps; i++)
 	{
 		float fi = ((float)i + dither.x) / numSteps;
@@ -327,7 +328,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 			}
 		}
 
-		float occlusion = skyVisibility;
+		occlusion = skyVisibility * skyVisibility;
 
 		float falloffFix = pow(fi, 1.0) * 4.0 + NearLightGain;
 
@@ -345,7 +346,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x += dither.x * StochasticSampling;
 	voxelCheckCoord1.y += dither.y * StochasticSampling;
 	voxelCheckCoord1.z += dither.z * StochasticSampling;
-	tracedTexture1[uint3(voxelCheckCoord1)].rgba = float4(tracedTexture1[uint3(voxelCheckCoord1)].rgb + gi.rgb, giSample.a);
+	tracedTexture1[uint3(voxelCheckCoord1)].rgba += float4(gi.rgb, giSample.a) * skyVisibility;
 
 
 	//Calculate static kernel and coordinates
@@ -368,7 +369,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	skyVisibility = 1;
 
 	//Trace static cone for mixing
-	[unroll(32)]
+	//[unroll(32)]
 	for (uint y = 0; y < numSteps; y++)
 	{
 		float fi = ((float)y + dither.x) / numSteps;
@@ -411,7 +412,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 			}
 		}
 
-		float occlusion = skyVisibility;
+		occlusion = skyVisibility * skyVisibility;
 
 		float falloffFix = pow(fi, 1.0) * 4.0 + NearLightGain;
 
@@ -431,12 +432,21 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x += dither.x * StochasticSampling;
 	voxelCheckCoord1.y += dither.y * StochasticSampling;
 	voxelCheckCoord1.z += dither.z * StochasticSampling;
-	cachedResult.rgba = tracedTexture0[uint3(voxelCheckCoord1)].rgba;
+	cachedResult.rgb = tracedTexture0[uint3(voxelCheckCoord1)].rgb / 32;
 
-	gi.rgb = lerp(gi.rgb, cachedResult, 0.5);
+
+	//Average HSV values independantly for prettier result
+	half4 cachedHSV = float4(rgb2hsv(cachedResult), 0);
+	half4 giHSV = float4(rgb2hsv(gi), 0);
+	gi.rgb *= cachedResult.rgb;
+	gi.rgb = (gi.rgb + cachedResult.rgb) * 0.5;
+	giHSV.g = lerp(cachedHSV.g, giHSV.g, 0.5);
+	gi = hsv2rgb(giHSV);
+
 
 	//Output for debug option 'Trace ONLY path cache'
 	if (visualizeGIPathCache) gi.rgb = cachedResult.rgb;
+
 
 	//Calculate lighting attribution
 	float NdotL = pow(saturate(dot(worldNormal, kernel) * 1.0 - 0.0), 0.5);
@@ -478,7 +488,7 @@ float4 SpecularConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, 
 
 	int numSamples = (int)(lerp(uint(ReflectionSteps) / uint(5), ReflectionSteps, smoothness));
 
-	[unroll(32)]
+	//[unroll(32)]
 	for (int i = 0; i < numSamples; i++)
 	{
 		float fi = ((float)i) / numSamples;

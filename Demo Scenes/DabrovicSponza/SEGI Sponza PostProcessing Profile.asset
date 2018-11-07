@@ -244,7 +244,7 @@ MonoBehaviour:
     value: 1
   coneTraceSteps:
     overrideState: 1
-    value: 18
+    value: 16
   coneLength:
     overrideState: 1
     value: 0.3

@@ -72,7 +72,7 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 1
+    value: 0
   updateGI:
     overrideState: 1
     value: 1
@@ -87,7 +87,7 @@ MonoBehaviour:
     value: 0.1
   coneWidth:
     overrideState: 1
-    value: 12
+    value: 6
   coneTraceBias:
     overrideState: 1
     value: 4

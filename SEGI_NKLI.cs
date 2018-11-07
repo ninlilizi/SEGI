@@ -1343,7 +1343,7 @@ namespace UnityEngine.Rendering.PostProcessing
             tracedTexture0.hideFlags = HideFlags.HideAndDontSave;
 
             CleanupTexture(ref tracedTexture1);
-            tracedTexture1 = new RenderTexture((int)settings.traceCacheResolution.value, (int)settings.traceCacheResolution.value, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            tracedTexture1 = new RenderTexture((int)settings.traceCacheResolution.value, (int)settings.traceCacheResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
             tracedTexture1.wrapMode = TextureWrapMode.Clamp;
             #if UNITY_5_4_OR_NEWER
             tracedTexture1.dimension = TextureDimension.Tex3D;

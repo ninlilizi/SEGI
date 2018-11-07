@@ -3,11 +3,11 @@
 #pragma kernel CSMain3 // 2 - PathTracer cache decoder
 #pragma kernel CSMain4 // 3 - PathTracer cache decoder
 
-RWTexture3D<float4> Result;
+RWTexture3D<half4> Result;
 Texture3D<float4> PrevResult;
 
 Texture3D<uint> RG0;
-Texture3D<float4> RG1;
+Texture3D<half4> RG1;
 
 SamplerState _PointClamp;
 
@@ -166,7 +166,7 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 	{
 		currentZ = zStagger * slice - slice + i;
 		color = RG1[uint3(float3(id.xy, currentZ))];
-		color.rgba = float4(color.rgb / 65536, color.a);
+		color.rgba = float4(color.rgb / 32, color.a);
 		if (color.r > 0 && color.g > 0 && color.b > 0)
 		{
 			color.rgb = lerp(Result[uint3(id.xy, currentZ)].rgb, color.rgb, 0.5);
