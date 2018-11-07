@@ -84,7 +84,7 @@ MonoBehaviour:
     value: 5
   coneLength:
     overrideState: 1
-    value: 0.1
+    value: 0.25
   coneWidth:
     overrideState: 1
     value: 6
