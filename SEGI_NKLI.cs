@@ -671,6 +671,7 @@ namespace UnityEngine.Rendering.PostProcessing
                     voxelCamera.orthographicSize = clipmapSize * 0.5f;
                     voxelCamera.nearClipPlane = 0.0f;
                     voxelCamera.farClipPlane = clipmapSize;
+                    voxelCamera.useOcclusionCulling = false;
                     voxelCamera.depth = -2;
                     voxelCamera.renderingPath = RenderingPath.Forward;
                     voxelCamera.clearFlags = CameraClearFlags.Color;

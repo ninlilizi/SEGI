@@ -283,11 +283,11 @@
 							albedo = albedoTex.rgb;
 
 							//Average HSV values independantly for prettier result
-							half4 sceneHSV = float4(rgb2hsv(scene), 0);
+							/*half4 sceneHSV = float4(rgb2hsv(scene), 0);
 							half4 giHSV = float4(rgb2hsv(gi), 0);
 							gi.rgb *= scene.rgb;
 							giHSV.rg = float2(rgb2hsv(gi).r, lerp(sceneHSV.g, giHSV.g, 0.5));
-							gi = hsv2rgb(giHSV);
+							gi = hsv2rgb(giHSV);*/
 
 							result = scene + gi.rgb * albedoTex.a * albedoTex.rgb;
 						}
