@@ -346,7 +346,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x += dither.x * StochasticSampling;
 	voxelCheckCoord1.y += dither.y * StochasticSampling;
 	voxelCheckCoord1.z += dither.z * StochasticSampling;
-	tracedTexture1[uint3(voxelCheckCoord1)].rgba += float4(gi.rgb, giSample.a) * skyVisibility;
+	tracedTexture1[uint3(voxelCheckCoord1)].rgba += float4(gi.rgb, giSample.a);
 
 
 	//Calculate static kernel and coordinates
@@ -439,8 +439,7 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	half4 cachedHSV = float4(rgb2hsv(cachedResult), 0);
 	half4 giHSV = float4(rgb2hsv(gi), 0);
 	gi.rgb *= cachedResult.rgb;
-	gi.rgb = (gi.rgb + cachedResult.rgb) * 0.5;
-	giHSV.g = lerp(cachedHSV.g, giHSV.g, 0.5);
+	giHSV.rg = float2(rgb2hsv(gi).r, lerp(cachedHSV.g, giHSV.g, 0.5));
 	gi = hsv2rgb(giHSV);
 
 
