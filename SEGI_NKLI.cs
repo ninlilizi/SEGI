@@ -779,15 +779,10 @@ namespace UnityEngine.Rendering.PostProcessing
 
                             shadowCam.RenderWithShader(sunDepthShader, "");
 
-                        Shader.SetGlobalTexture("prevSunShadowDepth0", sunShadowBufferCache[0].texture);
-                        Shader.SetGlobalTexture("prevSunShadowDepth1", sunShadowBufferCache[1].texture);
-                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[2].texture);
-                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[3].texture);
-                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[4].texture);
-                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[5].texture);
+                        Shader.SetGlobalTexture("SEGISunDepth", sunShadowBufferCache[currentClipmapIndex].texture);
                         Graphics.Blit(sunDepthTexture, sunDepthTextureCached, material, 13);
                         Graphics.Blit(sunDepthTextureCached, sunShadowBufferCache[currentClipmapIndex].texture);
-                        Shader.SetGlobalTexture("SEGISunDepth", sunShadowBufferCache[currentClipmapIndex].texture);
+                        
                         //Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
                     }
                     //}
