@@ -26,7 +26,6 @@ public class SEGI_Helper_Debug : MonoBehaviour {
     public RenderTexture previousGIResult;
     public RenderTexture previousDepth;
 
-    public RenderTexture tracedTexture0;
     //public RenderTexture intTex1;
     //public RenderTexture[] volumeTextures;
     //public RenderTexture volumeTexture1;
@@ -61,7 +60,6 @@ public class SEGI_Helper_Debug : MonoBehaviour {
             sunDepthTexture = SEGIRenderer.sunDepthTexture;
             previousGIResult = SEGIRenderer.previousGIResult;
             previousDepth = SEGIRenderer.previousDepth;
-            tracedTexture0 = SEGIRenderer.tracedTexture0;
             //intTex1 = SEGIRenderer.intTex1;
             //volumeTexture1 = SEGIRenderer.volumeTexture1;
             //volumeTextureB = SEGIRenderer.volumeTextureB;

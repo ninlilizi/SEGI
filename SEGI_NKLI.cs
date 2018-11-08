@@ -275,9 +275,6 @@ namespace UnityEngine.Rendering.PostProcessing
         ///<summary>The secondary clipmaps that hold irradiance data for infinite bounces</summary>
         Clipmap[] irradianceClipmaps;
 
-        public static RenderTexture tracedTexture0;
-        public static RenderTexture tracedTexture1;
-
         public int tracedTexture1UpdateCount;
 
         public static RenderTexture sunDepthTexture;
@@ -380,7 +377,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public bool VRWorksActuallyEnabled;
 
-
+        PathCacheBuffer pathCacheBuffer;
 
         //[ImageEffectOpaque]
         public override void Render(PostProcessRenderContext context)
@@ -406,6 +403,19 @@ namespace UnityEngine.Rendering.PostProcessing
                     prevTraceCacheResolution = (int)settings.traceCacheResolution.value;
                     CreateVolumeTextures();
                 }
+            }
+
+            if (pathCacheBuffer == null)
+            {
+                Debug.Log("<SEGI> Creating path cache buffers");
+                pathCacheBuffer = new PathCacheBuffer();
+                pathCacheBuffer.Init((int)settings.voxelResolution.value);
+            }
+
+            if (pathCacheBuffer.front == null || pathCacheBuffer.back == null)
+            {
+                Debug.Log("<SEGI> Recreating patch cache buffers");
+                pathCacheBuffer.Init((int)settings.voxelResolution.value);
             }
 
 
@@ -457,6 +467,7 @@ namespace UnityEngine.Rendering.PostProcessing
             {
                 clipmaps[0].resolution = (int)settings.voxelResolution.value;
                 clipmaps[0].UpdateTextures();
+                pathCacheBuffer.Init((int)settings.voxelResolution.value);
             }
 
             if (dummyVoxelTextureAAScaled.width != DummyVoxelResolution)
@@ -926,14 +937,14 @@ namespace UnityEngine.Rendering.PostProcessing
             else if (tracedTexture1UpdateCount > 48)
             {
                 context.command.SetComputeIntParam(clearComputeCache, "Resolution", (int)settings.traceCacheResolution.value);
-                context.command.SetComputeTextureParam(clearComputeCache, 1, "RG1", tracedTexture1);
+                context.command.SetComputeBufferParam(clearComputeCache, 1, "RG1", pathCacheBuffer.back);
                 context.command.SetComputeIntParam(clearComputeCache, "zStagger", tracedTexture1UpdateCount - 48);
                 context.command.DispatchCompute(clearComputeCache, 1, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
             }
             else if (tracedTexture1UpdateCount > 32)
             {
-                context.command.SetComputeTextureParam(transferIntsCompute, 3, "Result", tracedTexture0);
-                context.command.SetComputeTextureParam(transferIntsCompute, 3, "RG1", tracedTexture1);
+                context.command.SetComputeBufferParam(transferIntsCompute, 3, "ResultBuffer", pathCacheBuffer.front);
+                context.command.SetComputeBufferParam(transferIntsCompute, 3, "InputBuffer", pathCacheBuffer.back);
                 context.command.SetComputeIntParam(transferIntsCompute, "zStagger", tracedTexture1UpdateCount - 32);
                 context.command.SetComputeIntParam(transferIntsCompute, "Resolution", (int)settings.traceCacheResolution.value);
                 context.command.DispatchCompute(transferIntsCompute, 3, (int)settings.traceCacheResolution.value / 16, (int)settings.traceCacheResolution.value / 16, 1);
@@ -1011,8 +1022,8 @@ namespace UnityEngine.Rendering.PostProcessing
             context.command.SetGlobalTexture("PreviousDepth", previousDepth);
 
             //Render diffuse GI tracing result
-            context.command.SetRandomWriteTarget(1, tracedTexture0);
-            context.command.SetRandomWriteTarget(2, tracedTexture1);
+            context.command.SetGlobalBuffer("tracedBuffer0", pathCacheBuffer.front);
+            context.command.SetRandomWriteTarget(1, pathCacheBuffer.back);
             context.command.Blit(RT_gi1, RT_gi2, material, Pass.DiffuseTrace);
 
             //Render GI reflections result
@@ -1323,46 +1334,6 @@ namespace UnityEngine.Rendering.PostProcessing
             integerVolume.Create();
             integerVolume.hideFlags = HideFlags.HideAndDontSave;
 
-            CleanupTexture(ref tracedTexture0);
-            tracedTexture0 = new RenderTexture((int)settings.traceCacheResolution.value, (int)settings.traceCacheResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-            tracedTexture0.wrapMode = TextureWrapMode.Clamp;
-            #if UNITY_5_4_OR_NEWER
-                tracedTexture0.dimension = TextureDimension.Tex3D;
-            #else
-	            tracedTexture0.isVolume = true;
-            #endif
-            tracedTexture0.volumeDepth = (int)settings.traceCacheResolution.value;
-            tracedTexture0.enableRandomWrite = true;
-            tracedTexture0.filterMode = FilterMode.Bilinear;
-            #if UNITY_5_4_OR_NEWER
-                tracedTexture0.autoGenerateMips = false;
-            #else
-	            tracedTexture0.generateMips = false;
-            #endif
-            tracedTexture0.useMipMap = false;
-            tracedTexture0.Create();
-            tracedTexture0.hideFlags = HideFlags.HideAndDontSave;
-
-            CleanupTexture(ref tracedTexture1);
-            tracedTexture1 = new RenderTexture((int)settings.traceCacheResolution.value, (int)settings.traceCacheResolution.value, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
-            tracedTexture1.wrapMode = TextureWrapMode.Clamp;
-            #if UNITY_5_4_OR_NEWER
-            tracedTexture1.dimension = TextureDimension.Tex3D;
-            #else
-	            tracedTexture1.isVolume = true;
-            #endif
-            tracedTexture1.volumeDepth = (int)settings.traceCacheResolution.value;
-            tracedTexture1.enableRandomWrite = true;
-            tracedTexture1.filterMode = FilterMode.Bilinear;
-            #if UNITY_5_4_OR_NEWER
-            tracedTexture1.autoGenerateMips = false;
-            #else
-	            tracedTexture1.generateMips = false;
-            #endif
-            tracedTexture1.useMipMap = false;
-            tracedTexture1.Create();
-            tracedTexture1.hideFlags = HideFlags.HideAndDontSave;
-
             ResizeDummyTexture();
         }
 
@@ -1589,6 +1560,7 @@ namespace UnityEngine.Rendering.PostProcessing
         public override void Release()
         {
             CleanupTextures();
+            if (pathCacheBuffer != null) pathCacheBuffer.Cleanup();
         }
 
         void CleanupTextures()
@@ -1621,9 +1593,6 @@ namespace UnityEngine.Rendering.PostProcessing
                     }
                 }
             }
-
-            CleanupTexture(ref tracedTexture0);
-            CleanupTexture(ref tracedTexture1);
 
             if (RT_FXAART) RT_FXAART.Release();
             if (RT_gi1) RT_gi1.Release();
@@ -1713,6 +1682,31 @@ namespace UnityEngine.Rendering.PostProcessing
             }
         }
     }
+
+    class PathCacheBuffer
+    {
+        int size;
+        readonly int stride = sizeof(float) * 4;
+        public ComputeBuffer front;
+        public ComputeBuffer back;
+
+        public void Init(int resolution)
+        {
+            size = resolution * resolution * resolution;
+
+            if (front != null) front.Dispose();
+            if (back != null) back.Dispose();
+            front = new ComputeBuffer(size, stride, ComputeBufferType.Default);
+            back = new ComputeBuffer(size, stride, ComputeBufferType.Default);
+        }
+
+        public void Cleanup()
+        {
+            if (front != null) front.Dispose();
+            if (back != null) back.Dispose();
+        }
+    }
+
 }
 
 //####################################################################################################################################

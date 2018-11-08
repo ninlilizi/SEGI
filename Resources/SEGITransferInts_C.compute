@@ -3,11 +3,22 @@
 #pragma kernel CSMain3 // 2 - PathTracer cache decoder
 #pragma kernel CSMain4 // 3 - PathTracer cache decoder
 
+
+
 RWTexture3D<half4> Result;
 Texture3D<float4> PrevResult;
 
 Texture3D<uint> RG0;
-Texture3D<half4> RG1;
+
+
+//We use a struct as a float4 (to align with 128 byte cache addressing for 20% performance)
+struct colorStruct
+{
+	float4 value;
+};
+uniform StructuredBuffer<colorStruct> InputBuffer;
+uniform RWStructuredBuffer<float4> ResultBuffer;
+///
 
 SamplerState _PointClamp;
 
@@ -19,6 +30,24 @@ int zStagger;
 float4 VoxelOriginDelta;
 
 float4 ClipmapOverlap;
+
+
+
+// Encoding/decoding [0..1) floats into 8 bit/channel RGBA. Note that 1.0 will not be encoded properly.
+/*inline float4 EncodeFloatRGBA(float v)
+{
+	float4 kEncodeMul = float4(1.0, 255.0, 65025.0, 160581375.0);
+	float kEncodeBit = 1.0 / 255.0;
+	float4 enc = kEncodeMul * v;
+	enc = frac(enc);
+	enc -= enc.yzww * kEncodeBit;
+	return enc;
+}
+inline float DecodeFloatRGBA(float4 enc)
+{
+	float4 kDecodeDot = float4(1.0, 1 / 255.0, 1 / 65025.0, 1 / 160581375.0);
+	return dot(enc, kDecodeDot);
+}*/
 
 float3 rgb2hsv(float3 c)
 {
@@ -81,7 +110,7 @@ uint EncodeRGBAuint(float4 color)
 
 // 9-tap Gaussian filter with linear sampling
 // http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
-inline half4 gaussian_filter(float2 stride, uint3 coord)
+/*inline half4 gaussian_filter(float2 stride, uint3 coord)
 {
 	float4 s = RG1[uint3(coord)] * 0.227027027;
 
@@ -94,7 +123,7 @@ inline half4 gaussian_filter(float2 stride, uint3 coord)
 	s += RG1[uint3(coord)] * 0.0702702703;
 
 	return s;
-}
+}*/
 
 // 0
 [numthreads(16,16,1)]
@@ -149,7 +178,8 @@ void CSMain3(uint3 id : SV_DispatchThreadID)
 {
 	for (uint i = 0; i < Resolution; i++)
 	{
-		Result[uint3(id.xy, i)] = RG1[uint3(id.x, id.y, i)];
+		double index = id.x * Resolution * Resolution + id.y * Resolution + i;
+		ResultBuffer[index] = float4(InputBuffer[index]);
 	}
 }
 
@@ -159,18 +189,12 @@ void CSMain4(uint3 id : SV_DispatchThreadID)
 {
 	uint slice = Resolution / 16;
 	uint currentZ;
-	half4 color = float4(0, 0, 0, 0);
 
 	[unroll(32)]
 	for (uint i = 0; i < slice; i++)
 	{
 		currentZ = zStagger * slice - slice + i;
-		color = RG1[uint3(float3(id.xy, currentZ))];
-		color.rgba = float4(color.rgb / 32, color.a);
-		//if (color.r > 0 && color.g > 0 && color.b > 0)
-		//{
-			color.rgb = lerp(Result[uint3(id.xy, currentZ)].rgb, color.rgb, 0.5);
-			Result[uint3(id.xy, currentZ)] = color;
-		//}
+		double index = id.x * Resolution * Resolution + id.y * Resolution + currentZ;
+		ResultBuffer[index] = lerp(ResultBuffer[index], float4(InputBuffer[index]) / 32, 0.5);
 	}
 }

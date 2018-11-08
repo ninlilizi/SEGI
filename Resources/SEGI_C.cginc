@@ -35,8 +35,14 @@ sampler3D SEGIVolumeTexture1;
 //TEXTURE3D_SAMPLER3D(VolumeTexture2, samplerVolumeTexture2);
 //TEXTURE3D_SAMPLER3D(VolumeTexture3, samplerVolumeTexture3);
 
-RWTexture3D<half4> tracedTexture0;
-RWTexture3D<half4> tracedTexture1;
+
+//We use a struct as a float4 (to align with 128 byte cache addressing for 20% performance)
+struct colorStruct
+{
+	float4 value;
+};
+uniform StructuredBuffer<colorStruct> tracedBuffer0;
+uniform RWStructuredBuffer<float4> tracedBuffer1;
 
 int tracedTexture1UpdateCount;
 
@@ -346,7 +352,8 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x += dither.x * StochasticSampling;
 	voxelCheckCoord1.y += dither.y * StochasticSampling;
 	voxelCheckCoord1.z += dither.z * StochasticSampling;
-	tracedTexture1[uint3(voxelCheckCoord1)].rgba += float4(gi.rgb, giSample.a);
+	double index = voxelCheckCoord1.x * (256 * SEGITraceCacheScaleFactor) * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.y * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.z;
+	tracedBuffer1[index] += float4(gi.rgb, giSample.a);
 
 
 	//Calculate static kernel and coordinates
@@ -425,18 +432,19 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 
 
 	//Read cached cones from cache
-	half4 cachedResult = float4(0, 0, 0, 0);
+	half4 cachedResult = half4(0, 0, 0, 0);
 	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.x += dither.x * StochasticSampling;
 	voxelCheckCoord1.y += dither.y * StochasticSampling;
 	voxelCheckCoord1.z += dither.z * StochasticSampling;
-	cachedResult.rgb = tracedTexture0[uint3(voxelCheckCoord1)].rgb / 32;
+	index = voxelCheckCoord1.x * (256 * SEGITraceCacheScaleFactor) * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.y * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.z;
+	cachedResult = float4(tracedBuffer0[index]) / 32;
 
 
 	//Average HSV values independantly for prettier result
-	half4 cachedHSV = float4(rgb2hsv(cachedResult), 0);
+	half4 cachedHSV = float4(rgb2hsv(cachedResult.rgb), 0);
 	half4 giHSV = float4(rgb2hsv(gi), 0);
 	gi.rgb *= cachedResult.rgb;
 	giHSV.rg = float2(rgb2hsv(gi).r, lerp(cachedHSV.g, giHSV.g, 0.5));

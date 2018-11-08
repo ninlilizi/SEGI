@@ -72,7 +72,7 @@ MonoBehaviour:
     value: 1
   stochasticSampling:
     overrideState: 1
-    value: 0
+    value: 1
   updateGI:
     overrideState: 1
     value: 1
