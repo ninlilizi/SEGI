@@ -8,7 +8,7 @@
 RWTexture3D<half4> Result;
 Texture3D<float4> PrevResult;
 
-Texture3D<uint> RG0;
+
 
 
 //We use a struct as a float4 (to align with 128 byte cache addressing for 20% performance)
@@ -16,7 +16,11 @@ struct colorStruct
 {
 	float4 value;
 };
-uniform StructuredBuffer<colorStruct> InputBuffer;
+cbuffer PerFrame: register(b0)
+{
+	uniform StructuredBuffer<colorStruct> InputBuffer;
+	Texture3D<uint> RG0;
+}
 uniform RWStructuredBuffer<float4> ResultBuffer;
 ///
 

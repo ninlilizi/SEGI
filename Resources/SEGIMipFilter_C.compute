@@ -1,8 +1,15 @@
 #pragma kernel CSMain
 #pragma kernel CSMainGaussian
 
+struct colorStruct
+{
+	float4 value;
+};
 RWTexture3D<float4> Destination;
-Texture3D<float4> Source;
+cbuffer PerFrame: register(b0)
+{
+	Texture3D<colorStruct> Source;
+}
 
 SamplerState _LinearClamp;
 SamplerState _PointClamp;
@@ -22,7 +29,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
 		float3 sampleCoord = (fcoord) * 1.0 - 0.0 + ClipmapOverlap.xyz * 0.0;
 
-        float4 tex = Source.SampleLevel(_LinearClamp, sampleCoord + texel * 1.0, 0.0);
+        float4 tex = float4(Source.SampleLevel(_LinearClamp, sampleCoord + texel * 1.0, 0.0));
 		tex.rgba *= 2.0;
 
 		float3 writeCoord = fcoord;
@@ -67,7 +74,7 @@ void CSMainGaussian (uint3 id : SV_DispatchThreadID)
 
             offset = offsets[j];
 
-            tex += Source.SampleLevel(_LinearClamp, fcoord + texel * 0.5 + offset * texel * 0.5, 0.0);
+            tex += float4(Source.SampleLevel(_LinearClamp, fcoord + texel * 0.5 + offset * texel * 0.5, 0.0));
             c++;
         }
 

@@ -41,7 +41,10 @@ struct colorStruct
 {
 	float4 value;
 };
-uniform StructuredBuffer<colorStruct> tracedBuffer0;
+cbuffer PerFrame: register(b0)
+{
+	uniform StructuredBuffer<colorStruct> tracedBuffer0;
+}
 uniform RWStructuredBuffer<float4> tracedBuffer1;
 
 int tracedTexture1UpdateCount;
