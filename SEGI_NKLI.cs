@@ -369,7 +369,7 @@ namespace UnityEngine.Rendering.PostProcessing
         //public float reflectionProbeAttribution = 1f;
 
         //Delayed voxelization
-        public bool updateVoxelsAfterXDoUpdate = false;
+        public static bool updateVoxelsAfterXDoUpdate = false;
         private double updateVoxelsAfterXPrevX = 9223372036854775807;
         private double updateVoxelsAfterXPrevY = 9223372036854775807;
         private double updateVoxelsAfterXPrevZ = 9223372036854775807;
@@ -605,11 +605,11 @@ namespace UnityEngine.Rendering.PostProcessing
             if (attachedCamera.transform.position.z - updateVoxelsAfterXPrevZ >= settings.updateVoxelsAfterXInterval.value) updateVoxelsAfterXDoUpdate = true;
             if (updateVoxelsAfterXPrevZ - attachedCamera.transform.position.z >= settings.updateVoxelsAfterXInterval.value) updateVoxelsAfterXDoUpdate = true;
 
-            if (settings.updateGI.value)
+            if (settings.updateGI.value && updateVoxelsAfterXDoUpdate == true)
             {
 
                 //Main voxelization work
-                if (renderState == RenderState.Voxelize)
+                if (renderState == RenderState.Voxelize && updateVoxelsAfterXDoUpdate == true)
                 {
                     currentClipmapIndex = SelectCascadeBinary(clipmapCounter);      //Determine which clipmap to update during this frame
 
@@ -852,8 +852,16 @@ namespace UnityEngine.Rendering.PostProcessing
                             clipmapCounter = 0;
                         }
                     }
+
+                    if (currentClipmapIndex == 5 && !settings.infiniteBounces)
+                    {
+                        updateVoxelsAfterXPrevX = context.camera.transform.position.x;
+                        updateVoxelsAfterXPrevY = context.camera.transform.position.y;
+                        updateVoxelsAfterXPrevZ = context.camera.transform.position.z;
+                        updateVoxelsAfterXDoUpdate = false;
+                    }
                 }
-                else if (renderState == RenderState.Bounce)
+                else if (renderState == RenderState.Bounce && updateVoxelsAfterXDoUpdate == true)
                 {
                     //Calculate the relative position and scale of the current clipmap as compared to the first (level 0) clipmap. Used to ensure tracing is performed in the correct space
                     Vector3 translateToZero = Vector3.zero;
@@ -892,6 +900,13 @@ namespace UnityEngine.Rendering.PostProcessing
 
                     renderState = RenderState.Voxelize;
 
+                    if (currentClipmapIndex == 5)
+                    {
+                        updateVoxelsAfterXPrevX = context.camera.transform.position.x;
+                        updateVoxelsAfterXPrevY = context.camera.transform.position.y;
+                        updateVoxelsAfterXPrevZ = context.camera.transform.position.z;
+                        updateVoxelsAfterXDoUpdate = false;
+                    }
                 }
             }
 
@@ -1755,8 +1770,12 @@ namespace UnityEngine.Rendering.PostProcessing
             if (front != null) front.Dispose();
             if (back != null) back.Dispose();
         }
-    }
 
+        public static void UpdateGI()
+        {
+            SEGIRenderer.updateVoxelsAfterXDoUpdate = true;
+        }
+    }
 }
 
 //####################################################################################################################################
