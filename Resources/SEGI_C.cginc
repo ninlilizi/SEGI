@@ -37,43 +37,66 @@ sampler3D SEGIVolumeTexture1;
 
 
 //We use a struct as a float4 (to align with 128 byte cache addressing for 20% performance)
-struct colorStruct
-{
-	float4 value;
-};
+
 cbuffer PerFrame: register(b0)
 {
+	struct colorStruct
+	{
+		float4 value;
+	};
+
+	//Fix Stereo View Matrix
+	float4x4 _LeftEyeProjection;
+	float4x4 _RightEyeProjection;
+	float4x4 _LeftEyeToWorld;
+	float4x4 _RightEyeToWorld;
+	//Fix Stereo View Matrix/
+
+	float4x4 ProjectionMatrixInverse;
+
+	float4x4 SEGIVoxelProjection;
+	float4x4 SEGIVoxelProjection0;
+	float4x4 SEGIVoxelProjection1;
+	float4x4 SEGIVoxelProjection2;
+	float4x4 SEGIVoxelProjection3;
+	float4x4 SEGIVoxelProjection4;
+	float4x4 SEGIVoxelProjection5;
+	float4x4 SEGIWorldToVoxel;
+	float4x4 SEGIWorldToVoxel0;
+	float4x4 SEGIWorldToVoxel1;
+	float4x4 SEGIWorldToVoxel2;
+	float4x4 SEGIWorldToVoxel3;
+	float4x4 SEGIWorldToVoxel4;
+	float4x4 SEGIWorldToVoxel5;
+	float4x4 GIProjectionInverse;
+	float4x4 GIToVoxelProjection;
+	float4x4 ProjectionMatrix;
+	float4x4 WorldToCamera;
+	float4x4 CameraToWorld;
+	float4x4 GIToWorld;
+	
+	int ForwardPath;
+	int GIResolution;
+	int StereoEnabled;
+	half4 SEGISkyColor;
+	int ReflectionSteps;
+	uint SEGIRenderWidth;
+	uint SEGIRenderHeight;
+	int visualizeGIPathCache;
+	int SEGISphericalSkylight;
+	int tracedTexture1UpdateCount;
+	const float phi = 1.618033988;
+	const float gAngle = 5.083203603249289;
+	TEXTURE2D_SAMPLER2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0);
+	TEXTURE2D_SAMPLER2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1);
+	TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
+	sampler2D _CameraDepthNormalsTexture;
+	sampler2D _CameraDepthTexture;
+
 	uniform StructuredBuffer<colorStruct> tracedBuffer0;
 }
 uniform RWStructuredBuffer<float4> tracedBuffer1;
 
-int tracedTexture1UpdateCount;
-
-//TEXTURE3D_SAMPLER3D(tracedTexture0, samplertracedTexture0);
-//sampler3D tracedTexture0;
-
-float4x4 SEGIVoxelProjection;
-float4x4 SEGIVoxelProjection0;
-float4x4 SEGIVoxelProjection1;
-float4x4 SEGIVoxelProjection2;
-float4x4 SEGIVoxelProjection3;
-float4x4 SEGIVoxelProjection4;
-float4x4 SEGIVoxelProjection5;
-float4x4 SEGIWorldToVoxel;
-float4x4 SEGIWorldToVoxel0;
-float4x4 SEGIWorldToVoxel1;
-float4x4 SEGIWorldToVoxel2;
-float4x4 SEGIWorldToVoxel3;
-float4x4 SEGIWorldToVoxel4;
-float4x4 SEGIWorldToVoxel5;
-float4x4 GIProjectionInverse;
-float4x4 GIToWorld;
-
-float4x4 GIToVoxelProjection;
-float4x4 CameraToWorld;
-
-
-half4 SEGISkyColor;
 
 float4 SEGISunlightVector;
 float4 SEGIClipTransform0;
@@ -85,50 +108,17 @@ float4 SEGIClipTransform5;
 
 float4 _MainTex_ST;
 
-//float reflectionProbeAttribution;
-//float reflectionProbeIntensity;
-//int useReflectionProbes;
-int ReflectionSteps;
-int StereoEnabled;
-int GIResolution;
-int ForwardPath;
-
-int visualizeGIPathCache;
-
-uint SEGIRenderWidth;
-uint SEGIRenderHeight;
-
-
 uniform half4 _MainTex_TexelSize;
-
-float4x4 ProjectionMatrixInverse;
 
 TEXTURE2D_SAMPLER2D(_MainTex, sampler_MainTex);
 TEXTURE2D_SAMPLER2D(PreviousGITexture, samplerPreviousGITexture);
-TEXTURE2D_SAMPLER2D(_CameraGBufferTexture0, sampler_CameraGBufferTexture0);
-TEXTURE2D_SAMPLER2D(_CameraGBufferTexture1, sampler_CameraGBufferTexture1);
-TEXTURE2D_SAMPLER2D(_CameraGBufferTexture2, sampler_CameraGBufferTexture2);
 TEXTURE2D_SAMPLER2D(_CameraMotionVectorsTexture, sampler_CameraMotionVectorsTexture);
-sampler2D _CameraDepthNormalsTexture;
-sampler2D _CameraDepthTexture;
 
 UNITY_DECLARE_TEXCUBE(_SEGICube);
 //UNITY_DECLARE_TEXCUBE(_SEGICubeX2);
 half4 _SEGICube_HDR;
 //half4 _SEGICubeX2_HDR;
 
-
-float4x4 WorldToCamera;
-float4x4 ProjectionMatrix;
-
-int SEGISphericalSkylight;
-
-//Fix Stereo View Matrix
-float4x4 _LeftEyeProjection;
-float4x4 _RightEyeProjection;
-float4x4 _LeftEyeToWorld;
-float4x4 _RightEyeToWorld;
-//Fix Stereo View Matrix/
 
 float GetDepthTexture(float2 uv)
 {
@@ -352,16 +342,14 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
-	voxelCheckCoord1.x += dither.x * StochasticSampling;
-	voxelCheckCoord1.y += dither.y * StochasticSampling;
-	voxelCheckCoord1.z += dither.z * StochasticSampling;
+	voxelCheckCoord1.x += dither.x;
+	voxelCheckCoord1.y += dither.y;
+	voxelCheckCoord1.z += dither.z;
 	double index = voxelCheckCoord1.x * (256 * SEGITraceCacheScaleFactor) * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.y * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.z;
 	tracedBuffer1[index] += float4(gi.rgb, giSample.a);
 
 
 	//Calculate static kernel and coordinates
-	const float phi = 1.618033988;
-	const float gAngle = phi * PI * 1.0;
 	float fi = 1;
 	float fiN = fi / 1;
 	float longitude = gAngle * fi;
@@ -439,9 +427,9 @@ float4 ConeTrace(float3 voxelOrigin, float3 kernel, float3 worldNormal, float2 u
 	voxelCheckCoord1.x *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.y *= SEGITraceCacheScaleFactor;
 	voxelCheckCoord1.z *= SEGITraceCacheScaleFactor;
-	voxelCheckCoord1.x += dither.x * StochasticSampling;
-	voxelCheckCoord1.y += dither.y * StochasticSampling;
-	voxelCheckCoord1.z += dither.z * StochasticSampling;
+	voxelCheckCoord1.x += dither.x;
+	voxelCheckCoord1.y += dither.y;
+	voxelCheckCoord1.z += dither.z;
 	index = voxelCheckCoord1.x * (256 * SEGITraceCacheScaleFactor) * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.y * (256 * SEGITraceCacheScaleFactor) + voxelCheckCoord1.z;
 	cachedResult = float4(tracedBuffer0[index]) / 32;
 

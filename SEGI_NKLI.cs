@@ -37,7 +37,8 @@ namespace UnityEngine.Rendering.PostProcessing
         VeryLow = 32,
         Low = 64,
         Medium = 128,
-        High = 256
+        High = 256,
+        Extreme = 512
     }
 
     [Serializable]
@@ -278,6 +279,8 @@ namespace UnityEngine.Rendering.PostProcessing
         public int tracedTexture1UpdateCount;
 
         public static RenderTexture sunDepthTexture;
+        public static RenderTexture sunDepthTextureCached;
+        SunShadowBufferCache[] sunShadowBufferCache;
         public static RenderTexture previousGIResult;
         public static RenderTexture previousDepth;
 
@@ -373,7 +376,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
         public int GIResolutionPrev = 0;
 
-        //public LightShadows ShadowStateCache;
+        public LightShadows ShadowStateCache;
 
         public bool VRWorksActuallyEnabled;
 
@@ -586,10 +589,9 @@ namespace UnityEngine.Rendering.PostProcessing
             Shader.SetGlobalInt("SEGIVoxelAA", settings.voxelAA.value ? 1 : 0);
 
             //Temporarily disable rendering of shadows on the directional light during voxelization pass. Cache the result to set it back to what it was after voxelization is done
-            /*LightShadows prevSunShadowSetting = LightShadows.None;
-            if (SEGI_NKLI.Sun != null)
+            /*if (SEGI_NKLI.Sun != null)
             {
-                prevSunShadowSetting = SEGI_NKLI.Sun.shadows;
+                ShadowStateCache = SEGI_NKLI.Sun.shadows;
                 SEGI_NKLI.Sun.shadows = LightShadows.None;
             }*/
 
@@ -747,36 +749,48 @@ namespace UnityEngine.Rendering.PostProcessing
 
 
                     //Render the depth texture from the sun's perspective in order to inject sunlight with shadows during voxelization
-                    if (SEGI_NKLI.Sun != null)
-                    {
-                        shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
+                    //if (currentClipmapIndex == 0)
+                    //{
+                        if (SEGI_NKLI.Sun != null)
+                        {
+                            shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
 
-                        Vector3 shadowCamPosition = activeClipmap.origin + Vector3.Normalize(-SEGI_NKLI.Sun.transform.forward) * clipmapShadowSize * 0.5f * shadowSpaceDepthRatio;
+                            Vector3 shadowCamPosition = activeClipmap.origin + Vector3.Normalize(-SEGI_NKLI.Sun.transform.forward) * clipmapShadowSize * 0.5f * shadowSpaceDepthRatio;
 
-                        shadowCamTransform.position = shadowCamPosition;
-                        shadowCamTransform.LookAt(activeClipmap.origin, Vector3.up);
+                            shadowCamTransform.position = shadowCamPosition;
+                            shadowCamTransform.LookAt(activeClipmap.origin, Vector3.up);
 
-                        shadowCam.renderingPath = RenderingPath.Forward;
-                        shadowCam.depthTextureMode |= DepthTextureMode.None;
+                            shadowCam.renderingPath = RenderingPath.Forward;
+                            shadowCam.depthTextureMode |= DepthTextureMode.None;
 
-                        shadowCam.orthographicSize = clipmapShadowSize;
-                        shadowCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
+                            shadowCam.orthographicSize = clipmapShadowSize;
+                            shadowCam.farClipPlane = clipmapShadowSize * 2.0f * shadowSpaceDepthRatio;
 
-                        //Shader.SetGlobalMatrix("WorldToGI", shadowCam.worldToCameraMatrix);
-                        //Shader.SetGlobalMatrix("GIToWorld", shadowCam.cameraToWorldMatrix);
-                        //Shader.SetGlobalMatrix("GIProjection", shadowCam.projectionMatrix);
-                        //Shader.SetGlobalMatrix("GIProjectionInverse", shadowCam.projectionMatrix.inverse);
-                        voxelToGIProjection = shadowCam.projectionMatrix * shadowCam.worldToCameraMatrix * voxelCamera.cameraToWorldMatrix;
-                        Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProjection);
+                            //Shader.SetGlobalMatrix("WorldToGI", shadowCam.worldToCameraMatrix);
+                            //Shader.SetGlobalMatrix("GIToWorld", shadowCam.cameraToWorldMatrix);
+                            //Shader.SetGlobalMatrix("GIProjection", shadowCam.projectionMatrix);
+                            //Shader.SetGlobalMatrix("GIProjectionInverse", shadowCam.projectionMatrix.inverse);
+                            voxelToGIProjection = shadowCam.projectionMatrix * shadowCam.worldToCameraMatrix * voxelCamera.cameraToWorldMatrix;
+                            Shader.SetGlobalMatrix("SEGIVoxelToGIProjection", voxelToGIProjection);
 
 
-                        Graphics.SetRenderTarget(sunDepthTexture);
-                        shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
+                            Graphics.SetRenderTarget(sunDepthTexture);
+                            shadowCam.SetTargetBuffers(sunDepthTexture.colorBuffer, sunDepthTexture.depthBuffer);
 
-                        shadowCam.RenderWithShader(sunDepthShader, "");
+                            shadowCam.RenderWithShader(sunDepthShader, "");
 
-                        Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
+                        Shader.SetGlobalTexture("prevSunShadowDepth0", sunShadowBufferCache[0].texture);
+                        Shader.SetGlobalTexture("prevSunShadowDepth1", sunShadowBufferCache[1].texture);
+                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[2].texture);
+                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[3].texture);
+                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[4].texture);
+                        Shader.SetGlobalTexture("prevSunShadowDepth2", sunShadowBufferCache[5].texture);
+                        Graphics.Blit(sunDepthTexture, sunDepthTextureCached, material, 13);
+                        Graphics.Blit(sunDepthTextureCached, sunShadowBufferCache[currentClipmapIndex].texture);
+                        Shader.SetGlobalTexture("SEGISunDepth", sunShadowBufferCache[currentClipmapIndex].texture);
+                        //Shader.SetGlobalTexture("SEGISunDepth", sunDepthTexture);
                     }
+                    //}
 
                     //Clear the volume texture that is immediately written to in the voxelization scene shader
                     clearCompute.SetTexture(0, "RG0", integerVolume);
@@ -889,11 +903,11 @@ namespace UnityEngine.Rendering.PostProcessing
                 Matrix4x4 giToVoxelProjection = voxelCamera.projectionMatrix * voxelCamera.worldToCameraMatrix * shadowCam.cameraToWorldMatrix;
                 Shader.SetGlobalMatrix("GIToVoxelProjection", giToVoxelProjection);
 
-                //Set the sun's shadow setting back to what it was before voxelization
-                if (SEGI_NKLI.Sun != null)
+            //Set the sun's shadow setting back to what it was before voxelization
+            /*if (SEGI_NKLI.Sun != null)
             {
-                //SEGI_NKLI.Sun.shadows = prevSunShadowSetting;
-            }
+                SEGI_NKLI.Sun.shadows = ShadowStateCache;
+            }*/
 
             //Fix stereo rendering matrix
             if (attachedCamera.stereoEnabled)
@@ -930,7 +944,7 @@ namespace UnityEngine.Rendering.PostProcessing
 
             if (settings.visualizeSunDepthTexture.value && sunDepthTexture != null && sunDepthTexture != null)
             {
-                context.command.Blit(sunDepthTexture, context.destination, material, 13);
+                context.command.Blit(sunShadowBufferCache[currentClipmapIndex].texture, context.destination);
                 return;
             }
 
@@ -1231,25 +1245,9 @@ namespace UnityEngine.Rendering.PostProcessing
             shadowCam.clearFlags = CameraClearFlags.SolidColor;
             shadowCam.backgroundColor = new Color(0.0f, 0.0f, 0.0f, 1.0f);
             shadowCam.farClipPlane = shadowSpaceSize * 2.0f * shadowSpaceDepthRatio;
-            //shadowCam.stereoTargetEye = StereoTargetEyeMask.None;
             shadowCam.cullingMask = settings.giCullingMask.GetValue<LayerMask>();
             shadowCam.useOcclusionCulling = false;
             shadowCamTransform = shadowCamGameObject.transform;
-
-            if (sunDepthTexture)
-            {
-                //sunDepthTexture.DiscardContents();
-                sunDepthTexture.Release();
-                //DestroyImmediate(sunDepthTexture);
-            }
-            sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 32, RenderTextureFormat.RHalf, RenderTextureReadWrite.Default);
-            sunDepthTexture.vrUsage = VRTextureUsage.None;
-            sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
-            sunDepthTexture.filterMode = FilterMode.Point;
-            sunDepthTexture.Create();
-            sunDepthTexture.hideFlags = HideFlags.HideAndDontSave;
-
-
 
             //Get blue noise textures
             blueNoise = new Texture2D[64];
@@ -1309,6 +1307,7 @@ namespace UnityEngine.Rendering.PostProcessing
             //CreateVolumeTextures();
             //BuildClipmaps();
             ResizeAllTextures();
+            ResizeSunShadowBuffer();
 
             initChecker = true;
 
@@ -1540,19 +1539,40 @@ namespace UnityEngine.Rendering.PostProcessing
 
         void ResizeSunShadowBuffer()
         {
-
-            if (sunDepthTexture)
-            {
-                //sunDepthTexture.DiscardContents();
-                sunDepthTexture.Release();
-                //DestroyImmediate(sunDepthTexture);
-            }
+            if (sunDepthTexture) sunDepthTexture.Release();
             sunDepthTexture = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
             sunDepthTexture.vrUsage = VRTextureUsage.None;
             sunDepthTexture.wrapMode = TextureWrapMode.Clamp;
             sunDepthTexture.filterMode = FilterMode.Point;
             sunDepthTexture.Create();
             sunDepthTexture.hideFlags = HideFlags.HideAndDontSave;
+
+            if (sunDepthTextureCached) sunDepthTextureCached.Release();
+            sunDepthTextureCached = new RenderTexture(sunShadowResolution, sunShadowResolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+            sunDepthTextureCached.vrUsage = VRTextureUsage.None;
+            sunDepthTextureCached.wrapMode = TextureWrapMode.Clamp;
+            sunDepthTextureCached.filterMode = FilterMode.Point;
+            sunDepthTextureCached.Create();
+            sunDepthTextureCached.hideFlags = HideFlags.HideAndDontSave;
+
+            sunShadowBufferCache = new SunShadowBufferCache[numClipmaps];
+
+            if (sunShadowBufferCache != null)
+            {
+                for (int i = 0; i < numClipmaps; i++)
+                {
+                    if (sunShadowBufferCache[i] != null)
+                    {
+                        sunShadowBufferCache[i].Cleanup();
+                    }
+                }
+            }
+
+            for (int i = 0; i < numClipmaps; i++)
+            {
+                sunShadowBufferCache[i] = new SunShadowBufferCache();
+                sunShadowBufferCache[i].Init(sunShadowResolution);
+            }
         }
 
 
@@ -1566,6 +1586,7 @@ namespace UnityEngine.Rendering.PostProcessing
         void CleanupTextures()
         {
             CleanupTexture(ref sunDepthTexture);
+            CleanupTexture(ref sunDepthTextureCached);
             CleanupTexture(ref previousGIResult);
             CleanupTexture(ref previousDepth);
             CleanupTexture(ref integerVolume);
@@ -1580,6 +1601,7 @@ namespace UnityEngine.Rendering.PostProcessing
                     {
                         clipmaps[i].CleanupTextures();
                     }
+                    if (sunShadowBufferCache[i] != null) sunShadowBufferCache[i].Cleanup();
                 }
             }
 
@@ -1590,6 +1612,17 @@ namespace UnityEngine.Rendering.PostProcessing
                     if (irradianceClipmaps[i] != null)
                     {
                         irradianceClipmaps[i].CleanupTextures();
+                    }
+                }
+            }
+
+            if (sunShadowBufferCache != null)
+            {
+                for (int i = 0; i < numClipmaps; i++)
+                {
+                    if (sunShadowBufferCache[i] != null)
+                    {
+                        sunShadowBufferCache[i].Cleanup();
                     }
                 }
             }
@@ -1681,6 +1714,28 @@ namespace UnityEngine.Rendering.PostProcessing
                 //DestroyImmediate(volumeTexture0);
             }
         }
+    }
+
+    class SunShadowBufferCache
+    {
+        public RenderTexture texture;
+
+        public void Init(int resolution)
+        {
+            Cleanup();
+            texture = new RenderTexture(resolution, resolution, 16, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+            texture.vrUsage = VRTextureUsage.None;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Point;
+            texture.Create();
+            texture.hideFlags = HideFlags.HideAndDontSave;
+        }
+
+        public void Cleanup()
+        {
+             if (texture != null) texture.Release();
+        }
+
     }
 
     class PathCacheBuffer

@@ -33,7 +33,7 @@ MonoBehaviour:
     value: 256
   traceCacheResolution:
     overrideState: 1
-    value: 256
+    value: 512
   voxelSpaceSize:
     overrideState: 1
     value: 200

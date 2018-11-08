@@ -86,6 +86,8 @@
 			int FrameSwitch;
 
 			sampler2D NoiseTexture;
+			
+
 
 			float4 Frag(VaryingsSEGI input) : SV_Target
 			{
@@ -115,8 +117,7 @@
 				float3 gi = float3(0.0, 0.0, 0.0);
 				float3 traceResult = float3(0, 0, 0);
 
-				const float phi = 1.618033988;
-				const float gAngle = phi * PI * 1.0;
+
 
 				float scaledDepth = 256 * SEGITraceCacheScaleFactor;
 
@@ -885,11 +886,11 @@ ZTest Always
 						return float4(result, 1.0);
 					}
 
-				ENDHLSL
+						ENDHLSL
 			}
 
-				Pass // 13 Blit
-				{
+			Pass // 13 Blit and blend SunShadowMap
+			{
 				HLSLPROGRAM
 					#pragma vertex VertSEGI
 					#pragma fragment Frag
@@ -897,8 +898,15 @@ ZTest Always
 					#if defined (VRWORKS)
 						#pragma multi_compile VRWORKS_MRS VRWORKS_LMS VRWORKS_NONE
 					#endif
-					
+
 					//half4 _MainTex_ST;
+
+					sampler2D prevSunShadowDepth0;
+					sampler2D prevSunShadowDepth1;
+					sampler2D prevSunShadowDepth2;
+					sampler2D prevSunShadowDepth3;
+					sampler2D prevSunShadowDepth4;
+					sampler2D prevSunShadowDepth5;
 
 					/*struct Varyings
 					{
@@ -927,11 +935,20 @@ ZTest Always
 						//UNITY_SETUP_INSTANCE_ID(input);
 						//UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-						return SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord);
+						half4 color = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.texcoord);
+						half4 prevColor0 = tex2D(prevSunShadowDepth0, input.texcoord);
+						half4 prevColor1 = tex2D(prevSunShadowDepth1, input.texcoord);
+						half4 prevColor2 = tex2D(prevSunShadowDepth2, input.texcoord);
+						half4 prevColor3 = tex2D(prevSunShadowDepth3, input.texcoord);
+						half4 prevColor4 = tex2D(prevSunShadowDepth4, input.texcoord);
+						half4 prevColor5 = tex2D(prevSunShadowDepth5, input.texcoord);
+						half4 blendColor = (prevColor0 + prevColor1 + prevColor2 + prevColor3 + prevColor4 + prevColor5) * 0.84;
+						half4 newColor = lerp(color, blendColor, 0.98);
+						return newColor;
 					}
 
 				ENDHLSL
-				}
+			}
 
 	}
 
