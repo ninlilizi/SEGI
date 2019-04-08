@@ -48,7 +48,7 @@ namespace UnityEngine.Rendering.PostProcessing
     public sealed class SEGITransform : ParameterOverride<Transform> { }
 
     [Serializable]
-    [PostProcess(typeof(SEGIRenderer), PostProcessEvent.AfterStack, "NKLI/SEGI")]
+    [PostProcess(typeof(SEGIRenderer), PostProcessEvent.BeforeStack, "NKLI/SEGI")]
 
     public sealed class SEGI_NKLI : PostProcessEffectSettings
     {
