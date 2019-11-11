@@ -1,3 +1,5 @@
+### Please note that this fork has been discontinued in favour of my own GI solution, Nigiri.
+
 <h1 align=center>NKLI</h1>
 
 <p align="center">
@@ -6,8 +8,8 @@
 
 
 # Features.
-* 2D, Single Pass Rendering (Single Pass Instanced support once PP2 adds SPI)
-* Runs on Unity version 2018 (2017 support is coming)
+* 2D, Single Pass Rendering
+* Runs on Unity version 2018
 * Functions as a PostProcessing v2 effect
 * Samples cones across frames. Giving a 32cone result for the cost of 2 per frame.
 
