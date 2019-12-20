@@ -1,4 +1,5 @@
-### Please note that this fork has been discontinued in favour of my own GI solution, Nigiri.
+### Please note that this fork has been discontinued in favour of my own GI solution, [Nigiri](https://github.com/ninlilizi/Nigiri).
+## https://github.com/ninlilizi/Nigiri
 
 <h1 align=center>NKLI</h1>
 
